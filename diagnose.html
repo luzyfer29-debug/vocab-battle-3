@@ -2,5 +2,4 @@
 const files=['firebase-config.js','questions.js','math-questions.js','grammar-data.js','app.js'];
 const out=document.querySelector('#results');
 for(const file of files){const row=document.createElement('div');row.className='item';row.textContent='⏳ '+file+' wird geprüft …';out.append(row);try{const url='./'+file+'?diagnose='+Date.now();const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error('HTTP '+response.status);const source=await response.text();if(!source.trim())throw new Error('Datei ist leer');try{await import(url);row.innerHTML='<strong class="ok">✅ '+file+'</strong><div class="muted">'+source.length+' Zeichen – geladen</div>';}catch(err){row.innerHTML='<strong class="bad">❌ '+file+'</strong><div>'+String(err?.stack||err)+'</div><div class="muted">'+source.length+' Zeichen vorhanden</div>';}}catch(err){row.innerHTML='<strong class="bad">❌ '+file+'</strong><div>'+String(err)+'</div>';}}
-}
 </script></body></html>
