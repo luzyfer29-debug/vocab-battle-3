@@ -3,9 +3,12 @@ import {getAuth,signInAnonymously,onAuthStateChanged} from 'https://www.gstatic.
 import {getDatabase,ref,onValue,get,set,update,runTransaction,remove} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js';
 import {firebaseConfig} from './firebase-config.js';
 import {BATTLES} from './questions.js';
+import {MATH_BATTLES} from './math-questions.js';
 const app=document.querySelector('#app'),status=document.querySelector('#status');
 const names=['Luca','Semir','Talea','Nele'];
 const QUESTION_MS=15000,REVEAL_MS=3000;
+const ADMIN_UID='M41x9WNoHAfqpSmyrztAgf2IZYC3';
+let resetUnsubscribe=null,resetState={},resetReady=false;
 let db,uid='',code='',role='',slot='',room=null,unsubscribe=null,solo=null;
 let clock=null,busy=false,previousStageKey='',lastClockText='';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -54,6 +57,26 @@ function gapStorageKey(n){return `vb2gap_${soloName}_station_${n+1}`;}
 function gapLoad(n){try{const v=JSON.parse(localStorage.getItem(gapStorageKey(n))||'null');return Array.isArray(v)?v:[];}catch{return [];}}
 function gapSave(n,values){localStorage.setItem(gapStorageKey(n),JSON.stringify(values));}
 function gapFields(n){return GAP_SETS[n].groups.flatMap(g=>g.answers);}
+// Erstversuche bleiben pro Kind und Aufgabe lokal gespeichert.
+// Die Schluessel sind kompatibel mit der zuvor verwendeten Lernverlauf-Version.
+function firstKey(type,id){return `vb2first_${soloName}_${type}_${id}`;}
+function firstRead(type,id){try{return JSON.parse(localStorage.getItem(firstKey(type,id))||'null');}catch{return null;}}
+function firstCapture(type,id,answers,values,title){
+ if(!soloName||firstRead(type,id))return;
+ const inputs=values.map(v=>String(v||''));
+ const errors=answers?inputs.map((answer,i)=>({position:i+1,answer,correct:(answers[i]||[]).join(' / '),ok:(answers[i]||[]).some(a=>grammarNormalize(a)===grammarNormalize(answer))})).filter(x=>!x.ok):[];
+ const record={title,total:inputs.length,correct:answers?inputs.length-errors.length:null,errors,inputs,checkedAt:Date.now(),selfCheck:!answers};
+ try{localStorage.setItem(firstKey(type,id),JSON.stringify(record));}catch{}
+}
+function firstSummary(type,id,values,answers){
+ const first=firstRead(type,id);if(!first)return '';
+ const current=answers?answers.filter((a,i)=>a.some(x=>grammarNormalize(x)===grammarNormalize(values[i]))).length:null;
+ const original=first.selfCheck?'Freie Sätze – Selbstkontrolle':`${Number(first.correct)||0} von ${first.total} richtig`;
+ const now=answers?`${current} von ${answers.length} richtig`:'Freie Sätze – Selbstkontrolle';
+ const errors=first.selfCheck?'<p>Deine ersten Sätze sind gespeichert und können mit den Musterlösungen verglichen werden.</p>':(first.errors||[]).length?`<details><summary>Fehler des ersten Versuchs (${first.errors.length})</summary>${first.errors.map(x=>`<p><strong>Nr. ${Number(x.position)}:</strong> ${esc(x.answer||'(leer)')} → ${esc(x.correct||'')}</p>`).join('')}</details>`:'<p>Beim ersten Versuch alles richtig! 🎉</p>';
+ return `<div style="margin:16px 0;padding:14px;border:1px solid #8c86bd;border-radius:12px"><h3>📋 Dein Lernverlauf</h3><p><strong>Erster Versuch:</strong> ${original}</p><p><strong>Aktueller Stand:</strong> ${now}</p>${errors}<p class="muted">Der erste Versuch bleibt auf diesem Handy gespeichert.</p></div>`;
+}
+
 function gapRender(n,checked=false){
  if(!soloName){soloChooseName();return;}
  gapStation=n;
@@ -70,10 +93,10 @@ function gapRender(n,checked=false){
   return `<h3>${esc(group.title)}</h3><p style="line-height:1.85;overflow-wrap:break-word">${html}</p>`;
  }).join('');
  const count=answers.filter((a,i)=>a.some(x=>x.toLowerCase()===String(saved[i]||'').trim().toLowerCase())).length;
- app.innerHTML=card(`<h2>✍️ ${esc(data.title)}</h2><p>Schreibe die englischen Wörter in die Lücken. Die Reihenfolge entspricht dem Arbeitsblatt. Beim erneuten Öffnen beginnt die Übung mit leeren Feldern.</p>${checked?`<p class="good"><strong>${count} von ${answers.length} richtig.</strong> Rote Lücken kannst du verbessern und erneut prüfen.</p>`:''}${body}<div class="buttons">${btn('✅ Antworten prüfen','gapCheck')}${btn('🔄 Lücken leeren','gapClear','alt')}</div>`)+card(btn('Zur Battle-Auswahl','soloHome','alt'));
+ app.innerHTML=card(`<h2>✍️ ${esc(data.title)}</h2><p>Schreibe die englischen Wörter in die Lücken. Die Reihenfolge entspricht dem Arbeitsblatt. Beim erneuten Öffnen beginnt die Übung mit leeren Feldern.</p>${checked?`<p class="good"><strong>${count} von ${answers.length} richtig.</strong> Rote Lücken kannst du verbessern und erneut prüfen.</p>`:''}${body}${firstSummary('gap',n,saved,answers)}<div class="buttons">${btn('✅ Antworten prüfen','gapCheck')}${btn('🔄 Lücken leeren','gapClear','alt')}</div>`)+card(btn('Zur Battle-Auswahl','soloHome','alt'));
 }
 function gapCollect(){if(gapStation===null)return;gapSave(gapStation,Array.from(document.querySelectorAll('[data-gap]'),el=>el.value));}
-function gapCheck(){if(gapStation===null)return;gapCollect();gapRender(gapStation,true);}
+function gapCheck(){if(gapStation===null)return;gapCollect();firstCapture('gap',gapStation,gapFields(gapStation),gapLoad(gapStation),GAP_SETS[gapStation].title);gapRender(gapStation,true);}
 function gapClear(){if(gapStation===null)return;gapSave(gapStation,[]);gapRender(gapStation);}
 
 // Grammar: Original order of normal exercises; no Diff corner.
@@ -199,9 +222,9 @@ function grammarRender(st,task,checked=false,reveal=false){
   content=t.open.map((example,i)=>`<div style="margin:14px 0"><label style="display:block;margin-bottom:5px"><strong>${i+1}.</strong> ${esc(t.prompts?.[i]||'Schreibe einen vollständigen englischen Satz.')}</label><textarea data-grammar="${i}" rows="2" spellcheck="false" style="box-sizing:border-box;width:100%;max-width:100%;padding:9px;border-radius:8px;font-size:16px;background:white;color:#17152b">${esc(values[i]||'')}</textarea>${reveal?`<p class="muted">Musterlösung: <strong>${esc(example)}</strong></p>`:''}</div>`).join('');
  }
  const total=t.items?.length||t.open.length,correct=t.items?t.items.filter((x,i)=>x[2].some(a=>grammarNormalize(a)===grammarNormalize(values[i]))).length:0;
- app.innerHTML=card(`<h2>📘 ${esc(GRAMMAR[st].title)}</h2><h3>${esc(t.title)}</h3>${t.intro?`<p>${esc(t.intro)}</p>`:''}${t.example?`<p class="muted">Example: ${esc(t.example)}</p>`:''}<p class="muted">${isOpen?'Schreibe selbst. Über „💡 Lösung anzeigen“ kannst du die Musterlösungen ansehen; andere richtige Sätze sind möglich.':'Trage die richtige englische Form ein.'} Beim erneuten Öffnen beginnt die Übung mit leeren Feldern.</p>${checked?`<p class="good"><strong>${isOpen?'Deine Sätze sind gespeichert. Vergleiche sie bei Bedarf mit den Musterlösungen.':`${correct} von ${total} richtig. Verbessere die roten Felder selbst.`}</strong></p>`:''}${content}<div class="buttons">${btn(isOpen?'✅ Eingaben speichern':'✅ Antworten prüfen','grammarCheck')}${btn('💡 Lösung anzeigen','grammarReveal','alt')}${btn('🔄 Eingaben leeren','grammarClear','alt')}</div>`)+card(btn('Zur Aufgabenübersicht','grammarBack','alt'));
+ app.innerHTML=card(`<h2>📘 ${esc(GRAMMAR[st].title)}</h2><h3>${esc(t.title)}</h3>${t.intro?`<p>${esc(t.intro)}</p>`:''}${t.example?`<p class="muted">Example: ${esc(t.example)}</p>`:''}<p class="muted">${isOpen?'Schreibe selbst. Über „💡 Lösung anzeigen“ kannst du die Musterlösungen ansehen; andere richtige Sätze sind möglich.':'Trage die richtige englische Form ein.'} Beim erneuten Öffnen beginnt die Übung mit leeren Feldern.</p>${checked?`<p class="good"><strong>${isOpen?'Deine Sätze sind gespeichert. Vergleiche sie bei Bedarf mit den Musterlösungen.':`${correct} von ${total} richtig. Verbessere die roten Felder selbst.`}</strong></p>`:''}${content}${firstSummary('grammar',st+'_'+task,values,t.items?.map(x=>x[2])||null)}<div class="buttons">${btn(isOpen?'✅ Eingaben speichern':'✅ Antworten prüfen','grammarCheck')}${btn('💡 Lösung anzeigen','grammarReveal','alt')}${btn('🔄 Eingaben leeren','grammarClear','alt')}</div>`)+card(btn('Zur Aufgabenübersicht','grammarBack','alt'));
 }
-function grammarCheck(){if(grammarStation===null||grammarTask===null)return;grammarCollect();grammarRender(grammarStation,grammarTask,true);}
+function grammarCheck(){if(grammarStation===null||grammarTask===null)return;grammarCollect();const t=GRAMMAR[grammarStation].tasks[grammarTask];firstCapture('grammar',grammarStation+'_'+grammarTask,t.items?.map(x=>x[2])||null,grammarRead(grammarStation,grammarTask),GRAMMAR[grammarStation].title+' · '+t.title);grammarRender(grammarStation,grammarTask,true);}
 function grammarReveal(){if(grammarStation===null||grammarTask===null)return;grammarCollect();grammarRender(grammarStation,grammarTask,true,true);}
 function grammarClear(){if(grammarStation===null||grammarTask===null)return;grammarWrite(grammarStation,grammarTask,[]);grammarRender(grammarStation,grammarTask);}
 
@@ -209,47 +232,49 @@ const key='vb2solo';
 const SOLO_NAMES=['Luca','Semir','Talea','Nele'];
 let soloName=localStorage.getItem('vb2solo_name')||'';
 let dashboardUnsubscribe=null,soloHeartbeat=null;
-const RATIONAL_CARDS=[
- ['Was sind rationale Zahlen?','Rationale Zahlen lassen sich als Bruch schreiben: Zähler und Nenner sind ganze Zahlen, der Nenner ist nicht 0.'],
- ['Wie schreibt man −3 als rationale Zahl?','−3 = −3/1.'],
- ['Was ist ein Bruch?','Ein Bruch besteht aus Zähler (oben) und Nenner (unten).'],
- ['Wie addiert man Brüche?','Auf einen gemeinsamen Nenner bringen, dann die Zähler addieren.'],
- ['Berechne: 1/4 + 2/4','(1 + 2)/4 = 3/4.'],
- ['Wie subtrahiert man Brüche?','Auf einen gemeinsamen Nenner bringen, dann die Zähler subtrahieren.'],
- ['Berechne: 5/6 − 1/3','1/3 = 2/6, also 5/6 − 2/6 = 3/6 = 1/2.'],
- ['Wie multipliziert man Brüche?','Zähler mal Zähler und Nenner mal Nenner.'],
- ['Berechne: 2/3 × 3/4','(2 × 3)/(3 × 4) = 6/12 = 1/2.'],
- ['Wie dividiert man Brüche?','Den ersten Bruch mit dem Kehrwert des zweiten multiplizieren.'],
- ['Berechne: 3/5 ÷ 2/7','3/5 × 7/2 = 21/10 = 2 1/10.'],
- ['Was ist der Kehrwert einer Zahl?','Der Bruch, bei dem Zähler und Nenner vertauscht sind.'],
- ['Wie vergleicht man rationale Zahlen?','Auf einen gemeinsamen Nenner bringen oder als Dezimalzahlen schreiben.'],
- ['Was ist größer: 3/4 oder 5/8?','3/4 = 6/8 und 6/8 > 5/8. Also ist 3/4 größer.'],
- ['Wie wird eine gemischte Zahl zum unechten Bruch?','Ganze Zahl × Nenner + Zähler. Das Ergebnis wird der neue Zähler; der Nenner bleibt gleich.'],
- ['Wandle 2 1/3 in einen unechten Bruch um.','2 × 3 + 1 = 7, also 7/3.'],
- ['Wie wird ein unechter Bruch zur gemischten Zahl?','Zähler durch Nenner teilen. Der Quotient ist die ganze Zahl, der Rest wird der Zähler.'],
- ['Wandle 9/4 in eine gemischte Zahl um.','9 ÷ 4 = 2 Rest 1, also 2 1/4.'],
- ['Was bedeutet Kürzen?','Zähler und Nenner durch dieselbe Zahl teilen, am besten durch einen gemeinsamen Teiler.'],
- ['Kürze 8/12.','8/12 = (8 ÷ 4)/(12 ÷ 4) = 2/3.']
-];
-function rationalKey(){return `vb2rational_${soloName}`;}
-function rationalSaved(){try{const s=JSON.parse(localStorage.getItem(rationalKey())||'null');if(!s||!Number.isInteger(s.index)||s.index<0||s.index>RATIONAL_CARDS.length)return null;s.missed=Array.isArray(s.missed)?s.missed.filter(i=>Number.isInteger(i)&&i>=0&&i<RATIONAL_CARDS.length):[];return s;}catch{return null;}}
-function rationalMenu(){stopSoloHeartbeat();if(!soloName){soloChooseName();return;}const s=rationalSaved(),done=s?.index||0;app.innerHTML=card(`<h2>🧮 Übung 4 · Rationale Zahlen</h2><p>Decke die Antwort auf und entscheide danach, ob du die Karte schon sicher kannst. Es geht um Brüche, Rechenregeln, Vergleichen und Umwandeln.</p><p class="muted">${done} von ${RATIONAL_CARDS.length} Karten gelernt${s?.finished?' · abgeschlossen':''}${s?.missed?.length?` · ${s.missed.length} zum Wiederholen`:''}</p><p class="small muted">Der Lernstand wird auf diesem Gerät beim ausgewählten Namen gespeichert.</p><div class="buttons">${btn(s&&!s.finished?'▶️ Weiterlernen':'▶️ Übung starten','rationalStart')}${s?.finished?btn('🔁 Noch einmal üben','rationalRestart','alt'):''}</div>`)+card(btn('Zur Lernübersicht','soloHome','alt'));}
-function rationalStart(){let s=rationalSaved();if(!s||s.finished)s={index:0,missed:[],finished:false,revealed:false};s.revealed=false;localStorage.setItem(rationalKey(),JSON.stringify(s));rationalShow();}
-function rationalRestart(){localStorage.removeItem(rationalKey());rationalStart();}
-function rationalShow(){let s=rationalSaved();if(!s){rationalStart();return;}if(s.index>=RATIONAL_CARDS.length){s.finished=true;localStorage.setItem(rationalKey(),JSON.stringify(s));app.innerHTML=card(`<h2>🏁 Übung 4 geschafft!</h2><p>Du hast alle ${RATIONAL_CARDS.length} Karten durchgesehen.</p><p>${s.missed.length?`${s.missed.length} Karte${s.missed.length===1?'':'n'} als „Noch üben“ markiert.`:'Alle Karten waren sicher.'}</p><div class="buttons">${btn('🔁 Karten noch einmal ansehen','rationalReview')}${btn('Übung wiederholen','rationalRestart','alt')}</div>`)+card(btn('Zur Übungsübersicht','rationalMenu','alt'));return;}const [q,a]=RATIONAL_CARDS[s.index];app.innerHTML=card(`<p class="muted">${soloName} · Übung 4 · Karte ${s.index+1} von ${RATIONAL_CARDS.length}</p><div class="bar"><div class="fill" style="width:${s.index/RATIONAL_CARDS.length*100}%"></div></div><h2 style="margin-top:20px">${esc(q)}</h2>${s.revealed?`<div class="player"><strong>Antwort</strong><p>${esc(a)}</p></div>${btn('✅ Das kann ich','rationalKnown')}${btn('🔁 Noch üben','rationalMiss','alt')}`:btn('💡 Antwort aufdecken','rationalReveal')}`)+card(btn('Zur Übungsübersicht','rationalMenu','alt'));}
-function rationalReveal(){const s=rationalSaved();if(!s)return;s.revealed=true;localStorage.setItem(rationalKey(),JSON.stringify(s));rationalShow();}
-function rationalAdvance(known){const s=rationalSaved();if(!s)return;if(!known&&!s.missed.includes(s.index))s.missed.push(s.index);s.index++;s.revealed=false;localStorage.setItem(rationalKey(),JSON.stringify(s));rationalShow();}
-function rationalReview(){const s=rationalSaved();if(!s||!s.missed.length){rationalMenu();return;}s.reviewing=true;s.reviewPos=0;s.revealed=false;localStorage.setItem(rationalKey(),JSON.stringify(s));rationalReviewShow();}
-function rationalReviewShow(){const s=rationalSaved();if(!s)return;const list=s.missed||[];if(!list.length){s.reviewing=false;s.finished=true;localStorage.setItem(rationalKey(),JSON.stringify(s));rationalMenu();return;}if(!Number.isInteger(s.reviewPos)||s.reviewPos>=list.length)s.reviewPos=0;const idx=list[s.reviewPos],[q,a]=RATIONAL_CARDS[idx];app.innerHTML=card(`<p class="muted">Übung 4 · Wiederholung ${s.reviewPos+1} von ${list.length}</p><h2>${esc(q)}</h2>${s.revealed?`<div class="player"><strong>Antwort</strong><p>${esc(a)}</p></div>${btn('✅ Jetzt sicher','rationalReviewKnown')}${btn('🔁 Noch einmal zeigen','rationalReviewNext','alt')}`:btn('💡 Antwort aufdecken','rationalReviewReveal')}`)+card(btn('Zur Übungsübersicht','rationalMenu','alt'));}
-function rationalReviewReveal(){const s=rationalSaved();if(!s)return;s.revealed=true;localStorage.setItem(rationalKey(),JSON.stringify(s));rationalReviewShow();}
-function rationalReviewNext(known){const s=rationalSaved();if(!s)return;const idx=s.missed[s.reviewPos];if(known)s.missed=s.missed.filter(i=>i!==idx);else s.reviewPos=(s.reviewPos+1)%s.missed.length;s.revealed=false;localStorage.setItem(rationalKey(),JSON.stringify(s));rationalReviewShow();}
+function resetStamp(name,subject='english'){
+ return Math.max(Number(resetState.all)||0,Number(resetState[name])||0,Number(resetState[`${subject}_${name}`])||0);
+}
+function clearLocalLearning(name,subject){
+ const prefixes=subject==='math'?[`vb2math_${name}_battle_`]:[`vb2solo_${name}_battle_`,`vb2first_${name}_`,`vb2grammar_${name}_`,`vb2gap_${name}_`];
+ for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k&&prefixes.some(p=>k.startsWith(p)))localStorage.removeItem(k);}
+ if(subject==='math'&&mathName===name)mathRun=null;
+ if(subject==='english'&&soloName===name){solo=null;stopSoloHeartbeat();grammarStation=null;grammarTask=null;gapStation=null;}
+}
+function applyResetState(state){
+ resetState=state&&typeof state==='object'?state:{};
+ let activeEnglish=false,activeMath=false;
+ for(const name of SOLO_NAMES){
+  for(const subject of ['english','math']){
+   const stamp=resetStamp(name,subject),seenKey=`vb2reset_seen_${subject}_${name}`;
+   // Preserve previous legacy reset acknowledgement when upgrading.
+   const oldSeen=Number(localStorage.getItem(`vb2reset_seen_${name}`)||0);
+   const seen=Math.max(Number(localStorage.getItem(seenKey)||0),oldSeen);
+   if(stamp>seen){
+    clearLocalLearning(name,subject);
+    localStorage.setItem(seenKey,String(stamp));
+    if(subject==='english'&&soloName===name)activeEnglish=true;
+    if(subject==='math'&&mathName===name)activeMath=true;
+   }
+  }
+ }
+ resetReady=true;
+ if(activeMath&&mathName){mathHome();msg('Mathe-Lernstand zurückgesetzt. Englisch bleibt erhalten.');}
+ else if(activeEnglish&&soloName){soloHome();msg('Englisch-Lernstand zurückgesetzt. Mathe bleibt erhalten.');}
+}
+function watchResets(){
+ if(resetUnsubscribe){resetUnsubscribe();resetUnsubscribe=null;}
+ resetReady=false;
+ resetUnsubscribe=onValue(ref(db,'learningResets'),snap=>applyResetState(snap.val()),e=>msg('Reset-Abgleich fehlgeschlagen: '+e.message,true));
+}
+
 function stopSoloHeartbeat(){if(soloHeartbeat!==null){clearInterval(soloHeartbeat);soloHeartbeat=null;}}
 function startSoloHeartbeat(){stopSoloHeartbeat();soloHeartbeat=setInterval(()=>{if(solo&&soloName)void syncSolo();},30000);}
 function stopDashboard(){if(dashboardUnsubscribe){dashboardUnsubscribe();dashboardUnsubscribe=null;}}
 function stopClock(){if(clock!==null){clearInterval(clock);clock=null;}lastClockText='';}
-function home(){stopDashboard();stopSoloHeartbeat();if(unsubscribe){unsubscribe();unsubscribe=null;}stopClock();code='';role='';slot='';room=null;solo=null;busy=false;previousStageKey='';status.textContent='';app.innerHTML=card(`<h2>Was möchtest du machen?</h2><div class="buttons">${btn('👥 Spiel beitreten','join')}${btn('📚 Alleine lernen','solo')}</div>`)+card('<p class="muted">Hier kannst du alleine lernen oder mit einem Raumcode am Battle teilnehmen. Alle vier Kinder können gleichzeitig auf ihren eigenen Geräten lernen.</p>');}
+function home(){stopDashboard();stopSoloHeartbeat();if(unsubscribe){unsubscribe();unsubscribe=null;}stopClock();code='';role='';slot='';room=null;solo=null;busy=false;previousStageKey='';status.textContent='';app.innerHTML=card(`<h2>Was möchtest du machen?</h2><div class="buttons">${btn('👥 Spiel beitreten','join')}${btn('🇬🇧 Englisch','solo')}${btn('🔢 Mathe Klasse 7 NRW','mathChoose')}</div>`)+card('<p class="muted">Hier kannst du alleine lernen oder mit einem Raumcode am Battle teilnehmen. Alle vier Kinder können gleichzeitig auf ihren eigenen Geräten lernen.</p>');}
 function listen(){if(unsubscribe)unsubscribe();stopClock();unsubscribe=onValue(ref(db,`rooms/${code}`),snap=>{room=snap.val();if(!room){msg('Raum nicht gefunden oder gelöscht.',true);return;}render();},e=>msg('Firebase-Zugriff verweigert: '+e.message,true));}
-function current(){const b=Number(room?.meta?.battle||1)-1;return BATTLES[b]?.[Number(room?.meta?.index||0)%30];}
+function current(){const b=Number(room?.meta?.battle||1)-1;return (room?.meta?.subject==='math'?MATH_BATTLES:BATTLES)[b]?.[Number(room?.meta?.index||0)%30];}
 function players(){return Object.entries(room?.slots||{}).map(([id,p])=>({id,...p})).sort((a,b)=>(b.score||0)-(a.score||0));}
 function roster(){return players().map((p,i)=>`<div class="player row"><span>${i+1}. ${esc(p.name)}</span><span class="score">${p.score||0}</span></div>`).join('')||'<p>Noch keine Spieler.</p>';}
 function chooseBattle(){app.innerHTML=card(`<h2>🎮 Battle auswählen</h2><p>Welches Battle soll gespielt werden?</p><label>Battle<select id="battle-choice"><option value="1">Battle 1 – 30 Fragen</option><option value="2">Battle 2 – 30 Fragen</option><option value="3">Battle 3 – 30 Fragen</option></select></label>${btn('Raum erstellen','createRoom')}`)+card(btn('Zurück','home','alt'));}
@@ -285,9 +310,25 @@ async function answer(i){if(role!=='player'||room?.meta?.stage!=='question'||!ui
 // Wiederholungen geben keine zusätzlichen Punkte; alle Zustände bleiben lokal gespeichert.
 function cleanMistakes(v){const out={};if(!v||typeof v!=='object')return out;for(const [k,n] of Object.entries(v)){const i=Number(k);if(Number.isInteger(i)&&i>=0&&i<30&&Number.isFinite(Number(n))&&Number(n)>0)out[i]=Math.min(9999,Math.floor(Number(n)));}return out;}
 function mistakeRows(b,m){return Object.entries(cleanMistakes(m)).map(([idx,count])=>{const q=BATTLES[b]?.[Number(idx)];if(!q)return null;return {word:q.word||q.q,translation:q.options[q.correct],count,idx:Number(idx)};}).filter(Boolean).sort((a,b)=>b.count-a.count||a.word.localeCompare(b.word,'de'));}
-function showMyMistakes(){stopSoloHeartbeat();if(!soloName){soloChooseName();return;}const groups=[0,1,2].map(b=>{const entries=mistakeRows(b,soloSaved(b)?.mistakes);return `<h3>Battle ${b+1}</h3>${entries.length?entries.map(x=>`<div class="player"><strong>${esc(x.word)}</strong> – ${esc(x.translation)}<p class="muted">${x.count}× falsch beantwortet</p></div>`).join(''):'<p class="muted">Noch keine Fehler erfasst.</p>'}`;}).join('');app.innerHTML=card(`<h2>📕 ${esc(soloName)} · Meine Fehlerliste</h2><p>Die Fehler werden bei normalen Fragen und Wiederholungen gezählt. Frühere Battles vor diesem Update sind nicht rückwirkend enthalten.</p>${groups}`)+card(btn('Zur Battle-Auswahl','soloHome','alt'));}
+function firstMistakeSection(type,id,title,answers){
+ const r=firstRead(type,id);
+ if(!r)return `<div class="player"><strong>${esc(title)}</strong><p class="muted">Noch kein erster Versuch gespeichert.</p></div>`;
+ if(r.selfCheck){
+  const entered=(r.inputs||[]).filter(x=>String(x||'').trim()).length;
+  return `<div class="player"><strong>${esc(title)}</strong><p>${entered} von ${r.total} Sätzen im ersten Versuch ausgefüllt · Selbstkontrolle</p><details><summary>Erste Antworten ansehen</summary>${(r.inputs||[]).map((x,i)=>`<p><strong>${i+1}.</strong> ${esc(x||'(leer)')}</p>`).join('')}</details></div>`;
+ }
+ const mistakes=Array.isArray(r.errors)?r.errors:[];
+ return `<div class="player"><strong>${esc(title)}</strong><p>Erster Versuch: ${Number(r.correct)||0} von ${r.total} richtig · ${mistakes.length} Fehler</p>${mistakes.length?`<details><summary>Fehler ansehen (${mistakes.length})</summary>${mistakes.map(x=>`<p><strong>Nr. ${Number(x.position)}:</strong> ${esc(x.answer||'(leer)')} → <strong>${esc(x.correct||'')}</strong></p>`).join('')}</details>`:'<p class="good">Alles richtig! 🎉</p>'}</div>`;
+}
+function showMyMistakes(){
+ stopSoloHeartbeat();if(!soloName){soloChooseName();return;}
+ const battles=[0,1,2].map(b=>{const entries=mistakeRows(b,soloSaved(b)?.mistakes);return `<h3>Battle ${b+1}</h3>${entries.length?entries.map(x=>`<div class="player"><strong>${esc(x.word)}</strong> – ${esc(x.translation)}<p class="muted">${x.count}× falsch beantwortet</p></div>`).join(''):'<p class="muted">Noch keine Fehler erfasst.</p>'}`;}).join('');
+ const grammar=GRAMMAR.map((st,si)=>`<h3>Grammatik · Station ${si+1}</h3>${st.tasks.map((t,ti)=>firstMistakeSection('grammar',si+'_'+ti,t.title,t.items?.map(x=>x[2])||null)).join('')}`).join('');
+ const gaps=GAP_SETS.map((set,i)=>firstMistakeSection('gap',i,set.title,gapFields(i))).join('');
+ app.innerHTML=card(`<h2>📕 ${esc(soloName)} · Meine Fehlerliste</h2><p>Alle Fehler aus Battles sowie die ersten kontrollierten Versuche bei Grammatik und Lückentexten. Grammatik- und Lückentextdaten sind nur auf diesem Gerät gespeichert.</p><h2>🎮 Battles</h2>${battles}<h2>📘 Grammatik</h2>${grammar}<h2>✍️ Lückentexte</h2>${gaps}`)+card(btn('Zur Battle-Auswahl','soloHome','alt'));
+}
 function soloKey(b){return `${key}_${soloName}_battle_${b+1}`;}
-function soloSave(){if(!solo)return;localStorage.setItem(soloKey(solo.battle),JSON.stringify(solo));void syncSolo();}
+function soloSave(){if(!solo)return;solo.updatedAt=Date.now();localStorage.setItem(soloKey(solo.battle),JSON.stringify(solo));void syncSolo();}
 function soloSaved(b){try{const s=JSON.parse(localStorage.getItem(soloKey(b))||'null');if(!s||s.battle!==b||!Number.isInteger(s.index)||s.index<0||s.index>30||!Number.isFinite(s.score))return null;
  // Alte Speicherstände vor Einführung des Wiederholungsmodus bleiben kompatibel.
  s.wrong=Array.isArray(s.wrong)?s.wrong.filter(n=>Number.isInteger(n)&&n>=0&&n<30):[];
@@ -295,12 +336,27 @@ function soloSaved(b){try{const s=JSON.parse(localStorage.getItem(soloKey(b))||'
  if(s.reviewPos>=s.wrong.length)s.reviewPos=0;
  return s;
 }catch{return null;}}
-async function syncSolo(){if(!uid||!db||!solo||!soloName)return;try{await set(ref(db,`soloProgress/${uid}/${soloName}/battle${solo.battle+1}`),{name:soloName,battle:solo.battle+1,done:solo.index,correct:Math.floor(solo.score/10),score:solo.score,finished:!!solo.finished,mistakes:cleanMistakes(solo.mistakes),updatedAt:Date.now()});}catch(e){msg('Online-Speicherung noch nicht möglich: '+e.message,true);}}
-function soloChooseName(){stopSoloHeartbeat();app.innerHTML=card(`<h2>📚 Wer lernt gerade?</h2><p>Wähle deinen Namen, damit der Schiedsrichter deinen Lernfortschritt sehen kann.</p><div class="buttons">${SOLO_NAMES.map((n,i)=>btn(esc(n),`soloName${i}`)).join('')}</div>`)+card(btn('Zurück','home','alt'));}
+async function syncSolo(){
+ if(!uid||!db||!solo||!soloName||!resetReady)return;
+ const currentSolo=solo,name=soloName,device=uid;
+ const savedAt=Number(currentSolo.updatedAt)||Date.now();
+ try{
+  // Always check the current server reset before uploading old work.
+  const rs=await get(ref(db,'learningResets'));
+  applyResetState(rs.val());
+  if(!resetReady||solo!==currentSolo||soloName!==name||savedAt<=resetStamp(name,'english'))return;
+  await set(ref(db,`soloProgress/${device}/${name}/battle${currentSolo.battle+1}`),{
+   name,battle:currentSolo.battle+1,done:currentSolo.index,
+   correct:Math.floor(currentSolo.score/10),score:currentSolo.score,
+   finished:!!currentSolo.finished,mistakes:cleanMistakes(currentSolo.mistakes),updatedAt:savedAt
+  });
+ }catch(e){msg('Online-Speicherung noch nicht möglich: '+e.message,true);}
+}
+function soloChooseName(){if(!resetReady){msg('Lernstände werden abgeglichen. Bitte kurz warten.',true);return;}stopSoloHeartbeat();app.innerHTML=card(`<h2>📚 Wer lernt gerade?</h2><p>Wähle deinen Namen, damit der Schiedsrichter deinen Lernfortschritt sehen kann.</p><div class="buttons">${SOLO_NAMES.map((n,i)=>btn(esc(n),`soloName${i}`)).join('')}</div>`)+card(btn('Zurück','home','alt'));}
 function soloSetName(i){soloName=SOLO_NAMES[i];localStorage.setItem('vb2solo_name',soloName);soloHome();}
-function soloHome(){grammarCollect();stopSoloHeartbeat();if(!soloName){soloChooseName();return;}solo=null;const rational=rationalSaved();app.innerHTML=card(`<h2>📚 ${esc(soloName)} · Lernübersicht</h2><p>Die Battle-Fortschritte werden online gespeichert. Der Lernstand von Übung 4 bleibt auf diesem Gerät und beim ausgewählten Namen gespeichert.</p>${[0,1,2].map(b=>{const saved=soloSaved(b),done=saved?.index||0;const reviewing=saved&&!saved.finished&&saved.review&&saved.wrong.length;return `<div class="player"><h3>Battle ${b+1}</h3><p>${done} von 30 Fragen erledigt${reviewing?` · 🔁 ${saved.wrong.length} Wörter üben`:''}${saved?.finished?' · abgeschlossen':''}</p><div class="buttons">${btn(saved?'Neu beginnen':'Starten',`soloStart${b}`)}${saved&&!saved.finished?btn('Fortsetzen',`soloResume${b}`,'alt'):''}</div></div>`;}).join('')}${btn(`🧮 Übung 4 · Rationale Zahlen${rational?` · ${rational.index}/${RATIONAL_CARDS.length}`:''}`,'rationalMenu')}${btn('📘 Grammatik · Station 1 & 2','grammarMenu')}${btn('✍️ Lückentext 1 · Station 1','gap0')}${btn('✍️ Lückentext 2 · Station 2','gap1')}${btn('📕 Meine Fehlerliste','soloMistakes','alt')}${btn('Anderen Namen wählen','soloChangeName','alt')}`)+card(btn('Zurück','home','alt'));}
-function soloStart(b){const previous=soloSaved(b);solo={battle:b,index:0,score:0,finished:false,wrong:[],review:false,reviewPos:0,mistakes:cleanMistakes(previous?.mistakes)};soloSave();soloQuestion();}
-function soloResume(b){solo=soloSaved(b);if(!solo){soloStart(b);return;}void syncSolo();if(solo.finished)soloFinished();else soloQuestion();}
+function soloHome(){grammarCollect();stopSoloHeartbeat();if(!soloName){soloChooseName();return;}solo=null;app.innerHTML=card(`<h2>📚 ${esc(soloName)} · Battle auswählen</h2><p>30 Fragen pro Battle. Falsche Wörter werden danach wiederholt. Der Fortschritt wird auf diesem Handy und zusätzlich online gespeichert.</p>${[0,1,2].map(b=>{const saved=soloSaved(b),done=saved?.index||0;const reviewing=saved&&!saved.finished&&saved.review&&saved.wrong.length;return `<div class="player"><h3>Battle ${b+1}</h3><p>${done} von 30 Fragen erledigt${reviewing?` · 🔁 ${saved.wrong.length} Wörter üben`:''}${saved?.finished?' · abgeschlossen':''}</p><div class="buttons">${btn(saved?'Neu beginnen':'Starten',`soloStart${b}`)}${saved&&!saved.finished?btn('Fortsetzen',`soloResume${b}`,'alt'):''}</div></div>`;}).join('')}${btn('📘 Grammatik · Station 1 & 2','grammarMenu')}${btn('✍️ Lückentext 1 · Station 1','gap0')}${btn('✍️ Lückentext 2 · Station 2','gap1')}${btn('📕 Meine Fehlerliste','soloMistakes','alt')}${btn('Anderen Namen wählen','soloChangeName','alt')}`)+card(btn('Zurück','home','alt'));}
+function soloStart(b){if(!resetReady){msg('Bitte kurz auf den Reset-Abgleich warten.',true);return;}const previous=soloSaved(b);solo={battle:b,index:0,score:0,finished:false,wrong:[],review:false,reviewPos:0,mistakes:cleanMistakes(previous?.mistakes)};soloSave();soloQuestion();}
+function soloResume(b){if(!resetReady){msg('Bitte kurz auf den Reset-Abgleich warten.',true);return;}solo=soloSaved(b);if(!solo){soloStart(b);return;}void syncSolo();if(solo.finished)soloFinished();else soloQuestion();}
 function soloQuestion(){if(!solo)return;startSoloHeartbeat();const b=solo.battle;
  if(!solo.review&&solo.index>=30){if(solo.wrong.length){solo.review=true;solo.reviewPos=0;soloSave();}else{soloFinished();return;}}
  if(solo.review&&!solo.wrong.length){soloFinished();return;}
@@ -327,7 +383,7 @@ function soloFinished(){if(!solo)return;stopSoloHeartbeat();solo.finished=true;s
 function renderDashboard(entries){
  const latest={};
  for(const perDevice of Object.values(entries||{}))for(const [name,perBattle] of Object.entries(perDevice||{}))if(SOLO_NAMES.includes(name))for(const [battle,v] of Object.entries(perBattle||{})){
-  if(!/^battle[123]$/.test(battle)||!v||typeof v!=='object')continue;
+  if(!/^battle[123]$/.test(battle)||!v||typeof v!=='object'||Number(v.updatedAt||0)<=resetStamp(name))continue;
   const k=name+':'+battle;if(!latest[k]||Number(v.updatedAt)>Number(latest[k].updatedAt))latest[k]=v;
  }
  const now=Date.now();
@@ -355,9 +411,66 @@ function showDashboard(){
  if(!uid){msg('Bitte kurz warten, bis die Anmeldung abgeschlossen ist.',true);return;}
  dashboardUnsubscribe=onValue(ref(db,'soloProgress'),snap=>{renderDashboard(snap.val());},e=>msg('Lernübersicht konnte nicht geladen werden: '+e.message,true));
 }
-document.addEventListener('click',e=>{const a=e.target.closest('[data-action]'),ans=e.target.closest('[data-answer]'),sa=e.target.closest('[data-soloanswer]');if(ans){answer(Number(ans.dataset.answer));return;}if(sa){soloAnswer(Number(sa.dataset.soloanswer));return;}if(!a)return;const v=a.dataset.action;if(v==='home')home();else if(v==='host'||v==='createRoom'||v==='dashboard'||v==='start'||v==='reset')return;else if(v==='join')joinForm();else if(v==='enter')enter();else if(['start','reset'].includes(v))hostAction(v);else if(v==='solo')soloChooseName();else if(v==='dashboard')void showDashboard();else if(v==='soloChangeName')soloChooseName();else if(v==='soloMistakes')showMyMistakes();else if(v==='soloHome')soloHome();else if(v==='grammarMenu')grammarMenu();else if(v==='grammarStation0')grammarStationMenu(0);else if(v==='grammarStation1')grammarStationMenu(1);else if(/^grammarTask\d+$/.test(v)){const n=Number(v.slice(11));if(grammarStation!==null&&n<GRAMMAR[grammarStation].tasks.length)grammarRender(grammarStation,n);}else if(v==='grammarCheck')grammarCheck();else if(v==='grammarReveal')grammarReveal();else if(v==='grammarClear')grammarClear();else if(v==='grammarBack')grammarStationMenu(grammarStation);else if(v==='gap0')gapRender(0);else if(v==='gap1')gapRender(1);else if(v==='gapCheck')gapCheck();else if(v==='gapClear')gapClear();else if(v==='rationalMenu')rationalMenu();else if(v==='rationalStart')rationalStart();else if(v==='rationalRestart')rationalRestart();else if(v==='rationalReveal')rationalReveal();else if(v==='rationalKnown')rationalAdvance(true);else if(v==='rationalMiss')rationalAdvance(false);else if(v==='rationalReview')rationalReview();else if(v==='rationalReviewReveal')rationalReviewReveal();else if(v==='rationalReviewKnown')rationalReviewNext(true);else if(v==='rationalReviewNext')rationalReviewNext(false);else if(/^soloName[0-3]$/.test(v))soloSetName(Number(v.slice(-1)));else if(/^soloStart[012]$/.test(v))soloStart(Number(v.slice(-1)));else if(/^soloResume[012]$/.test(v))soloResume(Number(v.slice(-1)));else if(v==='soloNext')soloNext();});
+
+// === Mathe Klasse 7 NRW: rationale Zahlen ===
+let mathName='',mathRun=null,mathView='';
+const mathKey=(n,b)=>`vb2math_${n}_battle_${b+1}`;
+const MATH_CARDS=[
+ ['Was sind rationale Zahlen?','Rationale Zahlen lassen sich als Bruch schreiben: Zähler und Nenner sind ganze Zahlen, der Nenner ist nicht 0.'],
+ ['Wie schreibt man −3 als rationale Zahl?','−3 = −3/1.'],
+ ['Was ist ein Bruch?','Ein Bruch besteht aus Zähler (oben) und Nenner (unten).'],
+ ['Wie addiert man Brüche?','Auf einen gemeinsamen Nenner bringen, dann die Zähler addieren.'],
+ ['Berechne: 1/4 + 2/4','(1 + 2)/4 = 3/4.'],
+ ['Wie subtrahiert man Brüche?','Auf einen gemeinsamen Nenner bringen, dann die Zähler subtrahieren.'],
+ ['Berechne: 5/6 − 1/3','1/3 = 2/6, also 5/6 − 2/6 = 3/6 = 1/2.'],
+ ['Wie multipliziert man Brüche?','Zähler mal Zähler und Nenner mal Nenner.'],
+ ['Berechne: 2/3 × 3/4','(2 × 3)/(3 × 4) = 6/12 = 1/2.'],
+ ['Wie dividiert man Brüche?','Den ersten Bruch mit dem Kehrwert des zweiten multiplizieren.'],
+ ['Berechne: 3/5 ÷ 2/7','3/5 × 7/2 = 21/10 = 2 1/10.'],
+ ['Was ist der Kehrwert einer Zahl?','Der Bruch, bei dem Zähler und Nenner vertauscht sind.'],
+ ['Wie vergleicht man rationale Zahlen?','Auf einen gemeinsamen Nenner bringen oder als Dezimalzahlen schreiben.'],
+ ['Was ist größer: 3/4 oder 5/8?','3/4 = 6/8 und 6/8 > 5/8. Also ist 3/4 größer.'],
+ ['Wie wird eine gemischte Zahl zum unechten Bruch?','Ganze Zahl × Nenner + Zähler. Das Ergebnis wird der neue Zähler; der Nenner bleibt gleich.'],
+ ['Wandle 2 1/3 in einen unechten Bruch um.','2 × 3 + 1 = 7, also 7/3.'],
+ ['Wie wird ein unechter Bruch zur gemischten Zahl?','Zähler durch Nenner teilen. Der Quotient ist die ganze Zahl, der Rest wird der Zähler.'],
+ ['Wandle 9/4 in eine gemischte Zahl um.','9 ÷ 4 = 2 Rest 1, also 2 1/4.'],
+ ['Was bedeutet Kürzen?','Zähler und Nenner durch dieselbe Zahl teilen, am besten durch einen gemeinsamen Teiler.'],
+ ['Kürze 8/12.','8/12 = (8 ÷ 4)/(12 ÷ 4) = 2/3.']
+];
+function mathLoad(n,b){try{return JSON.parse(localStorage.getItem(mathKey(n,b))||'null');}catch{return null;}}
+function mathSave(){if(!mathRun)return;mathRun.updatedAt=Date.now();localStorage.setItem(mathKey(mathName,mathRun.b),JSON.stringify(mathRun));void mathSync();}
+async function mathSync(){
+ if(!db||!uid||!mathRun||!mathName||!resetReady)return;
+ const currentRun=mathRun,name=mathName,device=uid,savedAt=Number(mathRun.updatedAt)||0;
+ try{
+  const rs=await get(ref(db,'learningResets'));
+  applyResetState(rs.val());
+  if(!resetReady||mathRun!==currentRun||mathName!==name||savedAt<=resetStamp(name,'math'))return;
+  await set(ref(db,`mathProgress/${device}/${name}/battle${currentRun.b+1}`),{done:currentRun.index,score:currentRun.score,mistakes:currentRun.mistakes,updatedAt:savedAt,finished:!!currentRun.finished});
+ }catch(e){msg('Mathe online noch nicht verfügbar – der Fortschritt bleibt auf diesem Gerät gespeichert.',true);}
+}
+function mathChoose(){mathRun=null;app.innerHTML=card('<h2>🔢 Mathe · Klasse 7 NRW</h2><p>Rationale Zahlen – wer lernt?</p>'+SOLO_NAMES.map((n,i)=>btn(esc(n),`mathName${i}`)).join(''))+card(btn('Zur Fächerauswahl','home','alt'));}
+function mathSetName(i){mathName=SOLO_NAMES[i];mathHome();}
+function mathHome(){mathRun=null;const titles=['Zahlen vergleichen, addieren und subtrahieren','Multiplizieren und dividieren','Klammern und gemischte Rechnungen'];const battles=titles.map((t,b)=>{const s=mathLoad(mathName,b);return `<div class="player"><h3>Battle ${b+1}</h3><p>${esc(t)}</p><p>${s?.index||0}/30 Aufgaben · ${s?.score||0} Punkte</p>${btn('Neu beginnen',`mathStart${b}`)}${s&&!s.finished?btn('Fortsetzen',`mathResume${b}`,'alt'):''}</div>`;}).join('');const s=mathLoad(mathName,3);const exercise=`<div class="player"><h3>Übung 4 · Rationale Zahlen</h3><p>Merkkarten zu Brüchen, Rechenregeln, Vergleichen und Umwandeln</p><p>${Math.min(MATH_CARDS.length,Number(s?.index)||0)}/${MATH_CARDS.length} Karten · ${Number(s?.score)||0} Punkte${s?.finished?' · abgeschlossen':''}${s?.missed?.length?` · 🔁 ${s.missed.length} zum Wiederholen`:''}</p>${btn(s&&s.index>0&&!s.finished?'Weiterlernen':s?.finished?'Noch einmal üben':'Starten','mathFlashStart')}${s&&s.index>0&&!s.finished?btn('Fortsetzen','mathFlashResume','alt'):''}</div>`;app.innerHTML=card(`<h2>🔢 Mathe · ${esc(mathName)}</h2><p>Klasse 7 · Rationale Zahlen</p>${battles}${exercise}`+btn('📕 Meine Mathe-Fehlerliste','mathMistakes','alt'))+card(btn('Fach wechseln','home','alt'));}
+function mathStart(b,resume=false){const s=resume?mathLoad(mathName,b):null;mathRun=s&&s.index>=0?s:{b,index:0,score:0,finished:false,mistakes:{}};mathSave();mathQuestion();}
+function mathQuestion(){if(!mathRun)return;if(mathRun.index>=30){mathRun.finished=true;mathSave();app.innerHTML=card(`<h2>🏆 Mathe-Battle geschafft!</h2><p>${mathRun.score} von 300 Punkten</p>`+btn('Zur Übersicht','mathHome'));return;}const q=MATH_BATTLES[mathRun.b][mathRun.index];app.innerHTML=card(`<h2>🔢 Mathe-Battle ${mathRun.b+1}</h2><p>Aufgabe ${mathRun.index+1}/30 · ${mathRun.score} Punkte</p><h2>${esc(q.q)}</h2><div class="answers">${q.options.map((o,i)=>`<button data-mathanswer="${i}">${esc(o)}</button>`).join('')}</div>`)+card(btn('Zur Mathe-Übersicht','mathHome','alt'));}
+function mathAnswer(i){if(!mathRun||mathRun.index>=30)return;const q=MATH_BATTLES[mathRun.b][mathRun.index],ok=i===q.correct;document.querySelectorAll('[data-mathanswer]').forEach(el=>el.disabled=true);if(ok)mathRun.score+=10;else mathRun.mistakes[mathRun.index]=(mathRun.mistakes[mathRun.index]||0)+1;mathRun.index++;mathSave();app.innerHTML=card(`<h2>${ok?'✅ Richtig!':'❌ Leider falsch'}</h2><p>Richtige Lösung: <strong>${esc(q.options[q.correct])}</strong></p><p>${mathRun.score} Punkte</p>`+btn('Weiter ➜','mathNext'));}
+function mathFlashStart(){mathRun={b:3,index:0,score:0,finished:false,mistakes:{},missed:[],review:false,reviewPos:0,revealed:false};mathSave();mathFlashShow();}
+function mathFlashResume(){const s=mathLoad(mathName,3);if(!s){mathFlashStart();return;}mathRun={...s,b:3,missed:Array.isArray(s.missed)?s.missed:[],mistakes:s.mistakes||{},review:!!s.review,reviewPos:Number(s.reviewPos)||0,revealed:false};mathFlashShow();}
+function mathFlashShow(){if(!mathRun)return;const cards=MATH_CARDS;if(!mathRun.review&&mathRun.index>=cards.length){if(mathRun.missed.length){mathRun.review=true;mathRun.reviewPos=0;mathRun.revealed=false;mathSave();}else{mathRun.finished=true;mathSave();app.innerHTML=card(`<h2>🏁 Übung 4 geschafft!</h2><p>Du hast alle ${cards.length} Karten gelernt.</p><p class="score">${mathRun.score} von ${cards.length*10} Punkten</p>${btn('Zur Mathe-Übersicht','mathHome')}`);return;}}
+ if(mathRun.review&&!mathRun.missed.length){mathRun.review=false;mathRun.finished=true;mathSave();app.innerHTML=card(`<h2>🏆 Übung 4 geschafft!</h2><p>Du hast alle Karten noch einmal geübt.</p><p class="score">${mathRun.score} von ${cards.length*10} Punkten</p>${btn('Zur Mathe-Übersicht','mathHome')}`);return;}
+ const index=mathRun.review?mathRun.missed[mathRun.reviewPos]:mathRun.index,[q,a]=cards[index];const num=mathRun.review?`Wiederholung ${mathRun.reviewPos+1} von ${mathRun.missed.length}`:`Karte ${mathRun.index+1} von ${cards.length}`;app.innerHTML=card(`<p class="muted">🔢 Übung 4 · ${num} · ${mathRun.score} Punkte</p><div class="bar"><div class="fill" style="width:${mathRun.index/cards.length*100}%"></div></div><h2 style="margin-top:20px">${esc(q)}</h2>${mathRun.revealed?`<div class="player"><strong>Antwort</strong><p>${esc(a)}</p></div>${mathRun.review?btn('✅ Jetzt sicher','mathFlashReviewKnown'):btn('✅ Das kann ich','mathFlashKnown')}${mathRun.review?btn('🔁 Noch einmal','mathFlashReviewAgain','alt'):btn('🔁 Noch üben','mathFlashAgain','alt')}`:btn('💡 Antwort aufdecken','mathFlashReveal')}`)+card(btn('Zur Mathe-Übersicht','mathHome','alt'));}
+function mathFlashReveal(){if(!mathRun)return;mathRun.revealed=true;mathSave();mathFlashShow();}
+function mathFlashKnown(){if(!mathRun||mathRun.review)return;mathRun.score+=10;mathRun.index++;mathRun.revealed=false;mathSave();mathFlashShow();}
+function mathFlashAgain(){if(!mathRun||mathRun.review)return;const i=mathRun.index;if(!mathRun.missed.includes(i))mathRun.missed.push(i);mathRun.mistakes[i]=(Number(mathRun.mistakes[i])||0)+1;mathRun.index++;mathRun.revealed=false;mathSave();mathFlashShow();}
+function mathFlashReviewKnown(){if(!mathRun||!mathRun.review)return;const i=mathRun.missed[mathRun.reviewPos];mathRun.missed=mathRun.missed.filter(x=>x!==i);if(mathRun.reviewPos>=mathRun.missed.length)mathRun.reviewPos=0;mathRun.revealed=false;mathSave();mathFlashShow();}
+function mathFlashReviewAgain(){if(!mathRun||!mathRun.review||!mathRun.missed.length)return;mathRun.reviewPos=(mathRun.reviewPos+1)%mathRun.missed.length;mathRun.revealed=false;mathSave();mathFlashShow();}
+function mathMistakes(){const content=[0,1,2].map(b=>{const s=mathLoad(mathName,b),m=s?.mistakes||{};return `<h3>Battle ${b+1}</h3>`+(Object.keys(m).length?Object.entries(m).map(([i,c])=>`<p>${esc(MATH_BATTLES[b][Number(i)].q)} → <strong>${esc(MATH_BATTLES[b][Number(i)].options[MATH_BATTLES[b][Number(i)].correct])}</strong> · ${c}× falsch</p>`).join(''):'<p>Noch keine Fehler.</p>');}).join('');const s=mathLoad(mathName,3),m=s?.mistakes||{};const cardErrors=Object.keys(m).map(i=>`<p>${esc(MATH_CARDS[Number(i)]?.[0]||'')} → <strong>${esc(MATH_CARDS[Number(i)]?.[1]||'')}</strong> · ${m[i]}× zum Wiederholen markiert</p>`).join('')||'<p>Noch keine Karten zum Wiederholen.</p>';app.innerHTML=card(`<h2>📕 ${esc(mathName)} · Mathe-Fehlerliste</h2>${content}<h3>Übung 4 · Rationale Zahlen</h3>${cardErrors}`)+card(btn('Zur Mathe-Übersicht','mathHome','alt'));}
+function mathAction(v){if(v==='mathChoose')mathChoose();else if(v==='mathHome')mathHome();else if(v==='mathMistakes')mathMistakes();else if(v==='mathNext')mathQuestion();else if(v==='mathFlashStart')mathFlashStart();else if(v==='mathFlashResume')mathFlashResume();else if(v==='mathFlashReveal')mathFlashReveal();else if(v==='mathFlashKnown')mathFlashKnown();else if(v==='mathFlashAgain')mathFlashAgain();else if(v==='mathFlashReviewKnown')mathFlashReviewKnown();else if(v==='mathFlashReviewAgain')mathFlashReviewAgain();else if(/^mathName[0-3]$/.test(v))mathSetName(Number(v.slice(-1)));else if(/^mathStart[012]$/.test(v))mathStart(Number(v.slice(-1)));else if(/^mathResume[012]$/.test(v))mathStart(Number(v.slice(-1)),true);else return false;return true;}
+
+document.addEventListener('click',e=>{const ma=e.target.closest('[data-mathanswer]');if(ma){mathAnswer(Number(ma.dataset.mathanswer));return;}const mathButton=e.target.closest('[data-action]');if(mathButton&&mathAction(mathButton.dataset.action))return;const a=e.target.closest('[data-action]'),ans=e.target.closest('[data-answer]'),sa=e.target.closest('[data-soloanswer]');if(ans){answer(Number(ans.dataset.answer));return;}if(sa){soloAnswer(Number(sa.dataset.soloanswer));return;}if(!a)return;const v=a.dataset.action;if(v==='home')home();else if(v==='host'||v==='createRoom'||v==='dashboard'||v==='start'||v==='reset')return;else if(v==='join')joinForm();else if(v==='enter')enter();else if(['start','reset'].includes(v))hostAction(v);else if(v==='solo')soloChooseName();else if(v==='dashboard')void showDashboard();else if(v==='soloChangeName')soloChooseName();else if(v==='soloMistakes')showMyMistakes();else if(v==='soloHome')soloHome();else if(v==='grammarMenu')grammarMenu();else if(v==='grammarStation0')grammarStationMenu(0);else if(v==='grammarStation1')grammarStationMenu(1);else if(/^grammarTask\d+$/.test(v)){const n=Number(v.slice(11));if(grammarStation!==null&&n<GRAMMAR[grammarStation].tasks.length)grammarRender(grammarStation,n);}else if(v==='grammarCheck')grammarCheck();else if(v==='grammarReveal')grammarReveal();else if(v==='grammarClear')grammarClear();else if(v==='grammarBack')grammarStationMenu(grammarStation);else if(v==='gap0')gapRender(0);else if(v==='gap1')gapRender(1);else if(v==='gapCheck')gapCheck();else if(v==='gapClear')gapClear();else if(/^soloName[0-3]$/.test(v))soloSetName(Number(v.slice(-1)));else if(/^soloStart[012]$/.test(v))soloStart(Number(v.slice(-1)));else if(/^soloResume[012]$/.test(v))soloResume(Number(v.slice(-1)));else if(v==='soloNext')soloNext();});
 document.addEventListener('input',e=>{if(e.target.matches('[data-gap]'))gapCollect();if(e.target.matches('[data-grammar]'))grammarCollect();});
 document.addEventListener('change',e=>{if(e.target.matches('[data-grammar]'))grammarCollect();});
 document.addEventListener('focusout',e=>{if(e.target.matches('[data-grammar]'))grammarCollect();});
 window.addEventListener('pagehide',()=>grammarCollect());
-home();try{const fb=initializeApp(firebaseConfig),auth=getAuth(fb);db=getDatabase(fb);onAuthStateChanged(auth,u=>{if(u)uid=u.uid;else signInAnonymously(auth).catch(e=>msg('Anmeldung fehlgeschlagen: '+e.message,true));});}catch(e){msg('Firebase-Konfiguration fehlerhaft: '+e.message,true);}
+home();try{const fb=initializeApp(firebaseConfig),auth=getAuth(fb);db=getDatabase(fb);onAuthStateChanged(auth,u=>{if(u){uid=u.uid;watchResets();}else{uid='';resetReady=false;if(resetUnsubscribe){resetUnsubscribe();resetUnsubscribe=null;}signInAnonymously(auth).catch(e=>msg('Anmeldung fehlgeschlagen: '+e.message,true));}});}catch(e){msg('Firebase-Konfiguration fehlerhaft: '+e.message,true);}
