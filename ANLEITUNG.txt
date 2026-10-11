@@ -1,0 +1,9 @@
+VOCAB BATTLE 3.0
+
+1. Neues GitHub-Repository mit dem Namen vocab-battle-3 erstellen (Public).
+2. Alle Dateien dieses ZIPs (nicht die ZIP selbst) ins Hauptverzeichnis hochladen.
+3. Settings > Pages > Deploy from a branch > main / root > Save.
+4. Schiedsrichter: https://luzyfer29-debug.github.io/vocab-battle-3/
+5. Kinder: https://luzyfer29-debug.github.io/vocab-battle-3/kinder.html
+
+WICHTIG: Es wird die vorhandene Firebase-Datenbank verwendet. Firebase-Sicherheitsregeln fuer Grammatik-Battles und getrenntes Zuruecksetzen muessen ggf. noch geprueft werden. Das alte GitHub-Repository bleibt unveraendert.
