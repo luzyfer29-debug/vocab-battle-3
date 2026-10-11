@@ -358,7 +358,8 @@ function soloHome(){
  grammarCollect();stopSoloHeartbeat();if(!soloName){soloChooseName();return;}solo=null;
  const battles=[0,1,2].map(b=>{const saved=soloSaved(b),done=saved?.index||0,reviewing=saved&&!saved.finished&&saved.review&&saved.wrong.length;return `<div class="solo-game"><div class="row"><h3>Battle ${b+1}</h3><span class="small">${done} von 30</span></div><p>Fragen erledigt${reviewing?` · 🔁 ${saved.wrong.length} wiederholen`:''}${saved?.finished?' · abgeschlossen':''}</p><div class="solo-actions">${btn(saved?'Neu beginnen':'Starten',`soloStart${b}`)}${saved&&!saved.finished?btn('Fortsetzen',`soloResume${b}`,'alt'):''}</div></div>`;}).join('');
  const exercises=[
-  ['📘 Grammatik · Station 1 & 2','Regeln verstehen und Grammatikaufgaben üben.','grammarMenu','Grammatik öffnen'],
+  ['📘 Grammatik · Station 1','Aufgaben 1–4 aus Station 1 selbstständig üben.','grammarStation0','Station 1 öffnen'],
+  ['📘 Grammatik · Station 2','Aufgaben 1–7 aus Station 2 selbstständig üben.','grammarStation1','Station 2 öffnen'],
   ['✍️ Lückentext 1 · Station 1','Wörter passend in den Text einsetzen.','gap0','Lückentext öffnen'],
   ['✍️ Lückentext 2 · Station 2','Sätze ergänzen und die Wörter wiederholen.','gap1','Lückentext öffnen']
  ].map(([title,description,action,label])=>`<div class="solo-game"><h3>${esc(title)}</h3><p>${esc(description)}</p><div class="solo-actions">${btn(label,action)}</div></div>`).join('');
