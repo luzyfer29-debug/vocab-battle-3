@@ -19,7 +19,7 @@
       games.after(card);
     }
     const firstHeading=app.querySelector('section.card h2');
-    if(mathJoinPending&&app.querySelector('#roomcode')&&firstHeading){
+    if(mathJoinPending&&app.querySelector('#roomcode')&&firstHeading&&firstHeading.textContent!=='🔢 Mathe-Battle beitreten'){
       firstHeading.textContent='🔢 Mathe-Battle beitreten';
     }
     if(firstHeading?.textContent.includes('Gemeinsam spielen'))mathJoinPending=false;
