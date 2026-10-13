@@ -6,6 +6,7 @@ import {firebaseConfig} from './firebase-config.js';
 import {BATTLES} from './questions.js';
 import {MATH_BATTLES} from './math-questions.js';
 import {FRACTION_MODULES} from './fractions-data.js';
+import {workedStepsHtml} from './math-steps.js';
 import {GRAMMAR} from './grammar-data.js';
 import {READING_TEXT_EN,READING_TEXT_DE,READING_ILLUSTRATION,READING_QUIZ,READING_TEXT_TASKS} from './reading-data.js';
 import {WRITING_TASKS,WRITING_BATTLE} from './writing-data.js';
@@ -96,14 +97,14 @@ function render(){if(!room)return;const oldAudio=document.querySelector('#listen
 if(role==='host'){
  if(stage==='lobby')s+=card(`<h2>Schiedsrichter</h2><p>${esc(roomTitle(m))} starten – ${roomQuestionCount(m)} Fragen mit je 15 Sekunden. Danach erscheint die Rangliste.</p>${btn('▶️ Battle starten','start')}`);
  if(stage==='question'){const a=room.answers?.[m.index]||{};s+=card(`<h2>Frage ${questionNumber} von ${roomQuestionCount(m)}</h2>${m.mode==='reading'?`<p class="muted">${q?.type==='heading'?'Exercise 1 · Match the headings':'Exercise 2 · Right, wrong or not in the text?'}</p>`:''}<p>${esc(q?.q||'')}</p><h2 id="countdown">${countdown()}</h2><p>Antworten: ${Object.keys(a).length} von ${players().length}</p><p class="muted">Automatische Auswertung nach 15 Sekunden</p>`);}
- if(stage==='reveal')s+=card(`<h2>Richtige Antwort</h2><p class="good">${esc(q?.options[q.correct]??'')}</p><h2 id="countdown">${countdown()}</h2>`);
+ if(stage==='reveal')s+=card(`<h2>Richtige Antwort</h2><p class="good">${esc(q?.options[q.correct]??'')}</p>${m.subject==='math'?workedStepsHtml(q,esc):''}<h2 id="countdown">${countdown()}</h2>`);
  if(stage==='finished')s+=card(`<h2>🏆 ${esc(roomTitle(m))} beendet!</h2><p>Rangliste nach ${roomQuestionCount(m)} Fragen:</p>${roster()}${m.mode==='reading'?readingTasksHtml():''}${btn('🔄 Neues Spiel','reset')}`);
  s+=card(btn('Zur Startseite','home','alt'));
 }else{
  const myAnswer=room.answers?.[m.index]?.[uid];
  if(stage==='lobby')s+=card('<h2>Warteraum</h2><p>Warte, bis der Schiedsrichter das Battle startet.</p>');
  if(stage==='question'&&q){const answered=myAnswer!==undefined;s+=card(`${m.mode==='reading'?`<p class="muted">${q.type==='heading'?'Exercise 1 · Match the headings':'Exercise 2 · Right, wrong or not in the text?'}</p>`:''}<h2>${esc(q.q)}</h2><h2 id="countdown">${countdown()}</h2><div class="answers">${q.options.map((o,i)=>`<button ${answered||Date.now()>=Number(m.deadline||0)?'disabled':''} data-answer="${i}" class="${answered&&Number(myAnswer.choice)===i?'picked':''}">${esc(o)}</button>`).join('')}</div><p class="muted">${answered?'Antwort abgegeben. Warte auf die Auswertung.':'Wähle eine Antwort innerhalb von 15 Sekunden.'}</p>`);}
- if(stage==='reveal')s+=card(`<h2>Auflösung</h2><p>Richtig: <strong class="good">${esc(q?.options[q.correct]??'')}</strong></p><h2 id="countdown">${countdown()}</h2>`);
+ if(stage==='reveal')s+=card(`<h2>Auflösung</h2><p>Richtig: <strong class="good">${esc(q?.options[q.correct]??'')}</strong></p>${m.subject==='math'?workedStepsHtml(q,esc):''}<h2 id="countdown">${countdown()}</h2>`);
  if(stage==='finished')s+=card(`<h2>🏆 ${esc(roomTitle(m))} geschafft!</h2><p>Die Rangliste steht oben.</p>${m.mode==='reading'?readingTasksHtml():''}`);
  s+=card(btn('Zur Startseite','home','alt'));
 }
