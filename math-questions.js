@@ -231,6 +231,68 @@ export const MATH_PROPORTIONAL_EXAM_BATTLE = [
 // Progress fields used by the existing per-child, per-battle mathProgress view.
 export const MATH_PROGRESS_FIELDS = ["done", "score", "mistakes", "finished", "updatedAt"];
 
+// Three interactive, classwork-style tests for proportional and
+// antiproportional relationships. Each item is worth two points.
+export const MATH_PROPORTIONAL_CLASSWORKS = [
+ {
+  title:'Klassenarbeit 1 · Grundlagen und Tabellen',duration:45,points:30,questions:[
+   {q:'Welche Zuordnung ist proportional?',options:['Anzahl der Brötchen und Gesamtpreis bei gleichem Stückpreis','Anzahl der Arbeiter und benötigte Arbeitszeit','Alter einer Person und Körpergröße','Uhrzeit und Temperatur'],correct:0,explanation:'Bei gleichem Stückpreis wächst der Gesamtpreis im selben Verhältnis wie die Anzahl der Brötchen.',points:2},
+   {q:'Welche Zuordnung ist antiproportional?',options:['Kilogramm Äpfel und Preis bei gleichem Kilopreis','Anzahl der Arbeiter und Arbeitszeit für dieselbe Arbeit','Fahrzeit und Strecke bei gleicher Geschwindigkeit','Anzahl gleicher Hefte und Gesamtpreis'],correct:1,explanation:'Je mehr Arbeiter mithelfen, desto weniger Arbeitszeit wird benötigt. Das Produkt aus Arbeiterzahl und Zeit bleibt gleich.',points:2},
+   {q:'Bei einer proportionalen Zuordnung gilt: 4 Hefte kosten 10 €. Wie viel kostet ein Heft?',options:['2 €','2,50 €','4 €','6 €'],correct:1,explanation:'Preis für ein Heft: 10 € : 4 = 2,50 €.',points:2},
+   {q:'Ein Heft kostet 2,50 €. Was kosten 7 Hefte?',options:['15 €','17,50 €','20 €','22,50 €'],correct:1,explanation:'Ein Heft kostet 2,50 €. Daher: 7 · 2,50 € = 17,50 €.',points:2},
+   {q:'3 Arbeiter brauchen 8 Stunden. Wie lange brauchen 6 Arbeiter für dieselbe Arbeit?',options:['2 Stunden','4 Stunden','8 Stunden','16 Stunden'],correct:1,explanation:'Das Produkt bleibt gleich: 3 · 8 = 24 Arbeiterstunden. 24 : 6 = 4 Stunden.',points:2},
+   {q:'Bei einer proportionalen Zuordnung ist y : x = 3. Welcher y-Wert gehört zu x = 7?',options:['10','18','21','24'],correct:2,explanation:'Der Faktor ist 3. Also y = 3 · 7 = 21.',points:2},
+   {q:'Bei einer antiproportionalen Zuordnung gilt x · y = 36. Wie groß ist y bei x = 9?',options:['3','4','9','27'],correct:1,explanation:'Das Produkt bleibt 36. Daher y = 36 : 9 = 4.',points:2},
+   {q:'Welche Tabelle zeigt eine proportionale Zuordnung?',options:['x: 2, 4, 6 · y: 5, 10, 15','x: 2, 4, 6 · y: 12, 6, 4','x: 1, 2, 3 · y: 4, 5, 7','x: 2, 4, 6 · y: 3, 8, 10'],correct:0,explanation:'In der ersten Tabelle ist y : x immer 2,5. Der Quotient bleibt konstant.',points:2},
+   {q:'Bei einer proportionalen Zuordnung wird x verdoppelt. Was passiert mit y?',options:['y halbiert sich','y bleibt gleich','y verdoppelt sich','y vervierfacht sich'],correct:2,explanation:'Bei Proportionalität ändern sich beide Größen im gleichen Verhältnis. Wird x verdoppelt, verdoppelt sich auch y.',points:2},
+   {q:'5 Flaschen kosten 7,50 €. Wie viel kosten 2 Flaschen?',options:['2 €','3 €','3,50 €','5 €'],correct:1,explanation:'Eine Flasche kostet 7,50 € : 5 = 1,50 €. Für 2 Flaschen: 2 · 1,50 € = 3 €.',points:2},
+   {q:'Bei einer antiproportionalen Zuordnung bleibt welcher Wert gleich?',options:['Die Summe','Die Differenz','Der Quotient','Das Produkt'],correct:3,explanation:'Bei antiproportionalen Zuordnungen ist das Produkt konstant: x · y = k.',points:2},
+   {q:'4 Maschinen erledigen einen Auftrag in 15 Minuten. Wie lange brauchen 10 gleiche Maschinen?',options:['4 Minuten','6 Minuten','10 Minuten','37,5 Minuten'],correct:1,explanation:'4 · 15 = 60 Maschinenminuten. 60 : 10 = 6 Minuten.',points:2},
+   {q:'Welche Rechnung passt zu 6 kg Kartoffeln für 9 € und 10 kg zum gleichen Kilopreis?',options:['9 : 6 · 10','9 · 6 : 10','6 + 9 + 10','10 : 9 · 6'],correct:0,explanation:'Zuerst den Preis pro Kilogramm berechnen: 9 : 6. Danach mit 10 kg multiplizieren: 9 : 6 · 10 = 15 €.',points:2},
+   {q:'Zu einer antiproportionalen Tabelle gehören x = 2 und y = 18. Welcher y-Wert gehört zu x = 6?',options:['3','6','12','54'],correct:1,explanation:'Das Produkt ist 2 · 18 = 36. Für x = 6 gilt y = 36 : 6 = 6.',points:2},
+   {q:'Der Graph einer proportionalen Zuordnung verläuft durch den Ursprung und durch (2|6). Welcher Faktor k gehört dazu?',options:['2','3','4','6'],correct:1,explanation:'k = y : x = 6 : 2 = 3. Der Graph gehört zur Gleichung y = 3x.',points:2}
+  ]
+ },
+ {
+  title:'Klassenarbeit 2 · Dreisatz und Sachaufgaben',duration:45,points:30,questions:[
+   {q:'3 kg Äpfel kosten 7,50 €. Was kosten 8 kg?',options:['15 €','18 €','20 €','22,50 €'],correct:2,explanation:'1 kg kostet 7,50 € : 3 = 2,50 €. Für 8 kg: 8 · 2,50 € = 20 €.',points:2},
+   {q:'Für 4 Personen braucht man 300 g Nudeln. Wie viel braucht man für 7 Personen?',options:['450 g','500 g','525 g','600 g'],correct:2,explanation:'Pro Person: 300 g : 4 = 75 g. Für 7 Personen: 75 · 7 = 525 g.',points:2},
+   {q:'5 Arbeiter brauchen 12 Stunden. Wie lange brauchen 8 Arbeiter für dieselbe Arbeit?',options:['6 Stunden','7,5 Stunden','8 Stunden','19,2 Stunden'],correct:1,explanation:'5 · 12 = 60 Arbeiterstunden. 60 : 8 = 7,5 Stunden.',points:2},
+   {q:'Ein Zug fährt mit gleichbleibender Geschwindigkeit in 2,5 Stunden 200 km. Wie weit fährt er in 4 Stunden?',options:['250 km','300 km','320 km','400 km'],correct:2,explanation:'Pro Stunde fährt der Zug 200 : 2,5 = 80 km. In 4 Stunden: 80 · 4 = 320 km.',points:2},
+   {q:'6 Notizbücher kosten 10,80 €. Was kosten 11 Notizbücher?',options:['16,80 €','18 €','19,80 €','21,60 €'],correct:2,explanation:'Ein Notizbuch kostet 10,80 € : 6 = 1,80 €. Für 11 Stück: 11 · 1,80 € = 19,80 €.',points:2},
+   {q:'Ein Vorrat reicht für 12 Personen 10 Tage. Wie lange reicht er für 15 Personen?',options:['6 Tage','8 Tage','9 Tage','12,5 Tage'],correct:1,explanation:'Der Vorrat umfasst 12 · 10 = 120 Personentage. 120 : 15 = 8 Tage.',points:2},
+   {q:'Ein Auto verbraucht auf 100 km 6 Liter. Wie viel verbraucht es auf 350 km?',options:['18 l','21 l','24 l','35 l'],correct:1,explanation:'350 km sind das 3,5-Fache von 100 km. 6 · 3,5 = 21 Liter.',points:2},
+   {q:'4 gleiche Pumpen leeren ein Becken in 18 Minuten. Wie lange brauchen 6 Pumpen?',options:['9 Minuten','12 Minuten','15 Minuten','27 Minuten'],correct:1,explanation:'4 · 18 = 72 Pumpenminuten. 72 : 6 = 12 Minuten.',points:2},
+   {q:'Auf einer Karte entsprechen 3 cm genau 12 km. Wie weit sind 7 cm in Wirklichkeit?',options:['21 km','24 km','28 km','36 km'],correct:2,explanation:'1 cm entspricht 12 : 3 = 4 km. 7 cm entsprechen 7 · 4 = 28 km.',points:2},
+   {q:'Der Graph einer proportionalen Zuordnung geht durch (0|0) und (4|12). Welche Gleichung passt?',options:['y = 3x','y = 4x','y = x + 8','y = 12x'],correct:0,explanation:'Der Faktor ist 12 : 4 = 3. Deshalb lautet die Gleichung y = 3x.',points:2},
+   {q:'Welche Aussage beschreibt eine antiproportionale Zuordnung?',options:['Bei doppelter Strecke verdoppelt sich bei gleicher Geschwindigkeit die Zeit.','Bei doppelter Arbeiterzahl halbiert sich die benötigte Zeit.','Bei doppelter Warenmenge verdoppelt sich der Preis.','Bei doppelter Zeit verdoppelt sich die Strecke.'],correct:1,explanation:'Bei einer festen Arbeit bleibt Arbeiterzahl · Zeit gleich. Verdoppelt sich die Arbeiterzahl, halbiert sich die Zeit.',points:2},
+   {q:'6 m Stoff kosten 42 €. Was kosten 2,5 m?',options:['15 €','17,50 €','21 €','24,50 €'],correct:1,explanation:'1 m kostet 42 € : 6 = 7 €. Für 2,5 m: 2,5 · 7 € = 17,50 €.',points:2},
+   {q:'8 Handwerker brauchen 9 Tage. Wie viele Tage brauchen 12 Handwerker?',options:['4 Tage','6 Tage','8 Tage','13,5 Tage'],correct:1,explanation:'8 · 9 = 72 Handwerkertage. 72 : 12 = 6 Tage.',points:2},
+   {q:'Bei einer antiproportionalen Zuordnung gilt x · y = 84. Welcher Wert gehört zu x = 7?',options:['7','12','21','77'],correct:1,explanation:'y = 84 : 7 = 12.',points:2},
+   {q:'Ein Graph geht durch (1|8), (2|4) und (4|2). Welche Zuordnung passt?',options:['Proportional, denn y : x = 8','Antiproportional, denn x · y = 8','Proportional, denn x · y = 8','Keine Zuordnung'],correct:1,explanation:'Die Produkte sind 1 · 8 = 8, 2 · 4 = 8 und 4 · 2 = 8. Der Graph gehört zu einer antiproportionalen Zuordnung.',points:2}
+  ]
+ },
+ {
+  title:'Klassenarbeit 3 · Gemischte Prüfung',duration:45,points:30,questions:[
+   {q:'Eine Zuordnung hat die Tabelle x: 2, 5, 8 · y: 6, 15, 24. Welche Art liegt vor?',options:['Proportional','Antiproportional','Keine der beiden','Konstant'],correct:0,explanation:'Die Quotienten sind 6 : 2 = 3, 15 : 5 = 3 und 24 : 8 = 3. Der Quotient bleibt gleich: proportional.',points:2},
+   {q:'Eine Zuordnung hat x: 3, 6, 9 · y: 24, 12, 8. Welche Art liegt vor?',options:['Proportional','Antiproportional','Keine der beiden','Konstant'],correct:1,explanation:'Die Produkte sind 3 · 24 = 72, 6 · 12 = 72 und 9 · 8 = 72. Das Produkt bleibt gleich: antiproportional.',points:2},
+   {q:'7 gleiche Eintrittskarten kosten 56 €. Wie viel kosten 12 Karten?',options:['84 €','92 €','96 €','112 €'],correct:2,explanation:'Eine Karte kostet 56 € : 7 = 8 €. Für 12 Karten: 12 · 8 € = 96 €.',points:2},
+   {q:'9 Personen brauchen 4 Stunden für eine Arbeit. Wie lange brauchen 6 Personen?',options:['2 Stunden','6 Stunden','7 Stunden','12 Stunden'],correct:1,explanation:'9 · 4 = 36 Personenstunden. 36 : 6 = 6 Stunden.',points:2},
+   {q:'Bei einer proportionalen Zuordnung gilt y = 4x. Wie groß ist y bei x = 6,5?',options:['10,5','24','26','30'],correct:2,explanation:'y = 4 · 6,5 = 26.',points:2},
+   {q:'Bei einer antiproportionalen Zuordnung ist x · y = 60. Wie groß ist x bei y = 5?',options:['10','12','15','55'],correct:1,explanation:'x = 60 : 5 = 12.',points:2},
+   {q:'Welche Tabelle gehört zu y = 2,5x?',options:['x: 2, 4, 8 · y: 5, 10, 20','x: 2, 4, 8 · y: 20, 10, 5','x: 2, 4, 8 · y: 4, 8, 10','x: 2, 4, 8 · y: 5, 12, 20'],correct:0,explanation:'Setze die x-Werte ein: 2,5 · 2 = 5; 2,5 · 4 = 10; 2,5 · 8 = 20.',points:2},
+   {q:'Welche Gleichung passt zu einer antiproportionalen Zuordnung mit Produkt 48?',options:['y = 48x','y = x + 48','y = 48 : x','y = x : 48'],correct:2,explanation:'Bei antiproportionaler Zuordnung gilt x · y = 48. Nach y aufgelöst: y = 48 : x.',points:2},
+   {q:'Ein Graph einer proportionalen Zuordnung verläuft durch (3|12). Welcher weitere Punkt liegt darauf?',options:['(4|16)','(4|15)','(6|18)','(12|3)'],correct:0,explanation:'Der Faktor k = 12 : 3 = 4. Für x = 4 gilt y = 4 · 4 = 16.',points:2},
+   {q:'Ein Graph einer antiproportionalen Zuordnung geht durch (4|9). Welcher Punkt gehört ebenfalls dazu?',options:['(6|6)','(6|12)','(8|5)','(9|9)'],correct:0,explanation:'Das Produkt beträgt 4 · 9 = 36. Für x = 6 ist y = 36 : 6 = 6.',points:2},
+   {q:'10 Personen stellen Tische in 15 Minuten auf. Wie lange brauchen 6 Personen für dieselbe Arbeit?',options:['9 Minuten','15 Minuten','25 Minuten','30 Minuten'],correct:2,explanation:'Personenzahl und Zeit sind antiproportional. 10 · 15 = 150 Personenminuten. 150 : 6 = 25 Minuten.',points:2},
+   {q:'Ein Rezept für 5 Personen enthält 750 ml Milch. Wie viel Milch braucht man für 8 Personen?',options:['900 ml','1.000 ml','1.200 ml','1.500 ml'],correct:2,explanation:'Pro Person: 750 ml : 5 = 150 ml. Für 8 Personen: 150 · 8 = 1.200 ml.',points:2},
+   {q:'Bei welcher Situation ist der Dreisatz antiproportional?',options:['Mehr Kilometer bei gleicher Geschwindigkeit brauchen mehr Zeit.','Mehr gleiche Waren kosten mehr Geld.','Mehr Arbeiter erledigen dieselbe Arbeit in kürzerer Zeit.','Mehr Liter pro Minute füllen einen Tank schneller.'],correct:2,explanation:'Bei gleicher Arbeit bleibt Arbeiterzahl · Zeit konstant. Mehr Arbeiter bedeuten weniger benötigte Zeit.',points:2},
+   {q:'Eine Maschine füllt 240 Flaschen in 6 Minuten. Wie viele Flaschen füllt sie in 15 Minuten?',options:['400','480','600','720'],correct:2,explanation:'Pro Minute: 240 : 6 = 40 Flaschen. In 15 Minuten: 40 · 15 = 600 Flaschen.',points:2},
+   {q:'Eine proportionale Gerade geht durch (0|0) und (5|20). Wie lautet ihre Gleichung?',options:['y = 4x','y = 5x','y = x + 15','y = 20x'],correct:0,explanation:'Der Proportionalitätsfaktor ist 20 : 5 = 4. Die Gleichung lautet y = 4x.',points:2}
+  ]
+ }
+];
+
 
 // Lernkarten aus dem Arbeitsblatt-PDF: Begriff aufdecken, Erklärung anzeigen.
 export const PROPORTIONAL_WORKSHEET_CARDS = [

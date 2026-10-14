@@ -1,4 +1,4 @@
-Update 14.10.2026 - Mathe Klasse 7 NRW, Rationale Zahlen und kompakte Live-Ansicht mit drei Oberpunkten
+Update 15.10.2026 – Eltern-Live-Übersicht und Proportional-/Antiproportional-Klassenarbeiten
 
 1. Dieses ZIP entpacken.
 2. Alle Dateien aus dem Ordner vocab-battle-3-main in das Hauptverzeichnis des vorhandenen GitHub-Repositories vocab-battle-3 hochladen.
@@ -6,6 +6,11 @@ Update 14.10.2026 - Mathe Klasse 7 NRW, Rationale Zahlen und kompakte Live-Ansic
 4. Kinderseite öffnen: https://luzyfer29-debug.github.io/vocab-battle-3/kinder.html
 5. Eltern-/Schiedsrichterseite öffnen: https://luzyfer29-debug.github.io/vocab-battle-3/
 
-Neu: In der Eltern-Live-Übersicht stehen drei gleich große Oberpunkte: Mathe Bruchrechnung, Mathe Rationale Zahlen und Englisch. Die sechs Englisch-Bereiche erscheinen erst nach dem Öffnen von Englisch. Alle Bereiche sind kompakt, farblich unterscheidbar und aufklappbar. Die Mathe-Aufgaben heißen einheitlich „Rationale Zahlen · Aufgabe 1“ bis „Aufgabe 4“. Fortschritt und Fehlerlösungen sind je Kind sichtbar.
+Eltern-Live-Übersicht
+- Die Themen sind fachlich getrennt: Bruchrechnung, Mathe-Klassenarbeit, Rationale Zahlen, Proportional / Antiproportional und Englisch.
+- Proportional / Antiproportional steht als eigener Bereich und enthält das Übungsbattle sowie drei Klassenarbeiten.
+- Jede der drei Klassenarbeiten hat 15 Aufgaben, 30 Punkte und eine empfohlene Arbeitszeit von 45 Minuten.
+- Fortschritt und Fehlerlösungen sind je Kind sichtbar; die Lernstände lassen sich einzeln zurücksetzen.
 
-Die bisherige Firebase-Konfiguration bleibt erhalten. Die neue Übung speichert den Lernstand wie die vorhandenen Bruchthemen im mathProgress-Pfad. Im Proportional-/Antiproportional-Block stehen das Arbeitsblatt und zusätzlich die angehängten Lernkarten als getrennte PDF-Links bereit.
+Wichtig für die Online-Lernstände
+Die Datei firebase-regeln-komplett-grammatik.json enthält die erweiterten Firebase-Regeln für battle8 bis battle10 und die drei einzelnen Rücksetzungen. Damit die neuen Klassenarbeiten online in der Live-Übersicht gespeichert werden, muss diese Regeldatei zusätzlich in der Firebase Console unter Realtime Database → Rules übernommen und gespeichert werden. Die vorhandene Firebase-Konfiguration bleibt erhalten.
