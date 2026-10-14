@@ -1,3 +1,5 @@
+import {FRACTION_MODULES} from './fractions-data.js';
+
 // Original task bank aligned to the eight visible Sofatutor chapter headings
 // for rationale numbers, fractions, decimals and powers of ten (Grade 7 NRW).
 // Stable topic/task IDs support solo learning, battles and per-topic progress.
@@ -177,6 +179,18 @@ export const MATH_BATTLES = [
   appQuestions.slice(30, 60),
   [...appQuestions.slice(60, 80), ...reviewQuestions],
 ];
+
+// Mixed multiplayer class test used by both referee and kids pages.
+const examRationalQuestions = [
+  ...MATH_BATTLES[0].slice(0, 5),
+  ...MATH_BATTLES[1].slice(5, 10),
+];
+const examFractionQuestions = FRACTION_MODULES.slice(0, 5).flatMap(module =>
+  module.questions.slice(0, 2).map(question => ({
+    q: question.q, options: question.options, correct: question.correct,
+  })),
+);
+export const MATH_EXAM_BATTLE = [...examRationalQuestions, ...examFractionQuestions];
 
 // Progress fields used by the existing per-child, per-battle mathProgress view.
 export const MATH_PROGRESS_FIELDS = ["done", "score", "mistakes", "finished", "updatedAt"];
