@@ -1,7 +1,6 @@
 // Original task bank aligned to the eight visible Sofatutor chapter headings
 // for rationale numbers, fractions, decimals and powers of ten (Grade 7 NRW).
 // Stable topic/task IDs support solo learning, battles and per-topic progress.
-import {workedSteps} from './math-steps.js';
 const rawTopics = [
   {
     id: "rationale", title: "Rationale Zahlen – Einführung, Betrag und Grundrechenarten",
@@ -135,8 +134,7 @@ const rawTopics = [
 
 function makeTask(topicId, n, [question, options, correctIndex, explanation]) {
   return { id: `${topicId}-${String(n).padStart(2, "0")}`, question, options,
-    correctIndex, answer: options[correctIndex], explanation,
-    steps: workedSteps({question, explanation}), modes: ["lernen", "battle"] };
+    correctIndex, answer: options[correctIndex], explanation, modes: ["lernen", "battle"] };
 }
 
 export const MATH_TOPICS = rawTopics.map(({ id, title, learnHint, tasks }) => ({
@@ -164,12 +162,12 @@ const reviewTasks = [
 const appQuestions = MATH_TOPICS.flatMap(topic => topic.tasks.map(task => ({
   id: task.id, topicId: topic.id, topicTitle: topic.title,
   q: task.question, options: task.options, correct: task.correctIndex,
-  explanation: task.explanation, steps: task.steps,
+  explanation: task.explanation,
 })));
 const reviewQuestions = reviewTasks.map(task => ({
   id: task.id, topicId: "wiederholung", topicTitle: "Gemischte Wiederholung",
   q: task.question, options: task.options, correct: task.correctIndex,
-  explanation: task.explanation, steps: task.steps,
+  explanation: task.explanation,
 }));
 
 // The existing referee and kids app expects three 30-question battle arrays.

@@ -1,9 +1,9 @@
-VOCAB BATTLE 3.0
+Update 14.10.2026 - Bruchrechnung-Probeklassenarbeit
 
-1. Neues GitHub-Repository mit dem Namen vocab-battle-3 erstellen (Public).
-2. Alle Dateien dieses ZIPs (nicht die ZIP selbst) ins Hauptverzeichnis hochladen.
-3. Settings > Pages > Deploy from a branch > main / root > Save.
-4. Schiedsrichter: https://luzyfer29-debug.github.io/vocab-battle-3/
-5. Kinder: https://luzyfer29-debug.github.io/vocab-battle-3/kinder.html
+1. Dieses ZIP entpacken.
+2. Alle Dateien aus dem Ordner vocab-battle-3-main in das Hauptverzeichnis des vorhandenen GitHub-Repositories vocab-battle-3 hochladen.
+3. Gleichnamige Dateien ersetzen und die Änderungen mit „Commit changes“ speichern.
+4. Kinderseite öffnen: https://luzyfer29-debug.github.io/vocab-battle-3/kinder.html
+5. Eltern-/Schiedsrichterseite öffnen: https://luzyfer29-debug.github.io/vocab-battle-3/
 
-WICHTIG: Es wird die vorhandene Firebase-Datenbank verwendet. Firebase-Sicherheitsregeln fuer Grammatik-Battles und getrenntes Zuruecksetzen muessen ggf. noch geprueft werden. Das alte GitHub-Repository bleibt unveraendert.
+Die bisherige Firebase-Konfiguration bleibt erhalten. Die neue Übung speichert den Lernstand wie die vorhandenen Bruchthemen im mathProgress-Pfad.
