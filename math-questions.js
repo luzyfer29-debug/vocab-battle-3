@@ -188,9 +188,34 @@ const examRationalQuestions = [
 const examFractionQuestions = FRACTION_MODULES.slice(0, 5).flatMap(module =>
   module.questions.slice(0, 2).map(question => ({
     q: question.q, options: question.options, correct: question.correct,
+    explanation: question.explain,
   })),
 );
 export const MATH_EXAM_BATTLE = [...examRationalQuestions, ...examFractionQuestions];
+
+// Independent 20-question class test focused only on rational numbers.
+export const MATH_RATIONAL_EXAM_BATTLE = [
+  {q:'Welche Zahl ist am größten?',options:['−3,2','−2,8','−4','−3'],correct:1,explanation:'Bei negativen Zahlen ist die Zahl am größten, die am nächsten an 0 liegt. Es gilt −2,8 > −3 > −3,2 > −4.'},
+  {q:'Wie groß ist der Betrag von −7,5?',options:['−7,5','7,5','0','15'],correct:1,explanation:'Der Betrag ist der Abstand von 0. Deshalb gilt |−7,5| = 7,5.'},
+  {q:'Was ist die Gegenzahl von 3/4?',options:['3/4','−3/4','4/3','−4/3'],correct:1,explanation:'Bei der Gegenzahl wird nur das Vorzeichen umgekehrt. Die Gegenzahl von 3/4 ist −3/4.'},
+  {q:'Welche Zahl liegt zwischen −2 und −1?',options:['−2,5','−1,5','−0,5','1,5'],correct:1,explanation:'−1,5 liegt auf der Zahlengeraden genau zwischen −2 und −1.'},
+  {q:'Berechne: −8 + 13',options:['−21','−5','5','21'],correct:2,explanation:'Von −8 gehst du 13 Schritte nach rechts: −8 + 8 = 0, dann bleiben 5 Schritte. Ergebnis: 5.'},
+  {q:'Berechne: 6 + (−14)',options:['20','−20','8','−8'],correct:3,explanation:'6 + (−14) = 6 − 14. Da 14 um 8 größer als 6 ist, ist das Ergebnis −8.'},
+  {q:'Berechne: −3,5 + 1,2',options:['−4,7','−2,3','2,3','4,7'],correct:1,explanation:'Die Beträge vergleichen: 3,5 − 1,2 = 2,3. Die größere Zahl im Betrag ist 3,5 und gehört zur negativen Zahl. Ergebnis: −2,3.'},
+  {q:'Berechne: 4,8 − 7,1',options:['11,9','−11,9','2,3','−2,3'],correct:3,explanation:'4,8 − 7,1 = 4,8 + (−7,1). 7,1 − 4,8 = 2,3; die negative Zahl hat den größeren Betrag. Ergebnis: −2,3.'},
+  {q:'Berechne: −5 − (−9)',options:['−14','−4','4','14'],correct:2,explanation:'Minus eine negative Zahl wird zu plus: −5 − (−9) = −5 + 9 = 4.'},
+  {q:'Berechne: −12 − 5',options:['−17','−7','7','17'],correct:0,explanation:'−12 − 5 = −12 + (−5). Beide Zahlen sind negativ, also Beträge addieren und das Minuszeichen behalten: −(12 + 5) = −17.'},
+  {q:'Berechne: (−4) · 6',options:['−24','−10','10','24'],correct:0,explanation:'Unterschiedliche Vorzeichen ergeben ein negatives Produkt. 4 · 6 = 24, also ist (−4) · 6 = −24.'},
+  {q:'Berechne: (−7) · (−3)',options:['−21','−10','10','21'],correct:3,explanation:'Gleiche Vorzeichen ergeben ein positives Produkt. 7 · 3 = 21, also ist (−7) · (−3) = 21.'},
+  {q:'Berechne: (−56) : 8',options:['−8','−7','7','8'],correct:1,explanation:'Unterschiedliche Vorzeichen ergeben ein negatives Ergebnis. 56 : 8 = 7, daher ist (−56) : 8 = −7.'},
+  {q:'Berechne: (−72) : (−9)',options:['−9','−8','8','9'],correct:2,explanation:'Gleiche Vorzeichen ergeben ein positives Ergebnis. 72 : 9 = 8, also ist (−72) : (−9) = 8.'},
+  {q:'Berechne: −3/4 + 1/2',options:['−1/4','1/4','−5/4','5/4'],correct:0,explanation:'Gemeinsamer Nenner 4: 1/2 = 2/4. Dann −3/4 + 2/4 = −1/4.'},
+  {q:'Berechne: −2/3 + 5/6',options:['−1/6','1/6','−3/2','3/2'],correct:1,explanation:'Gemeinsamer Nenner 6: −2/3 = −4/6. Dann −4/6 + 5/6 = 1/6.'},
+  {q:'Berechne: (−3/5) · 10',options:['−6','−3/50','6','3/50'],correct:0,explanation:'Schreibe 10 als 10/1: (−3/5) · (10/1) = −30/5. Kürzen durch 5 ergibt −6.'},
+  {q:'Berechne: (−4/7) : (2/7)',options:['−2','−8/49','2','2/7'],correct:0,explanation:'Beim Teilen durch einen Bruch multiplizierst du mit dem Kehrwert: (−4/7) · (7/2). Die 7 kürzt sich, −4/2 = −2.'},
+  {q:'Berechne: −3 + 4 · (−2)',options:['−14','−11','2','14'],correct:1,explanation:'Punktrechnung vor Strichrechnung: Zuerst 4 · (−2) = −8. Danach −3 + (−8) = −11.'},
+  {q:'Berechne: (−18 + 6) : (−3)',options:['−8','−4','4','8'],correct:2,explanation:'Zuerst die Klammer: −18 + 6 = −12. Danach −12 : (−3) = 4, weil gleiche Vorzeichen ein positives Ergebnis ergeben.'},
+];
 
 // Progress fields used by the existing per-child, per-battle mathProgress view.
 export const MATH_PROGRESS_FIELDS = ["done", "score", "mistakes", "finished", "updatedAt"];
