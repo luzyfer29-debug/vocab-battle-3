@@ -230,3 +230,37 @@ export const MATH_PROPORTIONAL_EXAM_BATTLE = [
 
 // Progress fields used by the existing per-child, per-battle mathProgress view.
 export const MATH_PROGRESS_FIELDS = ["done", "score", "mistakes", "finished", "updatedAt"];
+
+
+// Lernkarten aus dem Arbeitsblatt-PDF: Begriff aufdecken, Erklärung anzeigen.
+export const PROPORTIONAL_WORKSHEET_CARDS = [
+ {front:'Proportionale Zuordnung',back:'Eine proportionale Zuordnung liegt vor, wenn zwei Größen in einem konstanten Verhältnis zueinander stehen. Vervielfacht sich eine Größe, vervielfacht sich die andere im gleichen Verhältnis.'},
+ {front:'Antiproportionale Zuordnung',back:'Eine antiproportionale Zuordnung liegt vor, wenn das Produkt zweier Größen konstant bleibt. Wird eine Größe größer, wird die andere entsprechend kleiner.'},
+ {front:'Konstanter Faktor bei Proportionalität',back:'Der Proportionalitätsfaktor gibt an, um wie viel sich eine Größe ändert, wenn sich die andere um eine Einheit ändert.'},
+ {front:'Beispiel für proportionale Zuordnung',back:'Bleibt der Preis pro Kilogramm Äpfel gleich, ist der Gesamtpreis proportional zur gekauften Menge.'},
+ {front:'Beispiel für antiproportionale Zuordnung',back:'Erledigen 4 Arbeiter eine Arbeit in 6 Stunden, brauchen 2 Arbeiter doppelt so lange. Arbeit × Zeit bleibt gleich.'},
+ {front:'Graphische Darstellung der Proportionalität',back:'Der Graph einer proportionalen Zuordnung ist eine Gerade durch den Ursprung (0, 0).'},
+ {front:'Graphische Darstellung der Antiproportionalität',back:'Der Graph einer antiproportionalen Zuordnung ist eine Hyperbel. Das Produkt der beiden Größen bleibt konstant.'},
+ {front:'Formel für Proportionalität',back:'y = k × x. Dabei ist k der Proportionalitätsfaktor.'},
+ {front:'Formel für Antiproportionalität',back:'x × y = c. Dabei ist c eine konstante Zahl.'},
+ {front:'Unterschied zwischen proportional und antiproportional',back:'Bei proportionalen Zuordnungen ändern sich beide Größen im gleichen Verhältnis. Bei antiproportionalen Zuordnungen wird eine Größe größer, während die andere so kleiner wird, dass das Produkt gleich bleibt.'}
+];
+
+// Frage-Antwort-Karten aus dem Lernkarten-PDF.
+export const PROPORTIONAL_FLASH_CARDS = [
+ {front:'Was bedeutet ein proportionaler Zusammenhang?',back:'Zwei Größen ändern sich im gleichen Verhältnis. Verdoppelt sich die eine Größe, verdoppelt sich auch die andere.'},
+ {front:'Wie erkennt man eine proportionale Zuordnung an Zahlenwerten?',back:'Der Quotient aus den beiden Größen bleibt immer gleich: y : x = k.'},
+ {front:'Was ist eine antiproportionale Zuordnung?',back:'Das Produkt aus zwei Größen bleibt gleich: x × y = k. Wird eine Größe größer, wird die andere entsprechend kleiner.'},
+ {front:'Nenne ein Beispiel für eine proportionale Beziehung im Alltag.',back:'Bei gleichbleibendem Kilopreis kosten doppelt so viele Äpfel auch doppelt so viel.'},
+ {front:'Nenne ein Beispiel für eine antiproportionale Beziehung im Alltag.',back:'Bei einer festen Strecke gilt: Je schneller man fährt, desto kürzer ist die Fahrzeit. Geschwindigkeit × Zeit bleibt konstant.'},
+ {front:'Wie lautet die Formel für eine proportionale Beziehung?',back:'y = k × x. k ist der Proportionalitätsfaktor.'},
+ {front:'Wie lautet die Formel für eine antiproportionale Beziehung?',back:'x × y = k. k ist ein konstanter Wert.'},
+ {front:'Wie berechnet man k bei einer proportionalen Zuordnung?',back:'Man teilt y durch x: k = y : x.'},
+ {front:'Wie berechnet man k bei einer antiproportionalen Zuordnung?',back:'Man multipliziert die beiden Größen: k = x × y.'},
+ {front:'Was passiert, wenn sich bei einer antiproportionalen Zuordnung eine Größe verdoppelt?',back:'Die andere Größe halbiert sich, damit das Produkt konstant bleibt.'},
+ {front:'Wie erkennt man eine proportionale Funktion im Koordinatensystem?',back:'Ihr Graph ist eine Gerade, die durch den Ursprung (0, 0) verläuft.'},
+ {front:'Wie sieht der Graph einer antiproportionalen Funktion aus?',back:'Er ist eine Hyperbel, die sich den Achsen asymptotisch nähert.'},
+ {front:'Warum ist eine proportionale Zuordnung auch eine lineare Funktion?',back:'Ihr Graph ist eine Gerade durch den Ursprung und ihre Gleichung hat die Form y = kx.'},
+ {front:'Was bedeutet der Proportionalitätsfaktor k?',back:'k gibt an, um wie viel sich die zweite Größe ändert, wenn sich die erste Größe um eine Einheit ändert.'},
+ {front:'Wozu hilft das Verständnis proportionaler und antiproportionaler Zusammenhänge?',back:'Damit lassen sich Alltagssituationen wie Preise, Geschwindigkeiten und Arbeitszeiten besser verstehen und berechnen.'}
+];
