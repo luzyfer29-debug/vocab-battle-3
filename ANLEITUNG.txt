@@ -8,4 +8,4 @@ Update 14.10.2026 - Mathe Klasse 7 NRW, Rationale Zahlen und kompakte Live-Ansic
 
 Neu: In der Eltern-Live-Übersicht stehen drei gleich große Oberpunkte: Mathe Bruchrechnung, Mathe Rationale Zahlen und Englisch. Die sechs Englisch-Bereiche erscheinen erst nach dem Öffnen von Englisch. Alle Bereiche sind kompakt, farblich unterscheidbar und aufklappbar. Die Mathe-Aufgaben heißen einheitlich „Rationale Zahlen · Aufgabe 1“ bis „Aufgabe 4“. Fortschritt und Fehlerlösungen sind je Kind sichtbar.
 
-Die bisherige Firebase-Konfiguration bleibt erhalten. Die neue Übung speichert den Lernstand wie die vorhandenen Bruchthemen im mathProgress-Pfad.
+Die bisherige Firebase-Konfiguration bleibt erhalten. Die neue Übung speichert den Lernstand wie die vorhandenen Bruchthemen im mathProgress-Pfad. Im Proportional-/Antiproportional-Block stehen das Arbeitsblatt und zusätzlich die angehängten Lernkarten als getrennte PDF-Links bereit.
