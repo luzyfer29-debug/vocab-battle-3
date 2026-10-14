@@ -217,5 +217,16 @@ export const MATH_RATIONAL_EXAM_BATTLE = [
   {q:'Berechne: (−18 + 6) : (−3)',options:['−8','−4','4','8'],correct:2,explanation:'Zuerst die Klammer: −18 + 6 = −12. Danach −12 : (−3) = 4, weil gleiche Vorzeichen ein positives Ergebnis ergeben.'},
 ];
 
+// Probeklassenarbeit „Proportional und antiproportional“ aus dem bereitgestellten PDF.
+// Im Kids-Bereich werden die Aufgaben einzeln angezeigt; bei falscher Antwort
+// sehen die Kinder Lösung und vollständigen Rechenweg.
+export const MATH_PROPORTIONAL_EXAM_BATTLE = [
+  {q:'Welche Zuordnung ist proportional?',options:['Die Strecke wächst im gleichen Verhältnis wie die Fahrzeit.','Der Gesamtpreis bleibt gleich, egal wie viele Äpfel gekauft werden.','Je mehr Arbeiter mithelfen, desto kürzer ist die Arbeitszeit.','Die Seitenzahl eines Buches bleibt gleich, egal wie schnell man liest.'],correct:0,explanation:'Bei einer proportionalen Zuordnung werden beide Größen mit demselben Faktor vervielfacht. Verdoppelt sich die Fahrzeit bei gleichbleibender Geschwindigkeit, verdoppelt sich auch die Strecke. Die Arbeitszeit bei mehr Arbeitern ist antiproportional; die anderen Aussagen beschreiben keine proportionale Zuordnung.'},
+  {q:'Ein Auto fährt gleichbleibend schnell. In 2 Stunden fährt es 140 km. Wie weit fährt es in 3,5 Stunden?',options:['210 km','245 km','280 km','490 km'],correct:1,explanation:'Proportionale Zuordnung: zuerst den Wert für 1 Stunde berechnen. 140 km : 2 = 70 km pro Stunde. Dann auf 3,5 Stunden hochrechnen: 70 · 3,5 = 245 km.'},
+  {q:'Vier Arbeiter brauchen 12 Stunden. Wie lange brauchen 6 Arbeiter für dieselbe Arbeit?',options:['6 Stunden','8 Stunden','18 Stunden','24 Stunden'],correct:1,explanation:'Mehr Arbeiter brauchen weniger Zeit: antiproportionale Zuordnung. Die Arbeiterstunden bleiben gleich: 4 · 12 = 48. Für 6 Arbeiter: 48 : 6 = 8 Stunden. Probe: 6 · 8 = 48.'},
+  {q:'Ergänze die Regeln: Bei einer proportionalen Zuordnung bleiben die ______ gleich. Wird eine Größe größer, wird die andere im selben Verhältnis ______. Bei einer antiproportionalen Zuordnung wird die andere Größe ______.',options:['Summen · kleiner · größer','Quotienten · größer · kleiner','Produkte · größer · größer','Quotienten · kleiner · kleiner'],correct:1,explanation:'Bei proportionalen Zuordnungen bleibt der Quotient gleich: y : x = k. Beide Größen wachsen oder schrumpfen im selben Verhältnis. Bei antiproportionalen Zuordnungen bleibt das Produkt gleich: x · y = k. Wird eine Größe größer, wird die andere kleiner.'},
+  {q:'Ein Wasserhahn füllt einen Tank in 8 Stunden, ein zweiter in 12 Stunden. Wie lange brauchen beide zusammen? Welche Gleichung passt?',options:['x · (1/8 + 1/12) = 1; x = 4,8 Stunden','x · (8 + 12) = 1; x = 20 Stunden','1/8 + 1/12 = x; x = 5/24 Stunden','x · (1/8 − 1/12) = 1; x = 24 Stunden'],correct:0,explanation:'Die erste Leitung füllt pro Stunde 1/8 des Tanks, die zweite 1/12. Zusammen füllen sie pro Stunde 1/8 + 1/12 = 3/24 + 2/24 = 5/24 des Tanks. Gleichung: x · 5/24 = 1. Also x = 24/5 = 4,8 Stunden = 4 Stunden 48 Minuten.'},
+];
+
 // Progress fields used by the existing per-child, per-battle mathProgress view.
 export const MATH_PROGRESS_FIELDS = ["done", "score", "mistakes", "finished", "updatedAt"];
