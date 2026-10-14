@@ -312,9 +312,9 @@ function renderDashboard(englishEntries,mathEntries){
 .live-panel[open]>summary:after{content:'−'}
 .live-panel>summary strong{font-size:16px;color:var(--live-accent)}
 .live-panel-content{padding-top:8px}
-.live-panel-content h3{font-size:15px;margin:14px 0 8px}
-.live-panel-content .player{padding:9px 10px;margin:6px 0;font-size:13px}
-.live-panel-content table{font-size:12px;border-collapse:collapse}
+.live-panel-content h3{font-size:17px;margin:14px 0 8px}
+.live-panel-content .player{padding:10px 11px;margin:7px 0;font-size:15px}
+.live-panel-content table{font-size:14px;border-collapse:collapse}
 .live-panel-content th,.live-panel-content td{padding:7px 5px;border-bottom:1px solid #40536e}
 .fraction-dashboard>summary{display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer;list-style:none}
 .fraction-dashboard>summary::-webkit-details-marker,.fraction-topic>summary::-webkit-details-marker,.fraction-errors>summary::-webkit-details-marker{display:none}
@@ -323,10 +323,10 @@ function renderDashboard(englishEntries,mathEntries){
 .rational-dashboard{border-left-color:#c4b5fd;background:linear-gradient(135deg,#2c3c56,#1c2a40)}.rational-dashboard>summary strong,.rational-dashboard>summary:after{color:#c4b5fd}
 .english-dashboard{border-left-color:#7dd3fc;background:linear-gradient(135deg,#24334b,#1b2940)}.english-dashboard>summary strong{color:#7dd3fc}.english-dashboard>summary:after{color:#7dd3fc}
 .fraction-dashboard{border-left:5px solid #57d9c6;background:linear-gradient(135deg,#2c3c56,#1c2a40)}.fraction-dashboard>summary strong{font-size:19px;color:#76e4d3}
-.fraction-dashboard>summary span{font-size:12px;color:#c5c0e2;white-space:nowrap}
+.fraction-dashboard>summary span{font-size:14px;color:#c5c0e2;white-space:nowrap}
 .live-subject{margin:14px 0;border-radius:18px;min-height:74px;padding:17px 16px}
-.live-subject>summary strong{font-size:19px}
-.live-subject>summary span{font-size:13px}
+.live-subject>summary strong{font-size:21px}
+.live-subject>summary span{font-size:15px}
 .rational-overview{border-left-color:#c4b5fd;background:linear-gradient(135deg,#2c3c56,#1c2a40)}
 .rational-overview>summary strong,.rational-overview>summary:after{color:#c4b5fd}
 .proportional-overview{border-left-color:#62e2c2;background:linear-gradient(135deg,#234b57,#1c2a40)}
@@ -340,19 +340,19 @@ function renderDashboard(englishEntries,mathEntries){
 .live-reset>summary strong{color:#fda4af;font-size:16px}
 .live-reset-content{padding-top:8px}
 .fraction-topic{margin:10px 0;background:#30415d;border:1px solid #435770;border-left:5px solid var(--fraction-accent,#62e2c2);border-radius:13px;overflow:hidden}
-.fraction-topic>summary{padding:12px;cursor:pointer;list-style:none;font-weight:800}.fraction-title{display:block;padding-right:20px;color:var(--fraction-accent,#fff);font-size:15px}.fraction-title:before{content:'●';font-size:11px;margin-right:8px}
+.fraction-topic>summary{padding:12px;cursor:pointer;list-style:none;font-weight:800}.fraction-title{display:block;padding-right:20px;color:var(--fraction-accent,#fff);font-size:17px}.fraction-title:before{content:'●';font-size:12px;margin-right:8px}
 .fraction-topic>summary:after{content:'＋';float:right;color:#62e2c2}
 .fraction-topic[open]>summary:after{content:'−'}
 .fraction-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-top:8px}
-.fraction-kpi{background:#1c2a40;border-radius:8px;border-top:2px solid var(--fraction-accent,#62e2c2);padding:5px 4px;text-align:center;font-size:11px;font-weight:600;color:#e5e1f5;white-space:nowrap}
+.fraction-kpi{background:#1c2a40;border-radius:8px;border-top:2px solid var(--fraction-accent,#62e2c2);padding:5px 4px;text-align:center;font-size:12px;font-weight:600;color:#e5e1f5;white-space:nowrap}
 .fraction-children{padding:0 9px 9px}
 .fraction-child{padding:10px;margin:7px 0;background:#1c2a40}
-.fraction-child .row{font-size:13px;gap:6px}
+.fraction-child .row{font-size:14px;gap:6px}
 .fraction-child .bar{height:6px;margin-top:7px}.fraction-child .fill{background:var(--fraction-accent,#62e2c2)}
 .fraction-errors{margin-top:7px;padding:7px 9px;background:#30415d;border-radius:9px}
-.fraction-errors>summary{cursor:pointer;font-size:12px;font-weight:750;list-style:none}
-.fraction-error-item{padding:8px 0;border-top:1px solid #435770;font-size:12px}
-@media(max-width:390px){.fraction-dashboard>summary strong{font-size:17px}.fraction-kpi{font-size:10px}}
+.fraction-errors>summary{cursor:pointer;font-size:14px;font-weight:750;list-style:none}
+.fraction-error-item{padding:9px 0;border-top:1px solid #435770;font-size:14px}
+@media(max-width:390px){.fraction-dashboard>summary strong{font-size:19px}.fraction-kpi{font-size:11px}.live-subject>summary span{font-size:13px}}
 </style><details id="live-fractions" class="card fraction-dashboard live-subject"><summary><strong>➗ Mathe Bruchrechnung</strong><span>7 Themen · Live</span></summary><p class="muted small">Tippe ein Thema an, um Fortschritt und Fehler je Kind zu sehen.</p>${FRACTION_MODULES.map((m,topicIndex)=>{const accentColors=['#7dd3fc','#62e2c2','#ffd166','#fda4af','#c4b5fd','#ffcb87','#62e2c2'];const topicPeople=SOLO_NAMES.map(name=>{const p=latestNamedProgress(mathEntries,name,'fraction_'+m.id),active=p&&Date.now()-Number(p.updatedAt||0)<90000,done=p?Math.min(m.questions.length,Number(p.done)||0):0,errors=Object.entries(p?.mistakes||{}).filter(([,count])=>Number(count)>0),errorCount=errors.reduce((sum,[,count])=>sum+Number(count||0),0),percent=m.questions.length?Math.round(done/m.questions.length*100):0;const errorDetails=errors.length?'<details class="fraction-errors" data-live-key="fraction-errors-'+m.id+'-'+name+'"><summary>Fehler ansehen · '+errorCount+'</summary>'+errors.map(([index,count])=>{const q=m.questions[Number(index)];return q?'<div class="fraction-error-item"><strong>'+esc(q.q)+'</strong><p><strong>Richtige Lösung:</strong> '+esc(q.options[q.correct])+'</p><p class="muted" style="white-space:pre-line">'+esc(q.explain)+' · '+Number(count)+'× falsch</p></div>':'';}).join('')+'</details>':'<p class="muted small" style="margin:7px 0 0">Keine Fehler online erfasst.</p>';return {name,p,active,done,percent,errorDetails};});const compact=topicPeople.map(({name,p,done})=>'<span class="fraction-kpi">'+esc(name)+' '+(p?done+'/'+m.questions.length:'–')+'</span>').join('');const children=topicPeople.map(({name,p,active,done,percent,errorDetails})=>'<div class="player fraction-child"><div class="row"><strong>'+esc(name)+' '+(active?'🟢':'⚪')+'</strong><span>'+(p?done+'/'+m.questions.length+' · '+(Number(p.score)||0)+' Punkte'+(p.finished?' · fertig':''):'Noch keine Online-Daten')+'</span></div>'+(p?'<div class="bar"><div class="fill" style="width:'+percent+'%"></div></div>':'')+errorDetails+'</div>').join('');return '<details class="fraction-topic" style="--fraction-accent:'+accentColors[topicIndex%accentColors.length]+'" data-live-key="fraction-topic-'+m.id+'"><summary><span class="fraction-title">'+esc(m.title)+'</span><div class="fraction-kpis">'+compact+'</div></summary><div class="fraction-children">'+children+'</div></details>';}).join('')}</details>`;
 const grammarProgress=livePanel('🏆 Grammatik-Battle',`<p class="muted">Bewertete Aufgaben und Punkte aus den Mehrspieler-Runden.</p>${progressRows(englishEntries,'grammarStation',i=>gbQuestions(i).length)}`,'live-english-grammar','#62e2c2');
  const clozeProgress=livePanel('✏️ Lückentext-Battle',`<p class="muted">Bearbeitete Lücken und Punkte aus dem Solo-Training.</p>${progressRows(englishEntries,'clozeStation',i=>CLOZE_BATTLES[i].items.length)}`,'live-english-cloze','#ffcb87');
