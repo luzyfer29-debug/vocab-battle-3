@@ -1,8 +1,8 @@
 // Drei eigenständige Klassenarbeits-Simulationen für Mathematik, Klasse 7 NRW.
 // Jede Arbeit umfasst 15 Aufgaben à 2 Punkte (30 Punkte, Richtzeit 45 Minuten).
 // Die ausführlichen Lösungswege werden nach einer falschen Antwort angezeigt.
-const task = (q, options, correct, explanation) => ({
-  q, options, correct, explanation, points: 2,
+const task = (q, options, correct, explanation, visual) => ({
+  q, options, correct, explanation, points: 2, ...(visual ? { visual } : {}),
 });
 
 export const MATH_PROPORTIONAL_EXAMS = [
@@ -22,7 +22,7 @@ export const MATH_PROPORTIONAL_EXAMS = [
       task('Der Term lautet y = 3,5 · x. Welcher y-Wert gehört zu x = 8?', ['11,5', '24', '28', '35'], 2, 'Setze x = 8 ein: y = 3,5 · 8 = 28.'),
       task('Bei einer antiproportionalen Zuordnung ist k = 60. Wie groß ist y für x = 12?', ['5', '48', '72', '720'], 0, 'Es gilt y = k : x. Also y = 60 : 12 = 5. Probe: 12 · 5 = 60.'),
       task('Ein Taxi kostet 4 € Grundgebühr und zusätzlich 2 € je Kilometer. Welche Aussage stimmt?', ['Die Zuordnung ist proportional, weil der Preis steigt.', 'Die Zuordnung ist antiproportional, weil der Preis steigt.', 'Sie ist linear, aber nicht proportional.', 'Sie ist proportional, weil 2 € pro Kilometer gleich bleiben.'], 2, 'Der Term lautet Preis = 2 · Kilometer + 4. Die Gerade startet bei 4 € statt bei (0|0). Daher ist die Zuordnung linear, aber nicht proportional.'),
-      task('Welcher Punkt liegt sicher auf dem Graphen einer proportionalen Zuordnung?', ['(0 | 5)', '(0 | 0)', '(3 | 0)', '(2 | 1)'], 1, 'Der Graph einer proportionalen Zuordnung ist eine Gerade durch den Ursprung (0|0). Bei x = 0 ist auch y = 0.'),
+      task('Lies das Schaubild ab: Welcher y-Wert gehört zu x = 3?', ['6', '8', '9', '12'], 2, 'Der markierte Punkt bei x = 3 liegt bei y = 9. Das passt zur Geraden y = 3 · x.', 'prop-line'),
       task('Eine antiproportionale Tabelle enthält x = 6 und y = 8. Welches Produkt k gilt?', ['2', '14', '48', '64'], 2, 'Bei antiproportionalen Zuordnungen ist k = x · y. Also 6 · 8 = 48.'),
       task('Für eine proportionale Zuordnung gilt k = 4. Welcher y-Wert gehört zu x = 0?', ['0', '1', '4', 'Nicht bestimmbar'], 0, 'Der Term lautet y = 4 · x. Für x = 0 gilt y = 4 · 0 = 0.'),
       task('Welche Werte passen zu y = 5 · x?', ['x = 2, y = 7', 'x = 3, y = 15', 'x = 4, y = 9', 'x = 5, y = 20'], 1, 'Setze x = 3 ein: y = 5 · 3 = 15. Nur dieses Wertepaar erfüllt den Term.'),
@@ -46,7 +46,7 @@ export const MATH_PROPORTIONAL_EXAMS = [
       task('Ein Rezept für 4 Personen braucht 300 g Mehl. Wie viel Mehl brauchst du für 10 Personen?', ['600 g', '700 g', '750 g', '1.200 g'], 2, 'Mehl pro Person: 300 g : 4 = 75 g. Für 10 Personen: 75 g · 10 = 750 g.'),
       task('3 gleiche Pumpen leeren ein Becken in 12 Stunden. Wie lange brauchen 4 Pumpen?', ['8 Stunden', '9 Stunden', '12 Stunden', '16 Stunden'], 1, 'Pumpen · Stunden bleibt gleich: 3 · 12 = 36. Für 4 Pumpen: 36 : 4 = 9 Stunden.'),
       task('Für 5 m Stoff bezahlt Mia 42,50 €. Wie viel kosten 2 m?', ['8,50 €', '17,00 €', '21,25 €', '25,50 €'], 1, 'Preis pro Meter: 42,50 € : 5 = 8,50 €/m. Für 2 m: 8,50 € · 2 = 17,00 €.'),
-      task('Ein Drucker druckt 360 Seiten in 6 Minuten. Wie lange brauchen 2 gleiche Drucker für 360 Seiten?', ['3 Minuten', '6 Minuten', '12 Minuten', '180 Minuten'], 0, 'Bei derselben Seitenzahl gilt: Drucker · Zeit bleibt gleich. 1 Drucker · 6 min = 6 Druckerminuten. Mit 2 Druckern: 6 : 2 = 3 Minuten.'),
+      task('Lies das Schaubild ab: Welcher y-Wert gehört bei der antiproportionalen Zuordnung zu x = 6?', ['2', '3', '4', '8'], 2, 'Der Graph zeigt bei x = 6 den Wert y = 4. Die Probe bestätigt die Antiproportionalität: 6 · 4 = 24.', 'anti-curve'),
       task('12 Brötchen kosten 4,20 €. Was kosten 20 Brötchen?', ['6,00 €', '7,00 €', '7,20 €', '8,40 €'], 1, 'Ein Brötchen kostet 4,20 € : 12 = 0,35 €. Für 20 Stück: 20 · 0,35 € = 7,00 €.'),
       task('Eine Strecke von 180 km wird in 2,5 Stunden gefahren. Wie lange dauert eine 324 km lange Fahrt bei gleicher Geschwindigkeit?', ['3,5 Stunden', '4 Stunden', '4,5 Stunden', '5 Stunden'], 2, 'Geschwindigkeit: 180 : 2,5 = 72 km/h. Zeit: 324 : 72 = 4,5 Stunden.'),
       task('10 Helfer bauen eine Bühne in 6 Stunden auf. Wie lange brauchen 15 gleich schnelle Helfer?', ['3 Stunden', '4 Stunden', '5 Stunden', '9 Stunden'], 1, 'Gesamtarbeit: 10 · 6 = 60 Helferstunden. Bei 15 Helfern: 60 : 15 = 4 Stunden.'),
@@ -65,7 +65,7 @@ export const MATH_PROPORTIONAL_EXAMS = [
       task('Welche Tabelle zeigt eine antiproportionale Zuordnung?', ['x: 2, 4, 6; y: 3, 6, 9', 'x: 2, 4, 6; y: 12, 6, 4', 'x: 2, 4, 6; y: 5, 7, 9', 'x: 2, 4, 6; y: 12, 8, 4'], 1, 'Die Produkte sind 2·12 = 24, 4·6 = 24 und 6·4 = 24. Das Produkt bleibt gleich.'),
       task('Eine proportionale Zuordnung hat den Term y = 1,8 · x. Berechne y für x = 15.', ['16,8', '18', '27', '30'], 2, 'Einsetzen: y = 1,8 · 15 = 27.'),
       task('Bei einer antiproportionalen Zuordnung gilt k = 84. Berechne y für x = 7.', ['7', '12', '77', '588'], 1, 'Es gilt x · y = 84. Also y = 84 : 7 = 12.'),
-      task('Der Graph einer Zuordnung ist eine Gerade durch (0|0). Was kannst du sicher sagen?', ['Die Zuordnung ist proportional.', 'Die Zuordnung ist antiproportional.', 'Die Zuordnung ist keine Funktion.', 'Die Zuordnung ist immer fallend.'], 0, 'Eine proportionale Zuordnung wird als Gerade durch den Ursprung dargestellt. Eine antiproportionale Zuordnung hat bei positiven Werten eine gekrümmte Kurve.'),
+      task('Welche Aussage passt zum abgebildeten Graphen?', ['Proportional; der Quotient y : x bleibt 3.', 'Antiproportional; das Produkt x · y bleibt 24.', 'Linear, aber nicht proportional; der Startwert ist 3.', 'Weder proportional noch antiproportional.'], 1, 'Der Graph ist eine fallende Kurve. Abgelesene Punkte wie (3|8) und (6|4) haben dasselbe Produkt: 3 · 8 = 6 · 4 = 24. Daher ist die Zuordnung antiproportional.', 'anti-curve'),
       task('Der Punkt (4|10) liegt auf einem proportionalen Graphen. Welcher Punkt gehört ebenfalls dazu?', ['(8|20)', '(8|14)', '(2|10)', '(10|4)'], 0, 'Der Quotient ist k = 10 : 4 = 2,5. Für x = 8 gilt y = 2,5 · 8 = 20.'),
       task('Eine antiproportionale Tabelle enthält (3|16). Welcher y-Wert gehört zu x = 12?', ['4', '12', '19', '64'], 0, 'Zuerst k berechnen: 3 · 16 = 48. Dann y = 48 : 12 = 4.'),
       task('Ein Streamingdienst kostet 5 € Grundpreis und zusätzlich 2 € je Film. Welche Aussage ist richtig?', ['Proportional, weil jeder Film 2 € kostet.', 'Antiproportional, weil der Preis mit mehr Filmen steigt.', 'Linear, aber nicht proportional, weil schon bei 0 Filmen 5 € anfallen.', 'Weder linear noch proportional.'], 2, 'Der Term lautet Kosten = 2 · Filmzahl + 5. Der Preis steigt gleichmäßig, aber der Graph geht nicht durch den Ursprung. Deshalb linear, nicht proportional.'),

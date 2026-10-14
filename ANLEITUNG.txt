@@ -9,7 +9,7 @@ Update 15.10.2026 – Mathe Klasse 7 NRW: Proportional-/Antiproportional-Battle
 Neu in dieser Version:
 - Ein eigener Button „Klassenarbeit Proportional / Antiproportional“ in der Mathe-Auswahl.
 - Neues Proportional-/Antiproportional-Battle mit eigener Beitritts-Schaltfläche auf der Kinderseite und passender Raum-Erstellung beim Schiedsrichter. Der Schiedsrichter kann einen der sieben Themenbereiche auswählen.
-- Drei getrennte Klassenarbeits-Simulationen für Klasse 7 NRW. Jede Arbeit hat 15 Aufgaben, 45 Minuten Richtzeit und 30 Punkte.
+- Drei getrennte Klassenarbeits-Simulationen für Klasse 7 NRW. Jede Arbeit hat 15 Aufgaben, 45 Minuten Richtzeit und 30 Punkte. In jeder Arbeit ist nun auch eine echte Aufgabe zum Ablesen eines proportionalen oder antiproportionalen Graphen enthalten.
 - Bei falschen Antworten sehen die Kinder die richtige Lösung und den Rechenweg.
 - Fortschritt und Fehler jeder Arbeit werden getrennt in der Live-Übersicht angezeigt und lassen sich einzeln zurücksetzen.
 

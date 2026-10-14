@@ -4,7 +4,7 @@ import {getDatabase,ref,onValue,get,set,update,runTransaction,remove} from 'http
 import {firebaseConfig} from './firebase-config.js';
 import {BATTLES} from './questions.js';
 import {MATH_BATTLES,MATH_EXAM_BATTLE,MATH_RATIONAL_EXAM_BATTLE,MATH_PROPORTIONAL_EXAM_BATTLE,PROPORTIONAL_WORKSHEET_CARDS,PROPORTIONAL_FLASH_CARDS} from './math-questions.js?v=proportional-antiproportional-20261015j';
-import {MATH_PROPORTIONAL_EXAMS} from './proportional-exams.js?v=proportional-exams-20261015a';
+import {MATH_PROPORTIONAL_EXAMS} from './proportional-exams.js?v=proportional-exams-20261015b';
 import {PROPORTIONAL_PRACTICE_TOPICS} from './proportional-practice.js?v=proportional-topics-20261015a';
 const RATIONAL_MATH_TITLES=['Rationale Zahlen · Aufgabe 1','Rationale Zahlen · Aufgabe 2','Rationale Zahlen · Aufgabe 3','Rationale Zahlen · Aufgabe 4'];
 import {FRACTION_MODULES} from './fractions-data.js?v=20261014-probetest';
@@ -590,7 +590,7 @@ function mathQuestion(){
  const total=questions?questions.length:30,totalPoints=questions?questions.reduce((sum,q)=>sum+(Number(q.points)||10),0):300;
  if(mathRun.index>=total){mathRun.finished=true;mathSave();const title=proportionalExam?proportionalExam.title+' geschafft!':topic?topic.title+' geschafft!':isProportionalExam?'Proportional / Antiproportional geschafft!':isRationalExam?'Mathe Klassenarbeit Rationale Zahlen':isMixedExam?'Mathe-Klassenarbeit':'Rationale Zahlen geschafft!';app.innerHTML=card(`<h2>🏆 ${esc(title)}</h2><p>${mathRun.score} von ${totalPoints} Punkten</p>`+btn('Zur Übersicht','mathHome'));return;}
  const q=questions?questions[mathRun.index]:MATH_BATTLES[b][mathRun.index],title=proportionalExam?.title||topic?.title||(isProportionalExam?'Proportional / Antiproportional':isRationalExam?'Mathe Klassenarbeit Rationale Zahlen':isMixedExam?'Mathe-Klassenarbeit':RATIONAL_MATH_TITLES[b]);
- app.innerHTML=card(`<h2>🔢 ${esc(title)}</h2><p>Aufgabe ${mathRun.index+1}/${total} · ${mathRun.score} von ${totalPoints} Punkten</p><h2>${mathText(q.q)}</h2><div class="answers">${q.options.map((o,i)=>`<button data-mathanswer="${i}">${mathText(o)}</button>`).join('')}</div>`)+card(btn('Zur Mathe-Übersicht','mathHome','alt'));
+ app.innerHTML=card(`<h2>🔢 ${esc(title)}</h2><p>Aufgabe ${mathRun.index+1}/${total} · ${mathRun.score} von ${totalPoints} Punkten</p><h2>${mathText(q.q)}</h2>${proportionalExam?proportionalExamVisual(q.visual):''}<div class="answers">${q.options.map((o,i)=>`<button data-mathanswer="${i}">${mathText(o)}</button>`).join('')}</div>`)+card(btn('Zur Mathe-Übersicht','mathHome','alt'));
 }
 function mathAnswer(i){
  if(!mathRun)return;
