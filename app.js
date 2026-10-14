@@ -266,7 +266,7 @@ function renderDashboard(englishEntries,mathEntries){
  const liveOpenDetails=new Set([...app.querySelectorAll('details[open]')].map(el=>el.dataset.liveKey||el.id).filter(Boolean));
  const newest=(entries,includeFourth=false)=>{const latest={};for(const perDevice of Object.values(entries||{}))for(const [name,perBattle] of Object.entries(perDevice||{}))if(SOLO_NAMES.includes(name))for(const [battle,v] of Object.entries(perBattle||{})){if(!/^battle[123]$/.test(battle)&&!(includeFourth&&battle==='battle4'))continue;if(!v||typeof v!=='object')continue;const k=name+':'+battle;if(!latest[k]||Number(v.updatedAt)>Number(latest[k].updatedAt))latest[k]=v;}return latest;};
  const english=newest(englishEntries),math=newest(mathEntries,true),now=Date.now();
- const sections=[['🇬🇧 Englisch',english,false],['🔢 Mathe Klasse 7 NRW · Rationale Zahlen',math,true]].map(([heading,latest,isMath])=>{
+ const sections=[['🇬🇧 Vokabeln',english,false],['🔢 Mathe Klasse 7 NRW · Rationale Zahlen',math,true]].map(([heading,latest,isMath])=>{
   if(isMath){
    const colors=['#75d8ff','#b1ff6e','#ffd166','#ff9e9e'];
    const topics=[1,2,3,4].map(b=>{
