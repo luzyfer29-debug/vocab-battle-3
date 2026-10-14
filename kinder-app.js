@@ -3,7 +3,7 @@ import {getAuth,signInAnonymously,onAuthStateChanged} from 'https://www.gstatic.
 import {getDatabase,ref,onValue,get,set,update,runTransaction,remove} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js';
 import {firebaseConfig} from './firebase-config.js';
 import {BATTLES} from './questions.js';
-import {MATH_BATTLES,MATH_EXAM_BATTLE,MATH_RATIONAL_EXAM_BATTLE,MATH_PROPORTIONAL_EXAM_BATTLE,PROPORTIONAL_WORKSHEET_CARDS,PROPORTIONAL_FLASH_CARDS} from './math-questions.js?v=proportional-antiproportional-20261015h';
+import {MATH_BATTLES,MATH_EXAM_BATTLE,MATH_RATIONAL_EXAM_BATTLE,MATH_PROPORTIONAL_EXAM_BATTLE,PROPORTIONAL_WORKSHEET_CARDS,PROPORTIONAL_FLASH_CARDS} from './math-questions.js?v=proportional-antiproportional-20261015j';
 const RATIONAL_MATH_TITLES=['Rationale Zahlen · Aufgabe 1','Rationale Zahlen · Aufgabe 2','Rationale Zahlen · Aufgabe 3','Rationale Zahlen · Aufgabe 4'];
 import {FRACTION_MODULES} from './fractions-data.js?v=20261014-probetest';
 import {WRITING_TASKS} from './writing-data.js';
@@ -569,6 +569,25 @@ function mathFlashReviewAgain(){if(!mathRun||!mathRun.review||!mathRun.missed.le
 function mathMistakes(){const content=[0,1,2].map(b=>{const s=mathLoad(mathName,b),m=s?.mistakes||{};return `<h3>${RATIONAL_MATH_TITLES[b]}</h3>`+(Object.keys(m).length?Object.entries(m).map(([i,c])=>`<p>${mathText(MATH_BATTLES[b][Number(i)].q)} → <strong>${mathText(MATH_BATTLES[b][Number(i)].options[MATH_BATTLES[b][Number(i)].correct])}</strong> · ${c}× falsch</p>`).join(''):'<p>Noch keine Fehler.</p>');}).join('');const s=mathLoad(mathName,3),m=s?.mistakes||{};const cardErrors=Object.keys(m).map(i=>`<p>${mathText(MATH_CARDS[Number(i)]?.[0]||'')} → <strong>${mathText(MATH_CARDS[Number(i)]?.[1]||'')}</strong> · ${m[i]}× zum Wiederholen markiert</p>`).join('')||'<p>Noch keine Karten zum Wiederholen.</p>';const examErrors=(b,questions,title)=>{const state=mathLoad(mathName,b),items=Object.entries(state?.mistakes||{}).map(([i,count])=>{const q=questions[Number(i)];return q?`<p>${mathText(q.q)} → <strong>${mathText(q.options[q.correct])}</strong> · ${count}× falsch</p>`:'';}).join('')||'<p>Keine Fehler erfasst.</p>';return `<h3>${title}</h3>${items}`;};app.innerHTML=card(`<h2>📕 ${esc(mathName)} · Mathe-Fehlerliste</h2>${content}<h3>${RATIONAL_MATH_TITLES[3]}</h3>${cardErrors}${examErrors(4,MATH_EXAM_BATTLE,'Klassenarbeit Brüche')}${examErrors(5,MATH_RATIONAL_EXAM_BATTLE,'Klassenarbeit Rationale Zahlen')}${examErrors(6,MATH_PROPORTIONAL_EXAM_BATTLE,'Proportional / Antiproportional')}`)+card(btn('Zur Mathe-Übersicht','mathHome','alt'));}
 let proportionalStudyDeck='',proportionalStudyIndex=0,proportionalStudyRevealed=false;
 function mathProportionalStudyStart(deck){proportionalStudyDeck=deck;proportionalStudyIndex=0;proportionalStudyRevealed=false;mathProportionalStudyShow();window.scrollTo(0,0);}
+function mathProportionalIllustration(type){
+ const label={
+  'prop-table':'Gleicher Quotient: 3 : 1 = 6 : 2 = 3',
+  'anti-table':'Gleiches Produkt: 2 · 24 = 3 · 16 = 48',
+  'prop-graph':'Proportional: Gerade durch den Ursprung',
+  'anti-graph':'Antiproportional: fallende Hyperbel',
+  'apples':'Mehr Kilogramm kosten im gleichen Verhältnis mehr.',
+  'workers':'Mehr Arbeiter brauchen für dieselbe Arbeit weniger Zeit.'
+ }[type]||'';
+ let picture='';
+ if(type==='prop-table')picture='<table><tr><th>x</th><td>1</td><td>2</td><td>3</td><td>4</td></tr><tr><th>y</th><td>3</td><td>6</td><td>9</td><td>12</td></tr></table>';
+ else if(type==='anti-table')picture='<table><tr><th>Arbeiter</th><td>2</td><td>3</td><td>4</td><td>6</td></tr><tr><th>Stunden</th><td>24</td><td>16</td><td>12</td><td>8</td></tr></table>';
+ else if(type==='prop-graph')picture='<svg viewBox="0 0 260 150" role="img" aria-label="Gerade durch den Ursprung"><path class="grid" d="M35 20V125M75 20V125M115 20V125M155 20V125M195 20V125M35 20H225M35 55H225M35 90H225M35 125H225"/><path class="axis" d="M35 125H232M35 132V16"/><path class="prop-line" d="M35 125L215 30"/><text x="226" y="143">x</text><text x="22" y="20">y</text><text x="24" y="140">0</text></svg>';
+ else if(type==='anti-graph')picture='<svg viewBox="0 0 260 150" role="img" aria-label="Fallende Hyperbel"><path class="grid" d="M35 20V125M75 20V125M115 20V125M155 20V125M195 20V125M35 20H225M35 55H225M35 90H225M35 125H225"/><path class="axis" d="M35 125H232M35 132V16"/><path class="anti-line" d="M48 24C58 34 61 55 78 70S112 94 145 105S190 115 218 119"/><text x="226" y="143">x</text><text x="22" y="20">y</text><text x="24" y="140">0</text></svg>';
+ else if(type==='apples')picture='<div class="proportional-visual-pair"><div><span class="fruit-icons">🍎🍎</span><strong>2 kg = 5 €</strong></div><span class="visual-arrow">→</span><div><span class="fruit-icons">🍎🍎🍎🍎🍎</span><strong>5 kg = 12,50 €</strong></div></div>';
+ else if(type==='workers')picture='<div class="proportional-visual-pair"><div><span class="worker-icons">👷👷👷👷</span><strong>4 Arbeiter</strong><small>12 Stunden</small></div><span class="visual-arrow">→</span><div><span class="worker-icons">👷👷👷👷👷👷</span><strong>6 Arbeiter</strong><small>8 Stunden</small></div></div>';
+ if(!picture)return '';
+ return '<div class="proportional-study-visual" aria-label="Schaubild: '+label+'">'+picture+'<small>'+label+'</small></div>';
+}
 function mathProportionalStudyShow(){
  const cards=proportionalStudyDeck==='worksheet'?PROPORTIONAL_WORKSHEET_CARDS:PROPORTIONAL_FLASH_CARDS;
  const isWorksheet=proportionalStudyDeck==='worksheet';
@@ -577,9 +596,10 @@ function mathProportionalStudyShow(){
  const frontLabel=isWorksheet?'Begriff':'Frage';
  const backLabel=isWorksheet?'Erklärung':'Antwort';
  const percent=Math.round((proportionalStudyIndex+1)/cards.length*100);
- const answer=proportionalStudyRevealed?'<div class="proportional-learning-side proportional-learning-answer"><strong>'+backLabel+'</strong><p>'+esc(item.back)+'</p></div>':btn('💡 '+backLabel+' anzeigen','mathProportionalReveal');
+ const visual=mathProportionalIllustration(item.visual);
+ const answer=proportionalStudyRevealed?'<div class="proportional-learning-side proportional-learning-answer"><strong>'+backLabel+'</strong><p>'+esc(item.back)+'</p>'+visual+'</div>':btn('💡 '+backLabel+' anzeigen','mathProportionalReveal');
  const navigation=proportionalStudyRevealed?'<div class="proportional-card-nav">'+(proportionalStudyIndex>0?btn('← Zurück','mathProportionalPrevious','alt'):'<span></span>')+btn(proportionalStudyIndex+1<cards.length?'Nächste Karte →':'Fertig','mathProportionalNext')+'</div>':'';
- app.innerHTML=card('<h2>'+title+'</h2><p class="muted">Karte '+(proportionalStudyIndex+1)+' von '+cards.length+'</p><div class="bar"><div class="fill" style="width:'+percent+'%"></div></div><div class="proportional-learning-side proportional-learning-front"><strong>'+frontLabel+'</strong><h3>'+esc(item.front)+'</h3></div>'+answer+navigation)+card(btn('Zurück zum Kapitel','mathViewProportional','alt'));
+ app.innerHTML=card('<h2>'+title+'</h2><p class="muted">Karte '+(proportionalStudyIndex+1)+' von '+cards.length+'</p><div class="bar"><div class="fill" style="width:'+percent+'%"></div></div><div class="proportional-learning-side proportional-learning-front"><strong>'+frontLabel+'</strong><h3>'+esc(item.front)+'</h3>'+(!proportionalStudyRevealed?visual:'')+'</div>'+answer+navigation)+card(btn('Zurück zum Kapitel','mathViewProportional','alt'));
 }
 function mathProportionalReveal(){proportionalStudyRevealed=true;mathProportionalStudyShow();}
 function mathProportionalNext(){const cards=proportionalStudyDeck==='worksheet'?PROPORTIONAL_WORKSHEET_CARDS:PROPORTIONAL_FLASH_CARDS;if(proportionalStudyIndex+1>=cards.length){mathSelectView('proportional');return;}proportionalStudyIndex++;proportionalStudyRevealed=false;mathProportionalStudyShow();}

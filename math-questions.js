@@ -232,35 +232,60 @@ export const MATH_PROPORTIONAL_EXAM_BATTLE = [
 export const MATH_PROGRESS_FIELDS = ["done", "score", "mistakes", "finished", "updatedAt"];
 
 
-// Lernkarten aus dem Arbeitsblatt-PDF: Begriff aufdecken, Erklärung anzeigen.
+// Lernkarten zur Einheit. Die zugehörigen PDFs sind aus denselben Lernzielen erstellt.
 export const PROPORTIONAL_WORKSHEET_CARDS = [
- {front:'Proportionale Zuordnung',back:'Eine proportionale Zuordnung liegt vor, wenn zwei Größen in einem konstanten Verhältnis zueinander stehen. Vervielfacht sich eine Größe, vervielfacht sich die andere im gleichen Verhältnis.'},
- {front:'Antiproportionale Zuordnung',back:'Eine antiproportionale Zuordnung liegt vor, wenn das Produkt zweier Größen konstant bleibt. Wird eine Größe größer, wird die andere entsprechend kleiner.'},
- {front:'Konstanter Faktor bei Proportionalität',back:'Der Proportionalitätsfaktor gibt an, um wie viel sich eine Größe ändert, wenn sich die andere um eine Einheit ändert.'},
- {front:'Beispiel für proportionale Zuordnung',back:'Bleibt der Preis pro Kilogramm Äpfel gleich, ist der Gesamtpreis proportional zur gekauften Menge.'},
- {front:'Beispiel für antiproportionale Zuordnung',back:'Erledigen 4 Arbeiter eine Arbeit in 6 Stunden, brauchen 2 Arbeiter doppelt so lange. Arbeit × Zeit bleibt gleich.'},
- {front:'Graphische Darstellung der Proportionalität',back:'Der Graph einer proportionalen Zuordnung ist eine Gerade durch den Ursprung (0, 0).'},
- {front:'Graphische Darstellung der Antiproportionalität',back:'Der Graph einer antiproportionalen Zuordnung ist eine Hyperbel. Das Produkt der beiden Größen bleibt konstant.'},
- {front:'Formel für Proportionalität',back:'y = k × x. Dabei ist k der Proportionalitätsfaktor.'},
- {front:'Formel für Antiproportionalität',back:'x × y = c. Dabei ist c eine konstante Zahl.'},
- {front:'Unterschied zwischen proportional und antiproportional',back:'Bei proportionalen Zuordnungen ändern sich beide Größen im gleichen Verhältnis. Bei antiproportionalen Zuordnungen wird eine Größe größer, während die andere so kleiner wird, dass das Produkt gleich bleibt.'}
+ {front:'Was ist eine Zuordnung?',back:'Eine Zuordnung ordnet jedem zulässigen x-Wert genau einen y-Wert zu. Beispiel: Einer Anzahl Kilogramm wird ein Preis zugeordnet.'},
+ {front:'Wann ist eine Zuordnung proportional?',back:'Wenn beide Größen im gleichen Verhältnis wachsen oder schrumpfen. Verdoppelt sich x, verdoppelt sich y. Der Quotient y : x bleibt gleich.'},
+ {front:'Wie erkennst du Proportionalität an einer Tabelle?',back:'Teile in jeder passenden Spalte den y-Wert durch den x-Wert. Ist y : x immer gleich, ist die Zuordnung proportional. Der Quotient ist k.' ,visual:'prop-table'},
+ {front:'Wie lautet die Formel einer proportionalen Zuordnung?',back:'y = k · x. Den Proportionalitätsfaktor berechnest du mit k = y : x. Für x = 0 gehört bei einer proportionalen Zuordnung y = 0 dazu.'},
+ {front:'Was sagt der Faktor k aus?',back:'k gibt den Wert von y für eine Einheit von x an. Bei k = 2,50 €/kg kostet 1 kg 2,50 €. Die Einheit von k gehört zur Antwort.'},
+ {front:'Wie rechnest du proportional mit dem Dreisatz?',back:'Erst auf 1 herunterrechnen, dann auf den gesuchten Wert hochrechnen. Beispiel: 2 kg kosten 5 €. 1 kg kostet 5 € : 2 = 2,50 €. 5 kg kosten 2,50 € · 5 = 12,50 €.',visual:'apples'},
+ {front:'Wie ergänzt du eine proportionale Wertetabelle?',back:'Bestimme zuerst k oder rechne mit dem Dreisatz. Bei k = 3 gilt y = 3 · x. Zu x = 5 gehört deshalb y = 15.',visual:'prop-table'},
+ {front:'Wie sieht der Graph einer proportionalen Zuordnung aus?',back:'Es ist eine Gerade durch den Ursprung (0|0). Je größer k ist, desto steiler verläuft die Gerade.',visual:'prop-graph'},
+ {front:'Wann ist eine Zuordnung antiproportional?',back:'Wenn eine Größe mit einem Faktor wächst und die andere durch denselben Faktor geteilt wird. Das Produkt x · y bleibt gleich.'},
+ {front:'Wie erkennst du Antiproportionalität an einer Tabelle?',back:'Multipliziere in jeder passenden Spalte x · y. Ist das Produkt immer gleich, ist die Zuordnung antiproportional. Dieses Produkt ist k.',visual:'anti-table'},
+ {front:'Wie lautet die Formel einer antiproportionalen Zuordnung?',back:'x · y = k. Für y kannst du auch y = k : x schreiben. Bei festem k wird y kleiner, wenn x größer wird.'},
+ {front:'Wie rechnest du antiproportional mit dem Dreisatz?',back:'Bestimme zuerst das feste Produkt und teile es durch den neuen x-Wert. 4 Arbeiter brauchen 12 Stunden: 4 · 12 = 48 Arbeiterstunden. 6 Arbeiter brauchen 48 : 6 = 8 Stunden. Das gilt bei gleicher Arbeit und gleicher Leistung.',visual:'workers'},
+ {front:'Wie ergänzt du eine antiproportionale Wertetabelle?',back:'Halte das Produkt konstant. Bei k = 48 gilt y = 48 : x: 2 → 24, 3 → 16, 4 → 12 und 6 → 8.',visual:'anti-table'},
+ {front:'Wie sieht der Graph einer antiproportionalen Zuordnung aus?',back:'Bei positiven Größen ist der Graph eine fallende, gekrümmte Linie. Er heißt Hyperbel und ist keine Gerade.',visual:'anti-graph'},
+ {front:'Wie unterscheidest du proportional und antiproportional?',back:'Proportional: y : x ist gleich; beide Werte ändern sich im gleichen Verhältnis. Antiproportional: x · y ist gleich; wird x größer, wird y entsprechend kleiner.'},
+ {front:'Wie unterscheidest du eine lineare von einer proportionalen Zuordnung?',back:'Bei einer linearen Zuordnung ändert sich y bei gleichen x-Schritten immer um denselben Betrag. Proportional ist sie nur, wenn die Gerade durch (0|0) geht. Beispiel Taxi: Grundgebühr 4 € plus 2 € pro Kilometer: 0 km → 4 €, 1 km → 6 €, 2 km → 8 €.'},
+ {front:'Was ist eine Zuordnung, die weder proportional noch antiproportional ist?',back:'Wenn weder y : x noch x · y konstant bleibt, ist sie keine der beiden Zuordnungen. Prüfe dafür mehrere Wertepaare und nicht nur, ob beide Größen steigen oder fallen.'},
+ {front:'Wie wechselst du von einer proportionalen Sachsituation zur Tabelle und zum Term?',back:'2 kg Äpfel kosten 5 €. Der Stückwert ist 2,50 €/kg. Tabelle: 1 kg → 2,50 €, 2 kg → 5 €, 4 kg → 10 €. Term: y = 2,5 · x.',visual:'prop-table'},
+ {front:'Wie liest du einen Punkt aus einem proportionalen Graphen?',back:'Der Punkt (2|6) bedeutet: Bei x = 2 ist y = 6. Daraus folgt k = 6 : 2 = 3 und der Term y = 3 · x. Bei x = 5 ist y = 15.',visual:'prop-graph'},
+ {front:'Wie wechselst du von einem antiproportionalen Graphen zur Regel?',back:'Liegt der Punkt (3|4) auf dem Graphen, ist k = 3 · 4 = 12. Für x = 6 gilt y = 12 : 6 = 2. Der Term lautet y = 12 : x.',visual:'anti-graph'},
+ {front:'Wie unterscheidest du proportional und linear am Graphen und Term?',back:'Eine Taxifahrt mit 4 € Grundgebühr und 2 € pro Kilometer hat den Term y = 2 · x + 4. Der Graph ist eine Gerade, geht aber nicht durch (0|0): Bei 0 km kostet es schon 4 €. Daher linear, aber nicht proportional.'},
+ {front:'Wie prüfst du eine Lösung im Sachzusammenhang?',back:'Prüfe, ob die Antwort zur Situation und zu den Einheiten passt. Bei einer festen Arbeit müssen Arbeiter · Stunden gleich bleiben. Setze das Ergebnis zur Probe wieder ein.'}
 ];
 
-// Frage-Antwort-Karten aus dem Lernkarten-PDF.
+// Lernkarten: Frage und Antwort; Schaubilder stützen Tabellen, Graphen und Sachsituationen.
 export const PROPORTIONAL_FLASH_CARDS = [
- {front:'Was bedeutet ein proportionaler Zusammenhang?',back:'Zwei Größen ändern sich im gleichen Verhältnis. Verdoppelt sich die eine Größe, verdoppelt sich auch die andere.'},
- {front:'Wie erkennt man eine proportionale Zuordnung an Zahlenwerten?',back:'Der Quotient aus den beiden Größen bleibt immer gleich: y : x = k.'},
- {front:'Was ist eine antiproportionale Zuordnung?',back:'Das Produkt aus zwei Größen bleibt gleich: x × y = k. Wird eine Größe größer, wird die andere entsprechend kleiner.'},
- {front:'Nenne ein Beispiel für eine proportionale Beziehung im Alltag.',back:'Bei gleichbleibendem Kilopreis kosten doppelt so viele Äpfel auch doppelt so viel.'},
- {front:'Nenne ein Beispiel für eine antiproportionale Beziehung im Alltag.',back:'Bei einer festen Strecke gilt: Je schneller man fährt, desto kürzer ist die Fahrzeit. Geschwindigkeit × Zeit bleibt konstant.'},
- {front:'Wie lautet die Formel für eine proportionale Beziehung?',back:'y = k × x. k ist der Proportionalitätsfaktor.'},
- {front:'Wie lautet die Formel für eine antiproportionale Beziehung?',back:'x × y = k. k ist ein konstanter Wert.'},
- {front:'Wie berechnet man k bei einer proportionalen Zuordnung?',back:'Man teilt y durch x: k = y : x.'},
- {front:'Wie berechnet man k bei einer antiproportionalen Zuordnung?',back:'Man multipliziert die beiden Größen: k = x × y.'},
- {front:'Was passiert, wenn sich bei einer antiproportionalen Zuordnung eine Größe verdoppelt?',back:'Die andere Größe halbiert sich, damit das Produkt konstant bleibt.'},
- {front:'Wie erkennt man eine proportionale Funktion im Koordinatensystem?',back:'Ihr Graph ist eine Gerade, die durch den Ursprung (0, 0) verläuft.'},
- {front:'Wie sieht der Graph einer antiproportionalen Funktion aus?',back:'Er ist eine Hyperbel, die sich den Achsen asymptotisch nähert.'},
- {front:'Warum ist eine proportionale Zuordnung auch eine lineare Funktion?',back:'Ihr Graph ist eine Gerade durch den Ursprung und ihre Gleichung hat die Form y = kx.'},
- {front:'Was bedeutet der Proportionalitätsfaktor k?',back:'k gibt an, um wie viel sich die zweite Größe ändert, wenn sich die erste Größe um eine Einheit ändert.'},
- {front:'Wozu hilft das Verständnis proportionaler und antiproportionaler Zusammenhänge?',back:'Damit lassen sich Alltagssituationen wie Preise, Geschwindigkeiten und Arbeitszeiten besser verstehen und berechnen.'}
+ {front:'Was bedeutet proportional?',back:'Zwei Größen ändern sich im gleichen Verhältnis. Wird eine Größe verdoppelt, verdoppelt sich die andere ebenfalls.'},
+ {front:'Wie testest du Proportionalität in einer Tabelle?',back:'Berechne y : x für alle Wertepaare. Ist der Quotient gleich, ist die Zuordnung proportional.',visual:'prop-table'},
+ {front:'Wie berechnest du den Proportionalitätsfaktor k?',back:'k = y : x. Beispiel: 6 € : 3 kg = 2 €/kg. k bedeutet hier: 2 € pro Kilogramm.'},
+ {front:'Wie lautet die proportionale Zuordnungsvorschrift?',back:'y = k · x. Mit k = 2,5 gilt zum Beispiel: y = 2,5 · x.'},
+ {front:'Wie löst du eine proportionale Dreisatzaufgabe?',back:'Teile durch den bekannten x-Wert, um den Wert für 1 zu erhalten. Multipliziere danach mit dem gesuchten x-Wert.'},
+ {front:'2 kg Äpfel kosten 5 €. Was kosten 5 kg?',back:'5 € : 2 = 2,50 € pro kg. 2,50 € · 5 = 12,50 €. Antwort: 5 kg Äpfel kosten 12,50 €.',visual:'apples'},
+ {front:'Wie ergänzt du eine proportionale Tabelle?',back:'Wenn x = 1, 2, 3, 4 und y = 3, 6, 9, 12 gilt k = 3. Für x = 5 ist y = 15.',visual:'prop-table'},
+ {front:'Wie sieht der proportionale Graph aus?',back:'Eine Gerade durch den Ursprung (0|0). Jeder Punkt auf der Geraden passt zur Zuordnung.',visual:'prop-graph'},
+ {front:'Was bedeutet der Ursprungspunkt bei proportionalen Zuordnungen?',back:'Bei x = 0 ist auch y = 0. Ohne gekaufte Kilogramm gibt es zum Beispiel keinen Warenpreis.'},
+ {front:'Was bedeutet antiproportional?',back:'Das Produkt der beiden Größen bleibt gleich. Verdoppelt sich x, halbiert sich y.'},
+ {front:'Wie testest du Antiproportionalität in einer Tabelle?',back:'Berechne x · y für alle Wertepaare. Ist das Produkt gleich, ist die Zuordnung antiproportional.',visual:'anti-table'},
+ {front:'Wie lautet die antiproportionale Zuordnungsvorschrift?',back:'x · y = k. Gleichwertig kannst du y = k : x schreiben.'},
+ {front:'Wie rechnest du bei einer antiproportionalen Dreisatzaufgabe?',back:'Berechne zuerst das feste Produkt. Teile dieses Produkt anschließend durch den neuen x-Wert.'},
+ {front:'4 Arbeiter brauchen 12 Stunden. Wie lange brauchen 6 Arbeiter?',back:'4 · 12 = 48 Arbeiterstunden. 48 : 6 = 8 Stunden. Probe: 6 · 8 = 48. Voraussetzung: gleiche Arbeit und gleiche Leistung.',visual:'workers'},
+ {front:'Wie sieht der Graph einer antiproportionalen Zuordnung aus?',back:'Bei positiven Größen ist es eine fallende, gekrümmte Kurve (Hyperbel), keine Gerade.',visual:'anti-graph'},
+ {front:'Wie unterscheidest du die beiden Zuordnungen?',back:'Proportional: gleicher Quotient y : x. Antiproportional: gleiches Produkt x · y.'},
+ {front:'Ist jede fallende Zuordnung antiproportional?',back:'Nein. Prüfe die Werte: Nur wenn x · y konstant bleibt, ist die Zuordnung antiproportional.'},
+ {front:'Was kennzeichnet eine lineare Zuordnung?',back:'Bei gleichen Schritten für x wächst oder sinkt y immer um denselben Betrag. Eine proportionale Zuordnung ist der Sonderfall, dessen Gerade durch den Ursprung (0|0) verläuft.'},
+ {front:'Warum ist eine Taxifahrt mit Grundgebühr nicht proportional?',back:'Die Kosten steigen pro Kilometer gleichmäßig, aber schon bei 0 km ist wegen der Grundgebühr ein Betrag fällig. Der Graph geht daher nicht durch (0|0).'},
+ {front:'Welche Einheit hat k bei einem proportionalen Beispiel?',back:'Die Einheit ist y-Einheit geteilt durch x-Einheit, zum Beispiel Euro pro Kilogramm oder Kilometer pro Stunde.'},
+ {front:'Warum musst du die Einheiten im Sachtext beachten?',back:'Sie zeigen, welche Größe gemeint ist. Schreibe zum Beispiel 2,50 €/kg oder 8 Stunden und prüfe, ob die Antwort zur Frage passt.'},
+ {front:'Wie wechselst du zwischen den Darstellungen?',back:'Beschreibe die Situation in Worten, trage passende Werte in eine Tabelle ein, finde Quotient oder Produkt und stelle die Werte als Graph dar.'},
+ {front:'Welche Annahme steckt in der Arbeiter-Aufgabe?',back:'Die gesamte Arbeit bleibt gleich und alle arbeiten gleich schnell. Nur dann bleibt Arbeiterzahl · Zeit konstant.'},
+ {front:'Wie wechselst du vom Alltagstext zu Tabelle und Term?',back:'3 Flaschen kosten 6 €. Eine Flasche kostet 6 € : 3 = 2 €. Tabelle: 1 → 2 €, 3 → 6 €, 5 → 10 €. Term: Preis = 2 · Flaschenzahl.',visual:'prop-table'},
+ {front:'Welche Zuordnung passt zum Term y = 3x?',back:'Proportional mit k = 3. Der Quotient y : x bleibt 3 und der Graph ist eine Gerade durch (0|0).'},
+ {front:'Welche Zuordnung passt zum Term y = 24 : x?',back:'Antiproportional mit k = 24, denn x · y = 24. Zum Beispiel gehören (3|8) und (6|4) dazu.',visual:'anti-table'},
+ {front:'Ein Taxi kostet 4 € Grundgebühr und 2 € pro Kilometer. Ist der Zusammenhang proportional?',back:'Nein. Der Term lautet Kosten = 2 · Kilometer + 4. Der Graph ist zwar eine Gerade, startet aber bei 4 € statt bei (0|0). Die Zuordnung ist linear, aber nicht proportional.'},
+ {front:'Wie prüfst du dein Ergebnis?',back:'Setze den gefundenen Wert in die Regel ein. Proportional muss y : x gleich k bleiben; antiproportional muss x · y gleich k bleiben.'}
 ];
