@@ -42,7 +42,7 @@
       "$uid": {
         "$name": {
           "$battle": {
-            ".write": "auth != null && auth.uid === $uid && newData.exists() && ($name === 'Luca' || $name === 'Semir' || $name === 'Talea' || $name === 'Nele') && ($battle === 'battle1' || $battle === 'battle2' || $battle === 'battle3' || $battle === 'battle4' || $battle === 'battle5' || $battle === 'battle6' || $battle === 'battle7' || $battle === 'battle14' || $battle === 'battle13' || $battle === 'battle12' || $battle === 'battle11' || $battle === 'battle10' || $battle === 'battle9' || $battle === 'battle8' || $battle === 'fraction_basics' || $battle === 'fraction_add' || $battle === 'fraction_sub' || $battle === 'fraction_mul' || $battle === 'fraction_div' || $battle === 'fraction_mixed' || $battle === 'fraction_probetest')",
+            ".write": "auth != null && auth.uid === $uid && newData.exists() && ($name === 'Luca' || $name === 'Semir' || $name === 'Talea' || $name === 'Nele') && ($battle === 'battle1' || $battle === 'battle2' || $battle === 'battle3' || $battle === 'battle4' || $battle === 'battle5' || $battle === 'battle6' || $battle === 'battle7' || $battle === 'battle8' || $battle === 'battle9' || $battle === 'battle10' || $battle === 'battle11' || $battle === 'battle12' || $battle === 'battle13' || $battle === 'battle14' || $battle === 'battle15' || $battle === 'battle16' || $battle === 'battle17' || $battle === 'fraction_basics' || $battle === 'fraction_add' || $battle === 'fraction_sub' || $battle === 'fraction_mul' || $battle === 'fraction_div' || $battle === 'fraction_mixed' || $battle === 'fraction_probetest')",
             ".validate": "newData.hasChildren(['done','score','updatedAt','finished']) && newData.child('done').isNumber() && newData.child('done').val() >= 0 && newData.child('done').val() <= 30 && newData.child('score').isNumber() && newData.child('score').val() >= 0 && newData.child('score').val() <= newData.child('done').val() * 10 && newData.child('updatedAt').isNumber() && newData.child('finished').isBoolean() && (!newData.child('mistakes').exists() || newData.child('mistakes').hasChildren())"
           }
         }
@@ -51,7 +51,7 @@
     "learningResets": {
       ".read": "auth != null",
       "$name": {
-        ".write": "auth != null && auth.uid === 'M41x9WNoHAfqpSmyrztAgf2IZYC3' && ($name === 'all' || $name === 'Luca' || $name === 'Semir' || $name === 'Talea' || $name === 'Nele' || $name.matches(/^(Luca|Semir|Talea|Nele)__math_(battle6|proportional|prop-erkennen|prop-tabelle|prop-dreisatz|anti-erkennen|anti-tabelle|anti-dreisatz|zuordnungen-vergleichen|fraction_[A-Za-z0-9_-]+)$/))",
+        ".write": "auth != null && auth.uid === 'M41x9WNoHAfqpSmyrztAgf2IZYC3' && ($name === 'all' || $name === 'Luca' || $name === 'Semir' || $name === 'Talea' || $name === 'Nele' || $name.matches(/^(Luca|Semir|Talea|Nele)__math_(battle6|proportional|prop-klassenarbeit-[1-3]|prop-erkennen|prop-tabelle|prop-dreisatz|anti-erkennen|anti-tabelle|anti-dreisatz|zuordnungen-vergleichen|fraction_[A-Za-z0-9_-]+)$/))",
         ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= now + 60000"
       }
     },

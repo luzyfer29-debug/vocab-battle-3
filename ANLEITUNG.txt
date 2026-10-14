@@ -1,11 +1,15 @@
-Update 14.10.2026 - Mathe Klasse 7 NRW, Rationale Zahlen und kompakte Live-Ansicht mit drei Oberpunkten
+Update 15.10.2026 – Mathe Klasse 7 NRW: Proportional / Antiproportional
 
 1. Dieses ZIP entpacken.
-2. Alle Dateien aus dem Ordner vocab-battle-3-main in das Hauptverzeichnis des vorhandenen GitHub-Repositories vocab-battle-3 hochladen.
-3. Gleichnamige Dateien ersetzen und die Änderungen mit „Commit changes“ speichern.
-4. Kinderseite öffnen: https://luzyfer29-debug.github.io/vocab-battle-3/kinder.html
-5. Eltern-/Schiedsrichterseite öffnen: https://luzyfer29-debug.github.io/vocab-battle-3/
+2. Im GitHub-Repository vocab-battle-3 „Add file“ → „Upload files“ öffnen.
+3. Alle Dateien aus dem Ordner vocab-battle-3-main gemeinsam in das Hauptverzeichnis ziehen. Gleichnamige Dateien ersetzen und mit „Commit changes“ speichern.
+4. Kinderseite: https://luzyfer29-debug.github.io/vocab-battle-3/kinder.html
+5. Eltern-/Schiedsrichterseite: https://luzyfer29-debug.github.io/vocab-battle-3/
 
-Neu: In der Eltern-Live-Übersicht stehen drei gleich große Oberpunkte: Mathe Bruchrechnung, Mathe Rationale Zahlen und Englisch. Die sechs Englisch-Bereiche erscheinen erst nach dem Öffnen von Englisch. Alle Bereiche sind kompakt, farblich unterscheidbar und aufklappbar. Die Mathe-Aufgaben heißen einheitlich „Rationale Zahlen · Aufgabe 1“ bis „Aufgabe 4“. Fortschritt und Fehlerlösungen sind je Kind sichtbar.
+Neu in dieser Version:
+- Ein eigener Button „Klassenarbeit Proportional / Antiproportional“ in der Mathe-Auswahl.
+- Drei getrennte Klassenarbeits-Simulationen für Klasse 7 NRW. Jede Arbeit hat 15 Aufgaben, 45 Minuten Richtzeit und 30 Punkte.
+- Bei falschen Antworten sehen die Kinder die richtige Lösung und den Rechenweg.
+- Fortschritt und Fehler jeder Arbeit werden getrennt in der Live-Übersicht angezeigt und lassen sich einzeln zurücksetzen.
 
-Die bisherige Firebase-Konfiguration bleibt erhalten. Die neue Übung speichert den Lernstand wie die vorhandenen Bruchthemen im mathProgress-Pfad. Im Proportional-/Antiproportional-Block stehen das Arbeitsblatt und zusätzlich die angehängten Lernkarten als getrennte PDF-Links bereit.
+Firebase-Hinweis: Die Datei firebase-regeln-komplett-grammatik.json enthält die ergänzten Regeln für die Online-Speicherung und die einzelnen Resets. Das Hochladen der JSON-Datei zu GitHub veröffentlicht die Regeln nicht in Firebase. Bei Bedarf den Inhalt in Firebase Realtime Database → Rules einsetzen und veröffentlichen.
