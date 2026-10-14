@@ -1,9 +1,11 @@
-Update 14.10.2026 - Bruchrechnung-Probeklassenarbeit
+Update 14.10.2026 - Bruchrechnung-Probeklassenarbeit und kompakte Eltern-Live-Ansicht
 
 1. Dieses ZIP entpacken.
 2. Alle Dateien aus dem Ordner vocab-battle-3-main in das Hauptverzeichnis des vorhandenen GitHub-Repositories vocab-battle-3 hochladen.
 3. Gleichnamige Dateien ersetzen und die Änderungen mit „Commit changes“ speichern.
 4. Kinderseite öffnen: https://luzyfer29-debug.github.io/vocab-battle-3/kinder.html
 5. Eltern-/Schiedsrichterseite öffnen: https://luzyfer29-debug.github.io/vocab-battle-3/
+
+Neu: Bruchrechnung steht in der Live-Übersicht direkt oben. Die Themen und Fehlerdetails sind aufklappbar und farblich unterscheidbar, damit die Seite kürzer und übersichtlicher bleibt. Fortschritt und richtige Lösungen bleiben je Kind sichtbar.
 
 Die bisherige Firebase-Konfiguration bleibt erhalten. Die neue Übung speichert den Lernstand wie die vorhandenen Bruchthemen im mathProgress-Pfad.
