@@ -14,3 +14,12 @@ Eltern-Live-Übersicht
 
 Wichtig für die Online-Lernstände
 Die Datei firebase-regeln-komplett-grammatik.json enthält die erweiterten Firebase-Regeln für battle8 bis battle10 und die drei einzelnen Rücksetzungen. Damit die neuen Klassenarbeiten online in der Live-Übersicht gespeichert werden, muss diese Regeldatei zusätzlich in der Firebase Console unter Realtime Database → Rules übernommen und gespeichert werden. Die vorhandene Firebase-Konfiguration bleibt erhalten.
+
+Neue Funktionen – Tages- und Wochenübersicht
+- In der Elternübersicht zeigt „Tages- und Wochenübersicht“ pro Übung, wie oft ein Kind sie heute und in der laufenden Woche gestartet oder fortgesetzt hat.
+- Die Woche läuft von Montag bis Sonntag (deutsche Zeitzone). Die Wochenzählung beginnt mit der neuen Kalenderwoche automatisch neu.
+- Die Zähler bleiben erhalten, wenn Lernstände zurückgesetzt werden. Sie beginnen erst nach dem Hochladen dieser Version; frühere Übungsstarts werden nicht nachgetragen.
+- Die Elternseite bietet einen Filter nach Kind sowie „Zuletzt gelernt“ und „Noch offen“. Die Schrift in der Zählerübersicht ist größer.
+- Bei falschen Antworten erscheint zuerst ein Tipp. Die ausführliche Lösung und der Rechenweg lassen sich anschließend öffnen.
+
+Für die Zähler muss die beigefügte Datei firebase-regeln-komplett-grammatik.json in der Firebase Console unter Realtime Database → Rules übernommen und gespeichert werden. GitHub Pages kann diese Firebase-Regeln nicht automatisch aktualisieren.
