@@ -4,7 +4,7 @@ import {getAuth,signInAnonymously,onAuthStateChanged,signInWithEmailAndPassword,
 import {getDatabase,ref,onValue,get,set,update,runTransaction,remove} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js';
 import {firebaseConfig} from './firebase-config.js';
 import {BATTLES} from './questions.js';
-import {MATH_BATTLES,MATH_EXAM_BATTLE,MATH_RATIONAL_EXAM_BATTLE,MATH_PROPORTIONAL_EXAM_BATTLE,MATH_PROPORTIONAL_CLASSWORKS,MATH_PROPORTIONAL_PRACTICE_BLOCKS} from './math-questions.js?v=proportional-uebungsbloecke-20261015a';
+import {MATH_BATTLES,MATH_EXAM_BATTLE,MATH_RATIONAL_EXAM_BATTLE,MATH_PROPORTIONAL_EXAM_BATTLE,MATH_PROPORTIONAL_CLASSWORKS,MATH_PROPORTIONAL_PRACTICE_BLOCKS} from './math-questions.js?v=proportional-uebungsbloecke-20261015b';
 const RATIONAL_MATH_TITLES=['Rationale Zahlen · Aufgabe 1','Rationale Zahlen · Aufgabe 2','Rationale Zahlen · Aufgabe 3','Rationale Zahlen · Aufgabe 4'];
 import {FRACTION_MODULES} from './fractions-data.js?v=20261014-probetest';
 import {GRAMMAR} from './grammar-data.js';
