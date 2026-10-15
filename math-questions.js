@@ -235,7 +235,7 @@ export const MATH_PROGRESS_FIELDS = ["done", "score", "mistakes", "finished", "u
 // antiproportional relationships. Each item is worth two points.
 export const MATH_PROPORTIONAL_CLASSWORKS = [
  {
-  title:'Klassenarbeit 1 · Grundlagen und Tabellen',duration:45,points:30,questions:[
+  title:'Proportional / Antiproportional · Klassenarbeit 1 · Grundlagen und Tabellen',duration:45,points:30,questions:[
    {q:'Welche Zuordnung ist proportional?',options:['Anzahl der Brötchen und Gesamtpreis bei gleichem Stückpreis','Anzahl der Arbeiter und benötigte Arbeitszeit','Alter einer Person und Körpergröße','Uhrzeit und Temperatur'],correct:0,explanation:'Bei gleichem Stückpreis wächst der Gesamtpreis im selben Verhältnis wie die Anzahl der Brötchen.',points:2},
    {q:'Welche Zuordnung ist antiproportional?',options:['Kilogramm Äpfel und Preis bei gleichem Kilopreis','Anzahl der Arbeiter und Arbeitszeit für dieselbe Arbeit','Fahrzeit und Strecke bei gleicher Geschwindigkeit','Anzahl gleicher Hefte und Gesamtpreis'],correct:1,explanation:'Je mehr Arbeiter mithelfen, desto weniger Arbeitszeit wird benötigt. Das Produkt aus Arbeiterzahl und Zeit bleibt gleich.',points:2},
    {q:'Bei einer proportionalen Zuordnung gilt: 4 Hefte kosten 10 €. Wie viel kostet ein Heft?',options:['2 €','2,50 €','4 €','6 €'],correct:1,explanation:'Preis für ein Heft: 10 € : 4 = 2,50 €.',points:2},
@@ -254,7 +254,7 @@ export const MATH_PROPORTIONAL_CLASSWORKS = [
   ]
  },
  {
-  title:'Klassenarbeit 2 · Dreisatz und Sachaufgaben',duration:45,points:30,questions:[
+  title:'Proportional / Antiproportional · Klassenarbeit 2 · Dreisatz und Sachaufgaben',duration:45,points:30,questions:[
    {q:'3 kg Äpfel kosten 7,50 €. Was kosten 8 kg?',options:['15 €','18 €','20 €','22,50 €'],correct:2,explanation:'1 kg kostet 7,50 € : 3 = 2,50 €. Für 8 kg: 8 · 2,50 € = 20 €.',points:2},
    {q:'Für 4 Personen braucht man 300 g Nudeln. Wie viel braucht man für 7 Personen?',options:['450 g','500 g','525 g','600 g'],correct:2,explanation:'Pro Person: 300 g : 4 = 75 g. Für 7 Personen: 75 · 7 = 525 g.',points:2},
    {q:'5 Arbeiter brauchen 12 Stunden. Wie lange brauchen 8 Arbeiter für dieselbe Arbeit?',options:['6 Stunden','7,5 Stunden','8 Stunden','19,2 Stunden'],correct:1,explanation:'5 · 12 = 60 Arbeiterstunden. 60 : 8 = 7,5 Stunden.',points:2},
@@ -273,7 +273,7 @@ export const MATH_PROPORTIONAL_CLASSWORKS = [
   ]
  },
  {
-  title:'Klassenarbeit 3 · Gemischte Prüfung',duration:45,points:30,questions:[
+  title:'Proportional / Antiproportional · Klassenarbeit 3 · Gemischte Prüfung',duration:45,points:30,questions:[
    {q:'Eine Zuordnung hat die Tabelle x: 2, 5, 8 · y: 6, 15, 24. Welche Art liegt vor?',options:['Proportional','Antiproportional','Keine der beiden','Konstant'],correct:0,explanation:'Die Quotienten sind 6 : 2 = 3, 15 : 5 = 3 und 24 : 8 = 3. Der Quotient bleibt gleich: proportional.',points:2},
    {q:'Eine Zuordnung hat x: 3, 6, 9 · y: 24, 12, 8. Welche Art liegt vor?',options:['Proportional','Antiproportional','Keine der beiden','Konstant'],correct:1,explanation:'Die Produkte sind 3 · 24 = 72, 6 · 12 = 72 und 9 · 8 = 72. Das Produkt bleibt gleich: antiproportional.',points:2},
    {q:'7 gleiche Eintrittskarten kosten 56 €. Wie viel kosten 12 Karten?',options:['84 €','92 €','96 €','112 €'],correct:2,explanation:'Eine Karte kostet 56 € : 7 = 8 €. Für 12 Karten: 12 · 8 € = 96 €.',points:2},
