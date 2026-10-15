@@ -23,3 +23,7 @@ Neue Funktionen – Tages- und Wochenübersicht
 - Bei falschen Antworten erscheint zuerst ein Tipp. Die ausführliche Lösung und der Rechenweg lassen sich anschließend öffnen.
 
 Für die Zähler muss die beigefügte Datei firebase-regeln-komplett-grammatik.json in der Firebase Console unter Realtime Database → Rules übernommen und gespeichert werden. GitHub Pages kann diese Firebase-Regeln nicht automatisch aktualisieren.
+
+Übersichtlichkeit der Elternseite
+- Die Tages- und Wochenzahlen sind in klaren Tabellen je Themenbereich angeordnet. Tippe einen Bereich an, um seine Tabelle zu öffnen.
+- Schrift, Zähler und Tabellenüberschriften sind für bessere Lesbarkeit vergrößert. Die Farben unterscheiden die Bereiche, bleiben aber ruhig und kontrastreich.
