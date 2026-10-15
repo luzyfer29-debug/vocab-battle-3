@@ -32,3 +32,10 @@ Für die Zähler muss die beigefügte Datei firebase-regeln-komplett-grammatik.j
 Fachtrennung auf der Elternseite
 - Nach „Live-Lernübersicht“ erscheinen zuerst nur zwei große Bereiche: Englisch und Mathe. Erst beim Antippen öffnet sich das jeweilige Fach mit seinen Themen, Ergebnissen, Fehlerlisten, Klassenarbeiten und Zurücksetz-Optionen.
 - Der Kindfilter wirkt in beiden Bereichen. Die Fortschritte und Zähler bleiben nach Fach getrennt.
+
+Neue Funktion – tägliche und wöchentliche Fehlerauswertung
+- Auf der Kinder-Startseite gibt es „Auswertung Englisch“ und „Auswertung Mathe“. Nach Auswahl des Kindes kann zwischen täglicher und wöchentlicher Auswertung gewählt werden.
+- Fehler werden je Fach und Thema gebündelt. Offene Fehler bleiben in der Liste, bis das Kind sie richtig löst. Bei Mathe wird bei einer falschen Antwort auch der gespeicherte Rechenweg angezeigt.
+- Die Eltern-Live-Übersicht enthält unter Englisch und Mathe jeweils eine tägliche und eine wöchentliche Fehlerauswertung. Sie zeigt pro Kind und Thema, welche Fehler noch offen oder richtig bearbeitet sind.
+- Beim ersten Öffnen übernimmt die Kinderseite vorhandene lokal gespeicherte Fehler. Danach werden neue Fehler samt Zeitraum online gespeichert und in der Elternansicht aktualisiert.
+- Für diese Ergänzung sind keine neuen Firebase-Regeln nötig. Die Fehler werden in den vorhandenen Lernaktivitäts-Einträgen gespeichert.
