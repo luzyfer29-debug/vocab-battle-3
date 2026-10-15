@@ -339,7 +339,7 @@ function renderDashboard(englishEntries,mathEntries,activityData={}){
 .dashboard-subject.english-main>summary strong{color:#8cebd8}
 .dashboard-subject.math-main>summary strong{color:#d0b8ff}
 .dashboard-subject-hint{grid-column:2;display:block;margin-top:-8px;color:#c8d5e5;font-size:15px;font-weight:500;line-height:1.35}
-.dashboard-subject-content{padding:0 12px 12px}
+.dashboard-subject-content{padding:0 12px 12px}.dashboard-subject-content>details{display:block;width:100%;margin:0 0 10px}
 .live-panel{border-left:5px solid var(--live-accent);padding:14px}
 .live-panel>summary{display:flex;align-items:center;gap:10px;cursor:pointer;list-style:none}
 .live-panel>summary::-webkit-details-marker{display:none}
