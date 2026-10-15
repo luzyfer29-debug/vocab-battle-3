@@ -396,7 +396,7 @@ function listen(){if(unsubscribe)unsubscribe();stopClock();unsubscribe=onValue(r
 function current(){const m=room?.meta||{},b=Number(m.battle||1)-1,i=Number(m.index||0);if(m.mode==='math-exam')return MATH_PROPORTIONAL_CLASSWORKS[0].questions[i%MATH_PROPORTIONAL_CLASSWORKS[0].questions.length];if(m.mode==='fractions'){const questions=FRACTION_MODULES[b]?.questions||[];return questions[i%Math.max(questions.length,1)];}return (m.subject==='math'?MATH_BATTLES:BATTLES)[b]?.[i%30];}
 function roomQuestionCount(m=room?.meta||{}){return m.mode==='math-exam'?MATH_PROPORTIONAL_CLASSWORKS[0].questions.length:m.mode==='fractions'?(FRACTION_MODULES[Number(m.battle||1)-1]?.questions.length||0):30;}
 function roomTitle(m=room?.meta||{}){const n=Number(m.battle||1);return m.mode==='math-exam'?'Proportional / Antiproportional · Klassenarbeit 1':m.mode==='fractions'?FRACTION_MODULES[n-1]?.title||'Bruchrechnung':m.subject==='math'?RATIONAL_MATH_TITLES[n-1]||RATIONAL_MATH_TITLES[0]:`Englisch-Battle ${n}`;}
-function questionDurationMs(m=room?.meta||{}){return !m.mode&&m.subject!=='math'?VOCAB_QUESTION_MS:OTHER_QUESTION_MS;}
+function questionDurationMs(m=room?.meta||{}){return m.mode==='vocab'||(!m.mode&&m.subject!=='math')?VOCAB_QUESTION_MS:OTHER_QUESTION_MS;}
 function questionDurationSeconds(m=room?.meta||{}){return Math.round(questionDurationMs(m)/1000);}
 function players(){return Object.entries(room?.slots||{}).map(([id,p])=>({id,...p})).sort((a,b)=>(b.score||0)-(a.score||0));}
 function roster(){return players().map((p,i)=>`<div class="player row"><span>${i+1}. ${esc(p.name)}</span><span class="score">${p.score||0}</span></div>`).join('')||'<p>Noch keine Spieler.</p>';}
