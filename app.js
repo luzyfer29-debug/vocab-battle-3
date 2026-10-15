@@ -494,31 +494,22 @@ async function showEnglishSeries(){
  if(!adminLoggedIn||uid!==ADMIN_UID){loginForm();return;}
  stopDashboard();stopSoloHeartbeat();app.innerHTML=card('<h2>🏆 Englisch-Gesamtwertung</h2><p>Wertung wird geladen …</p>')+card(btn('Zurück','home','alt'));
  const activities=[
-  {id:'vocab1',label:'Vokabelarbeit 1'},
-  {id:'vocab2',label:'Vokabelarbeit 2'},
+  {id:'vocabWork1',label:'Vokabelarbeit 1'},
+  {id:'vocabWork2',label:'Vokabelarbeit 2'},
   {id:'gap1',label:'Lückentext 1'},
   {id:'gap2',label:'Lückentext 2'}
  ],rankPoints={1:30,2:20,3:10,4:0};
  try{
-  const [battleSnap,workSnap]=await Promise.all([get(ref(db,'soloProgress')),get(ref(db,'englishSeriesWorkPoints'))]);
-  const data=battleSnap.val()||{},workData=workSnap.val()||{};
-  const rows=names.map(name=>({name,points:[null,null,null],stamps:[0,0,0],workRanks:{}}));
+  const [battleSnap,resultSnap]=await Promise.all([get(ref(db,'soloProgress')),get(ref(db,'englishSeriesResults'))]);
+  const data=battleSnap.val()||{},resultData=resultSnap.val()||{};
+  const rows=names.map(name=>({name,points:[null,null,null],stamps:[0,0,0],workScores:{}}));
   for(const device of Object.values(data))for(const row of rows){const progress=device?.[row.name]||{};for(let battle=1;battle<=3;battle++){const result=progress['battle'+battle];if(Number(result?.seriesBattle)!==battle||!Number.isFinite(Number(result?.seriesPoints)))continue;const stamp=Number(result.seriesUpdatedAt)||0;if(stamp>=row.stamps[battle-1]){row.points[battle-1]=Number(result.seriesPoints);row.stamps[battle-1]=stamp;}}}
-  for(const row of rows)for(const activity of activities){const rank=Number(workData?.[row.name]?.[activity.id]);if(Number.isInteger(rank)&&rank>=1&&rank<=4){row.workRanks[activity.id]=rank;row.points.push(rankPoints[rank]);}else row.points.push(null);}
+  for(const device of Object.values(resultData))for(const row of rows)for(const activity of activities){const result=device?.[row.name]?.[activity.id];if(!result?.finished||!Number.isFinite(Number(result.score))||!Number(result.maxScore))continue;const old=row.workScores[activity.id],stamp=Number(result.updatedAt)||0;if(!old||stamp>=old.stamp)row.workScores[activity.id]={score:Number(result.score),maxScore:Number(result.maxScore),stamp};}
+  for(const activity of activities){const ranked=rows.filter(row=>row.workScores[activity.id]).sort((a,b)=>b.workScores[activity.id].score/b.workScores[activity.id].maxScore-a.workScores[activity.id].score/a.workScores[activity.id].maxScore||a.name.localeCompare(b.name,'de'));let lastRatio=null,lastRank=0;ranked.forEach((row,index)=>{const score=row.workScores[activity.id],ratio=score.score/score.maxScore;if(lastRatio===null||ratio<lastRatio)lastRank=index+1;row.workScores[activity.id].rank=lastRank;row.points.push(rankPoints[lastRank]??0);lastRatio=ratio;});for(const row of rows)if(!row.workScores[activity.id])row.points.push(null);}
   rows.forEach(row=>row.total=row.points.reduce((sum,points)=>sum+(points||0),0));
   rows.sort((a,b)=>b.total-a.total||(b.points.filter(x=>x===30).length-a.points.filter(x=>x===30).length)||(b.points.filter(x=>x===20).length-a.points.filter(x=>x===20).length)||a.name.localeCompare(b.name,'de'));
-  const body=rows.map((row,index)=>'<tr><td>'+ (index+1)+'.</td><td><strong>'+esc(row.name)+'</strong></td>'+row.points.slice(0,3).map(value=>'<td>'+(value===null?'–':value)+'</td>').join('')+activities.map(activity=>'<td><label class="series-score-cell"><span class="series-score-value" style="display:block;margin-bottom:5px;font-weight:800;color:#ffe45e">'+(row.workRanks[activity.id]?rankPoints[row.workRanks[activity.id]]+' P':'–')+'</span><select style="width:100%;min-width:145px;padding:8px;border:1px solid #30efff;border-radius:10px;background:#151a43;color:#fff" data-series-work-name="'+esc(row.name)+'" data-series-work-activity="'+activity.id+'" aria-label="'+esc(row.name)+', '+activity.label+'"><option value="">Platz wählen</option><option value="1" '+(row.workRanks[activity.id]===1?'selected':'')+'>1. Platz · 30 Punkte</option><option value="2" '+(row.workRanks[activity.id]===2?'selected':'')+'>2. Platz · 20 Punkte</option><option value="3" '+(row.workRanks[activity.id]===3?'selected':'')+'>3. Platz · 10 Punkte</option><option value="4" '+(row.workRanks[activity.id]===4?'selected':'')+'>4. Platz · 0 Punkte</option></select></label></td>').join('')+'<td><strong>'+row.total+'</strong></td></tr>').join('');
-  app.innerHTML=card('<h2>🏆 Englisch-Gesamtwertung</h2><p>Battle-Punkte und vier Arbeiten zählen in die Gesamtwertung.</p><p class="small muted">Nach dem Korrigieren je Arbeit den Platz auswählen. Platz 1 = 30, Platz 2 = 20, Platz 3 = 10, Platz 4 = 0 Punkte. Pro Arbeit kann jeder Platz nur einmal vergeben werden.</p><div class="series-table-wrap" style="overflow-x:auto;max-width:100%"><table class="series-table" style="width:100%;min-width:900px;border-collapse:collapse;text-align:center"><thead><tr><th>Platz</th><th>Name</th><th>Battle 1</th><th>Battle 2</th><th>Battle 3</th>'+activities.map(activity=>'<th>'+activity.label+'</th>').join('')+'<th>Gesamt</th></tr></thead><tbody>'+body+'</tbody></table></div>')+card(btn('Zurück','home','alt'));
-  app.querySelectorAll('[data-series-work-activity]').forEach(select=>select.addEventListener('change',async event=>{
-   const control=event.currentTarget,name=control.dataset.seriesWorkName,activity=control.dataset.seriesWorkActivity,rank=control.value,previous=control.dataset.previous||'';
-   if(rank&&Object.entries(workData).some(([otherName,scores])=>otherName!==name&&String(scores?.[activity]||'')===rank)){msg('Dieser Platz ist für diese Arbeit bereits vergeben.',true);control.value=previous;return;}
-   try{
-    const scoreRef=ref(db,'englishSeriesWorkPoints/'+name+'/'+activity);
-    if(rank)await set(scoreRef,Number(rank));else await remove(scoreRef);
-    await showEnglishSeries();msg('Platzierung und Gesamtpunkte gespeichert.');
-   }catch(error){msg('Platzierung konnte nicht gespeichert werden: '+esc(error.message),true);control.value=previous;}
-  }));
-  app.querySelectorAll('[data-series-work-activity]').forEach(select=>select.dataset.previous=select.value);
+  const body=rows.map((row,index)=>'<tr><td>'+ (index+1)+'.</td><td><strong>'+esc(row.name)+'</strong></td>'+row.points.slice(0,3).map(value=>'<td>'+(value===null?'–':value)+'</td>').join('')+activities.map(activity=>{const result=row.workScores[activity.id];return '<td>'+(result?`${result.score}/${result.maxScore}<br><strong>${rankPoints[result.rank]??0} P · Platz ${result.rank}</strong>`:'–')+'</td>';}).join('')+'<td><strong>'+row.total+'</strong></td></tr>').join('');
+  app.innerHTML=card('<h2>🏆 Englisch-Gesamtwertung</h2><p>Die Ergebnisse werden nach Abschluss der jeweiligen Arbeit automatisch übernommen. Platz 1 = 30, Platz 2 = 20, Platz 3 = 10, Platz 4 = 0 Punkte.</p><div class="series-table-wrap" style="overflow-x:auto;max-width:100%"><table class="series-table" style="width:100%;min-width:900px;border-collapse:collapse;text-align:center"><thead><tr><th>Platz</th><th>Name</th><th>Battle 1</th><th>Battle 2</th><th>Battle 3</th>'+activities.map(activity=>'<th>'+activity.label+'</th>').join('')+'<th>Gesamt</th></tr></thead><tbody>'+body+'</tbody></table></div>')+card(btn('Zurück','home','alt'));
  }catch(e){app.innerHTML=card('<h2>🏆 Englisch-Gesamtwertung</h2><p class="error">Gesamtwertung konnte nicht geladen werden: '+esc(e.message)+'</p>')+card(btn('Zurück','home','alt'));}
 }
 function mathLoad(n,b){try{return JSON.parse(localStorage.getItem(mathKey(n,b))||'null');}catch{return null;}}
