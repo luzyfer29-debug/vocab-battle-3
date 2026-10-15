@@ -38,13 +38,14 @@ window.addEventListener('error', event => {
 window.addEventListener('unhandledrejection', event => {
   status.textContent = 'Startfehler: ' + String(event.reason?.stack || event.reason || 'Unbekannter Fehler');
 });
-import('./app.js?v=proportional-uebungsbloecke-20261015c-series-20261015a-mobile-fix-20261015a').then(() => {
+import('./app.js?v=proportional-uebungsbloecke-20261015c-series-20261015a-mobile-fix-20261015a-seriesworks-20261015a').then(() => {
   if (status.textContent === 'App wird gestartet …') status.textContent = '';
 }).catch(error => {
   status.style.whiteSpace = 'pre-wrap';
   status.textContent = 'Startfehler: ' + String(error?.stack || error?.message || error);
 });
 </script></body></html>
+
 
 
 
