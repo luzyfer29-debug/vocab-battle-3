@@ -333,7 +333,7 @@ export const MATH_PROPORTIONAL_PRACTICE_BLOCKS = [
   learnQ('Ein Team aus 5 Personen braucht 14 Stunden. Wie lange bei 7 Personen?',['8 h','10 h','12 h','19,6 h'],2,'5 · 14 = 70 Personenstunden. 70 : 7 = 10 Stunden.'),
   learnQ('10 gleiche Pumpen brauchen 3 Stunden. Wie lange brauchen 2 Pumpen?',['6 h','10 h','15 h','30 h'],2,'10 · 3 = 30 Pumpenstunden. 30 : 2 = 15 Stunden.')
  ]},
- {id:'mixed',title:'Gemischt · Proportional oder antiproportional?',kind:'mixed',points:15,questions:[
+ {id:'mixed',title:'Gemischt · Block 1 · Grundlagen',kind:'mixed',points:15,questions:[
   learnQ('Welche Zuordnung ist proportional?',['Anzahl gleicher Bücher und Gesamtpreis','Arbeiterzahl und Arbeitszeit','Geschwindigkeit und Fahrzeit für dieselbe Strecke','Personenzahl und Vorratsdauer'],0,'Bei gleichem Preis pro Buch wächst der Gesamtpreis proportional zur Anzahl.'),
   learnQ('Welche Zuordnung ist antiproportional?',['Zeit und Strecke bei gleichbleibender Geschwindigkeit','Anzahl gleicher Flaschen und Gesamtpreis','Arbeiterzahl und Dauer derselben Arbeit','Menge und Preis bei gleichem Kilopreis'],2,'Bei derselben Arbeit bedeutet mehr Arbeiter weniger Zeit; das Produkt bleibt gleich.'),
   learnQ('4 kg kosten 12 €. Was kosten 7 kg?',['18 €','20 €','21 €','24 €'],2,'Das ist proportional: 12 : 4 = 3 € pro kg. 7 · 3 = 21 €.'),
@@ -349,6 +349,40 @@ export const MATH_PROPORTIONAL_PRACTICE_BLOCKS = [
   learnQ('Der Graph einer proportionalen Zuordnung muss durch …',['(0|0)','(0|1)','(1|0)','(2|2)'],0,'Eine proportionale Zuordnung hat die Form y = kx und geht deshalb durch den Ursprung.'),
   learnQ('Bei x · y = 56. Wie groß ist y bei x = 7?',['7','8','49','63'],1,'Antiproportional: y = 56 : 7 = 8.'),
   learnQ('Eine Tabelle hat x: 2, 4, 8 und y: 5, 10, 20. Welche Art?',['Proportional','Antiproportional','Keine von beiden','Konstant'],0,'Die Quotienten y : x sind jeweils 2,5. Daher proportional.')
+ ]},
+ {id:'mixed_2',title:'Gemischt · Block 2 · Tabellen und Faktoren',kind:'mixed',points:15,questions:[
+  learnQ('4 kg Äpfel kosten 10 €. Was kosten 7 kg?',['15 €','17,50 €','20 €','25 €'],1,'Proportional: 10 € : 4 = 2,50 € pro kg. Dann 7 · 2,50 € = 17,50 €.'),
+  learnQ('8 Arbeiter brauchen 6 Stunden. Wie lange brauchen 12 Arbeiter für dieselbe Arbeit?',['3 h','4 h','8 h','9 h'],1,'Antiproportional: 8 · 6 = 48 Arbeiterstunden. 48 : 12 = 4 Stunden.'),
+  learnQ('Bei welcher Zuordnung bleibt y : x gleich?',['Proportional','Antiproportional','Bei beiden immer','Bei keiner'],0,'Bei proportionalen Zuordnungen bleibt der Quotient y : x konstant.'),
+  learnQ('Bei x · y = 90. Wie groß ist y bei x = 15?',['5','6','15','75'],1,'Antiproportional: y = 90 : 15 = 6.'),
+  learnQ('Welche Tabelle ist proportional?',['x: 2, 4, 6 · y: 5, 10, 15','x: 2, 4, 6 · y: 12, 6, 4','x: 2, 4, 6 · y: 5, 9, 15','x: 2, 4, 6 · y: 4, 8, 15'],0,'In der ersten Tabelle ist y : x immer 2,5.'),
+  learnQ('5 Maschinen brauchen 18 Minuten. Wie lange brauchen 15 Maschinen?',['3 min','6 min','12 min','54 min'],1,'Antiproportional: 5 · 18 = 90 Maschinenminuten. 90 : 15 = 6 Minuten.'),
+  learnQ('Eine proportionale Zuordnung hat den Faktor k = 3,5. Wie groß ist y bei x = 8?',['11,5','24','28','32'],2,'y = k · x = 3,5 · 8 = 28.'),
+  learnQ('Welche Tabelle ist antiproportional?',['x: 2, 4, 8 · y: 24, 12, 6','x: 2, 4, 8 · y: 3, 6, 12','x: 2, 4, 8 · y: 24, 10, 6','x: 2, 4, 8 · y: 2, 4, 8'],0,'Die Produkte sind 2 · 24 = 48, 4 · 12 = 48 und 8 · 6 = 48.'),
+  learnQ('Bei einer antiproportionalen Zuordnung gilt x = 7 und y = 12. Welcher y-Wert gehört zu x = 3?',['4','16','28','36'],2,'Das Produkt ist 7 · 12 = 84. Für x = 3 gilt y = 84 : 3 = 28.'),
+  learnQ('6 Flaschen kosten 9 €. Was kosten 10 Flaschen?',['12 €','15 €','18 €','24 €'],1,'Proportional: 9 € : 6 = 1,50 € pro Flasche. 10 · 1,50 € = 15 €.'),
+  learnQ('10 Personen reicht ein Vorrat 9 Tage. Wie lange reicht er für 15 Personen?',['4 Tage','6 Tage','9 Tage','13,5 Tage'],1,'Antiproportional: 10 · 9 = 90 Personentage. 90 : 15 = 6 Tage.'),
+  learnQ('x: 3, 6, 9 und y: 12, 24, 36. Welche Art ist das?',['Proportional','Antiproportional','Keine von beiden','Konstant'],0,'Die Quotienten y : x sind jeweils 4. Die Zuordnung ist proportional.'),
+  learnQ('Ein Wasserhahn füllt 1/6 eines Beckens pro Stunde. Ein zweiter füllt 1/3 pro Stunde. Wie lange füllen beide zusammen das Becken?',['1 Stunde','2 Stunden','3 Stunden','6 Stunden'],1,'Zusammen füllen sie 1/6 + 1/3 = 1/2 des Beckens pro Stunde. Für ein ganzes Becken brauchen sie 2 Stunden.'),
+  learnQ('12 Arbeiter brauchen 15 Tage. Wie lange brauchen 20 Arbeiter?',['6 Tage','9 Tage','12 Tage','25 Tage'],1,'Antiproportional: 12 · 15 = 180 Arbeitertage. 180 : 20 = 9 Tage.'),
+  learnQ('Welche Aussage passt zu einer proportionalen Zuordnung?',['Das Produkt bleibt gleich.','Der Quotient y : x bleibt gleich.','Eine Größe steigt, die andere muss sinken.','Der Graph geht nie durch den Ursprung.'],1,'Bei proportionalen Zuordnungen bleibt der Quotient y : x konstant.')
+ ]},
+ {id:'mixed_3',title:'Gemischt · Block 3 · Sachaufgaben und Dreisatz',kind:'mixed',points:15,questions:[
+  learnQ('1 kg Käse kostet 14 €. Was kosten 2,5 kg?',['21 €','28 €','35 €','42 €'],2,'Proportional: 14 € · 2,5 = 35 €.'),
+  learnQ('9 Helfer brauchen 8 Stunden. Wie lange brauchen 6 Helfer?',['4 h','10 h','12 h','14 h'],2,'Antiproportional: 9 · 8 = 72 Helferstunden. 72 : 6 = 12 Stunden.'),
+  learnQ('Ein Maßstab zeigt: 2 cm entsprechen 5 km. Wie weit sind 7 cm?',['12 km','15 km','17,5 km','20 km'],2,'Proportional: 5 km : 2 = 2,5 km pro cm. 7 · 2,5 = 17,5 km.'),
+  learnQ('Ein Graph geht durch den Ursprung und durch (3|12). Welcher Punkt liegt auch darauf?',['(5|15)','(5|20)','(6|18)','(8|24)'],1,'Der Faktor ist 12 : 3 = 4. Bei x = 5 gilt y = 4 · 5 = 20.'),
+  learnQ('4 Pumpen leeren einen Pool in 30 Minuten. Wie lange brauchen 10 Pumpen?',['8 min','12 min','15 min','75 min'],1,'Antiproportional: 4 · 30 = 120 Pumpenminuten. 120 : 10 = 12 Minuten.'),
+  learnQ('8 m Stoff kosten 36 €. Was kosten 5 m?',['18 €','20 €','22,50 €','24 €'],2,'Proportional: 36 € : 8 = 4,50 € pro Meter. 5 · 4,50 € = 22,50 €.'),
+  learnQ('18 Personen teilen eine Arbeit und brauchen 4 Stunden. Wie lange brauchen 12 Personen?',['3 h','6 h','8 h','12 h'],1,'Antiproportional: 18 · 4 = 72 Personenstunden. 72 : 12 = 6 Stunden.'),
+  learnQ('x: 4, 8, 12 und y: 30, 15, 10. Welche Art ist das?',['Proportional','Antiproportional','Keine von beiden','Konstant'],1,'Die Produkte sind 4 · 30 = 120, 8 · 15 = 120 und 12 · 10 = 120.'),
+  learnQ('Für 6 Personen braucht man 450 g Nudeln. Wie viel braucht man für 10 Personen?',['600 g','700 g','750 g','900 g'],2,'Proportional: 450 g : 6 = 75 g pro Person. 10 · 75 g = 750 g.'),
+  learnQ('Bei x · y = 144. Wie groß ist x bei y = 12?',['8','10','12','24'],2,'x = 144 : 12 = 12.'),
+  learnQ('Ein Fahrrad fährt 18 km in 1,5 Stunden. Wie weit fährt es in 4 Stunden bei gleicher Geschwindigkeit?',['36 km','42 km','48 km','54 km'],2,'Proportional: 18 : 1,5 = 12 km/h. 12 · 4 = 48 km.'),
+  learnQ('5 gleiche Geräte erledigen einen Auftrag in 16 Minuten. Wie lange brauchen 8 Geräte?',['8 min','10 min','12 min','25,6 min'],1,'Antiproportional: 5 · 16 = 80 Geräteminuten. 80 : 8 = 10 Minuten.'),
+  learnQ('Bei einer proportionalen Zuordnung gilt y : x = 2,4. Wie groß ist y bei x = 15?',['17,4','24','36','42'],2,'y = 2,4 · 15 = 36.'),
+  learnQ('Ein Vorrat reicht für 16 Tiere 12 Tage. Wie lange reicht er für 24 Tiere?',['6 Tage','8 Tage','10 Tage','18 Tage'],1,'Antiproportional: 16 · 12 = 192 Tier-Tage. 192 : 24 = 8 Tage.'),
+  learnQ('Welche Aussage unterscheidet die beiden Zuordnungen richtig?',['Proportional: Quotient konstant; antiproportional: Produkt konstant.','Proportional: Produkt konstant; antiproportional: Quotient konstant.','Bei beiden bleibt immer die Summe gleich.','Bei beiden müssen beide Größen steigen.'],0,'Proportional gilt y : x = k. Antiproportional gilt x · y = k.')
  ]}
 ];
 
