@@ -27,3 +27,7 @@ Für die Zähler muss die beigefügte Datei firebase-regeln-komplett-grammatik.j
 Übersichtlichkeit der Elternseite
 - Die Tages- und Wochenzahlen sind in klaren Tabellen je Themenbereich angeordnet. Tippe einen Bereich an, um seine Tabelle zu öffnen.
 - Schrift, Zähler und Tabellenüberschriften sind für bessere Lesbarkeit vergrößert. Die Farben unterscheiden die Bereiche, bleiben aber ruhig und kontrastreich.
+
+Fachtrennung auf der Elternseite
+- Nach „Live-Lernübersicht“ erscheinen zuerst nur zwei große Bereiche: Englisch und Mathe. Erst beim Antippen öffnet sich das jeweilige Fach mit seinen Themen, Tabellen, Klassenarbeiten und Zurücksetz-Optionen.
+- Der Kindfilter wirkt in beiden Bereichen. Die Tabellen bleiben nach Fach getrennt.
