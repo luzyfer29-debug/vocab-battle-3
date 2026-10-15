@@ -399,7 +399,10 @@ function roomTitle(m=room?.meta||{}){const n=Number(m.battle||1);return m.mode==
 function questionDurationMs(m=room?.meta||{}){return m.mode==='vocab'||(!m.mode&&m.subject!=='math')?VOCAB_QUESTION_MS:OTHER_QUESTION_MS;}
 function questionDurationSeconds(m=room?.meta||{}){return Math.round(questionDurationMs(m)/1000);}
 function players(){return Object.entries(room?.slots||{}).map(([id,p])=>({id,...p})).sort((a,b)=>(b.score||0)-(a.score||0));}
-function roster(){return players().map((p,i)=>`<div class="player row"><span>${i+1}. ${esc(p.name)}</span><span class="score">${p.score||0}</span></div>`).join('')||'<p>Noch keine Spieler.</p>';}
+function isEnglishSeriesRoom(m=room?.meta||{}){return m.subject==='english'&&(m.mode==='vocab'||!m.mode)&&Number(m.battle)>=1&&Number(m.battle)<=3;}
+function englishSeriesPoints(place){return [30,20,10][place-1]||0;}
+function roster(){return players().map((p,i)=>{const award=room?.meta?.stage==='finished'&&isEnglishSeriesRoom()?` · +${englishSeriesPoints(i+1)} Serienpunkte`:'';return `<div class="player row"><span>${i+1}. ${esc(p.name)}</span><span class="score">${p.score||0}${award}</span></div>`;}).join('')||'<p>Noch keine Spieler.</p>';}
+
 function chooseBattle(){app.innerHTML=card(`<h2>🎮 Battle auswählen</h2><p>Welches Battle soll gespielt werden?</p><label>Battle<select id="battle-choice"><option value="1">Battle 1 – 30 Fragen</option><option value="2">Battle 2 – 30 Fragen</option><option value="3">Battle 3 – 30 Fragen</option></select></label>${btn('Raum erstellen','createRoom')}`)+card(btn('Zurück','home','alt'));}
 function countdown(){const m=room?.meta||{};if(m.stage!=='question'&&m.stage!=='reveal')return '';const remaining=Math.max(0,Math.ceil((Number(m.deadline||0)-Date.now())/1000));return m.stage==='question'?`⏱️ Noch ${remaining} Sekunden`:`⏳ Weiter in ${remaining} Sekunden`;}
 function render(){if(!room)return;const m=room.meta||{},q=current(),stage=m.stage||'lobby',questionNumber=m.mode==='math-exam'||m.mode==='fractions'?Number(m.index||0)+1:Number(m.index||0)%30+1;const stageKey=`${m.battle}:${m.index}:${stage}`;let s=card(`<p class="muted">Raumcode</p><div class="big">${esc(code)}</div><p>${esc(roomTitle(m))} · ${stage==='lobby'?'Warteraum':stage==='question'?`Frage ${questionNumber} von ${roomQuestionCount(m)}`:stage==='reveal'?'Auswertung':'Battle beendet'}</p>${roster()}`);
@@ -468,7 +471,7 @@ async function syncSolo(){
   const rs=await get(ref(db,'learningResets'));
   applyResetState(rs.val());
   if(!resetReady||solo!==currentSolo||soloName!==name||savedAt<=resetStamp(name,'english'))return;
-  await set(ref(db,`soloProgress/${device}/${name}/battle${currentSolo.battle+1}`),{
+  await update(ref(db,`soloProgress/${device}/${name}/battle${currentSolo.battle+1}`),{
    name,battle:currentSolo.battle+1,done:currentSolo.index,
    correct:Math.floor(currentSolo.score/10),score:currentSolo.score,
    finished:!!currentSolo.finished,mistakes:cleanMistakes(currentSolo.mistakes),updatedAt:savedAt
