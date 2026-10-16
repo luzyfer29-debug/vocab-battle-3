@@ -1,11 +1,11 @@
-let initializeApp,getAuth,signInAnonymously,onAuthStateChanged;
-let getDatabase,ref,onValue,get,set,update,runTransaction,remove;
 import {firebaseConfig} from './firebase-config.js?v=20261016-kinder-dependency-cache-bust-2';
 import {BATTLES} from './questions.js?v=20261016-kinder-dependency-cache-bust-2';
 import {MATH_BATTLES,MATH_EXAM_BATTLE,MATH_RATIONAL_EXAM_BATTLE,MATH_PROPORTIONAL_EXAM_BATTLE,MATH_PROPORTIONAL_CLASSWORKS,MATH_PROPORTIONAL_PRACTICE_BLOCKS,PROPORTIONAL_WORKSHEET_CARDS,PROPORTIONAL_FLASH_CARDS} from './math-questions.js?v=20261016-kinder-dependency-cache-bust-2';
-const RATIONAL_MATH_TITLES=['Rationale Zahlen · Aufgabe 1','Rationale Zahlen · Aufgabe 2','Rationale Zahlen · Aufgabe 3','Rationale Zahlen · Aufgabe 4'];
 import {FRACTION_MODULES} from './fractions-data.js?v=20261016-kinder-dependency-cache-bust-2';
 import {WRITING_TASKS} from './writing-data.js?v=20261016-kinder-dependency-cache-bust-2';
+let initializeApp,getAuth,signInAnonymously,onAuthStateChanged;
+let getDatabase,ref,onValue,get,set,update,runTransaction,remove;
+const RATIONAL_MATH_TITLES=['Rationale Zahlen · Aufgabe 1','Rationale Zahlen · Aufgabe 2','Rationale Zahlen · Aufgabe 3','Rationale Zahlen · Aufgabe 4'];
 const LISTENING_QUESTIONS=[
  {q:'Welche Reihenfolge haben die Aktivitäten im Radiobeitrag?',options:['Radio-Studio → Zipline → Rafting → Skatepark → Erfrischungen → Cardiff-Schild','Zipline → Radio-Studio → Skatepark → Rafting → Cardiff-Schild → Erfrischungen','Radio-Studio → Rafting → Zipline → Erfrischungen → Skatepark → Cardiff-Schild','Cardiff-Schild → Radio-Studio → Zipline → Rafting → Skatepark → Erfrischungen'],correct:0},
  {q:'Welche Aktivität kannst du nahe Mount Snowdon ausprobieren?',options:['Eine Zipline','Skifahren','Reiten','Klettern in einer Halle'],correct:0},
