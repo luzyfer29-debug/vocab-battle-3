@@ -13,7 +13,7 @@ export const LISTENING_QUESTIONS = [
     ['The zip line in Cardiff is the longest in Europe.','wrong'],
     ['They will close some roads in the city centre.','right'],
     ['You need a helmet for some sports.','right']
-  ].map(([q,answer])=>({task:3,type:'tf',points:1,instruction:'Listen again. Right or wrong? Tick (✓) the correct box for each sentence.',q,options:['Right','Wrong'],accepted:[answer],answerText:answer})),
+  ].map(([q,answer])=>({task:3,type:'tf',points:1,instruction:'Listen again. Right or wrong? Tick (✓) the correct box for each sentence.',q,options:['Right','Wrong'],correct:answer==='right'?0:1,accepted:[answer],answerText:answer})),
   ...[
     ['Cardiff is the capital of _____.',['Wales','the capital city of wales']],
     ['At the activity weekend you can try lots of different _____.',['sports','activities','sports and activities']],
