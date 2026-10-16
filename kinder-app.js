@@ -5,7 +5,7 @@ import {FRACTION_MODULES} from './fractions-data.js?v=20261016-kinder-dependency
 import {WRITING_TASKS,WRITING_BATTLE} from './writing-data.js?v=20261016-room-question-sync-20261016';
 import {GRAMMAR} from './grammar-data.js?v=20261016-room-question-sync-20261016';
 import {READING_TEXT_EN,READING_TEXT_DE,READING_ILLUSTRATION,READING_QUIZ} from './reading-data.js?v=20261016-room-question-sync-20261016';
-import {LISTENING_QUESTIONS,LISTENING_TOTAL_POINTS,listeningIsCorrect,listeningControls,listeningAnswerValue,listeningTaskImage} from './listening-data.js?v=listening-worksheet-20261016b';
+import {LISTENING_QUESTIONS,LISTENING_TOTAL_POINTS,listeningIsCorrect,listeningControls,listeningAnswerValue,listeningTaskImage} from './listening-data.js?v=listening-worksheet-20261016c';
 let initializeApp,getAuth,signInAnonymously,onAuthStateChanged;
 let getDatabase,ref,onValue,get,set,update,runTransaction,remove;
 const RATIONAL_MATH_TITLES=['Rationale Zahlen · Aufgabe 1','Rationale Zahlen · Aufgabe 2','Rationale Zahlen · Aufgabe 3','Rationale Zahlen · Aufgabe 4'];
