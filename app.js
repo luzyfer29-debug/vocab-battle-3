@@ -306,8 +306,7 @@ function readingTextCheck(){const field=document.querySelector('[data-readingtex
 function readingTextNext(){if(!readingRun)return;readingRun.textIndex++;readingRun.checked=false;readingSave();readingTextTask();}
 
 // Writing: three source-aligned tasks with explanations, sentence frames and self-check.
-let writingI
-ndex=0,writingModelVisible=false,writingSyncTimer=null;
+let writingIndex=0,writingModelVisible=false,writingSyncTimer=null;
 const writingKey=()=>`vb2writing_${soloName}_unit2`;
 function writingLoad(){try{return JSON.parse(localStorage.getItem(writingKey())||'null')||{texts:{},complete:{}};}catch{return {texts:{},complete:{}};}}
 async function syncWritingProgress(s=writingLoad()){if(!uid||!soloName||!db)return;const done=WRITING_TASKS.filter(t=>s.complete?.[t.id]).length,now=Date.now();try{await set(ref(db,`soloProgress/${uid}/${soloName}/writingUnit2`),{done,total:WRITING_TASKS.length,completed:s.complete||{},currentTask:WRITING_TASKS[writingIndex]?.title||'',active:true,updatedAt:now,timestamp:now});}catch(e){msg('Writing bleibt auf diesem Gerät gespeichert; die Live-Übersicht konnte nicht aktualisiert werden: '+e.message,true);}}
@@ -625,8 +624,7 @@ function wbRender(){
  }
  const stage=m.stage;let out=card(`<h2>✍️ Writing-Battle · Unit 2</h2><p>Raumcode</p><div class="big">${esc(wbCode)}</div><p>${stage==='finished'?'Beendet':`Aufgabe ${Math.min(WRITING_BATTLE.length,i+1)} von ${WRITING_BATTLE.length}`}</p>${wbRank()}`);
  if(stage==='lobby')out+=card('<h3>Warteraum</h3><p>Die Kinder treten über „Spiel beitreten“ und den Raumcode bei.</p>'+btn('▶️ Battle starten','wbStart'));
- if(stage==='question'&&q){const submissions=wbRoom.submissions?.[i]||{},reviews=wbRoom.reviews?.[i]||{};out+=card(`<h3>${esc(q.title)}</h3><p>${esc(q.prompt)}</p><p id="wb-host-clock"></p><p><strong>Beispielantwort:</strong> ${esc(q.sample)}</p><p class="muted">Bewerte die passende Antwort mit ✅ Richtig. Andere englische Formulierungen können ebenfalls richtig sein.</p>`+wbPlayers().map(p=>{const ans=submissions[p.uid],r=reviews[p.uid];return `<div class="player"><strong>${esc(p.name)}</strong><p style="white-space:pre-wrap">${ans?esc(ans.text):'Noch keine Antwort'}</p>${r?`<p>${r.correct?'✅ Richtig – bewertet':'❌ Noch nicht ganz – bewertet'}</p>`:ans?`${btn('✅ Richtig',`wbY
-es_${p.uid}`)} ${btn('❌ Noch nicht ganz',`wbNo_${p.uid}`,'alt')}`:''}</div>`;}).join('')+btn('Nächste Aufgabe ➜','wbNext'));}
+ if(stage==='question'&&q){const submissions=wbRoom.submissions?.[i]||{},reviews=wbRoom.reviews?.[i]||{};out+=card(`<h3>${esc(q.title)}</h3><p>${esc(q.prompt)}</p><p id="wb-host-clock"></p><p><strong>Beispielantwort:</strong> ${esc(q.sample)}</p><p class="muted">Bewerte die passende Antwort mit ✅ Richtig. Andere englische Formulierungen können ebenfalls richtig sein.</p>`+wbPlayers().map(p=>{const ans=submissions[p.uid],r=reviews[p.uid];return `<div class="player"><strong>${esc(p.name)}</strong><p style="white-space:pre-wrap">${ans?esc(ans.text):'Noch keine Antwort'}</p>${r?`<p>${r.correct?'✅ Richtig – bewertet':'❌ Noch nicht ganz – bewertet'}</p>`:ans?`${btn('✅ Richtig',`wbYes_${p.uid}`)} ${btn('❌ Noch nicht ganz',`wbNo_${p.uid}`,'alt')}`:''}</div>`;}).join('')+btn('Nächste Aufgabe ➜','wbNext'));}
  if(stage==='finished')out+=card('<h2>🏆 Endstand</h2>'+wbRank()+btn('Neues Spiel','wbRestart'));
  app.innerHTML=out+card(btn('Zur Startseite','home','alt'));if(wbTimer)clearInterval(wbTimer);if(stage==='question')wbTimer=setInterval(wbClock,1000);wbClock();
 }
