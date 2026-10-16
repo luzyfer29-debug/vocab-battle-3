@@ -278,13 +278,28 @@ function competitionRank(entries){
  const sorted=[...entries].sort((a,b)=>Number(b.correct)-Number(a.correct)||String(a.name).localeCompare(String(b.name),'de'));let last=null,place=0;
  return sorted.map((row,index)=>{if(index===0||Number(row.correct)!==last)place=index+1;last=Number(row.correct);const tied=(index>0&&Number(sorted[index-1].correct)===last)||(index+1<sorted.length&&Number(sorted[index+1].correct)===last);return {row,place,tied,bonus:[10,8,5,3][place-1]||0};});
 }
+function legacyBattleResult(profile,activity){
+ let legacy=null,correct=0,maxCorrect=0;
+ if(activity.id==='grammar_station1'||activity.id==='grammar_station2'){
+  legacy=profile[`grammarStation${activity.id.endsWith('1')?'1':'2'}`];if(!legacy?.finished||!legacy.runId)return null;
+  correct=Number(legacy.correct);maxCorrect=Number(legacy.total);
+ }else if(activity.id==='listening'){
+  legacy=profile.listeningUnit2;if(!legacy?.finished||!/^battle-/.test(String(legacy.runId||'')))return null;
+  correct=Math.round((Number(legacy.score)||0)/10);maxCorrect=Number(legacy.total)||LISTENING_QUESTIONS.length;
+ }else if(activity.id==='writing'){
+  legacy=profile.writingBattleUnit2;if(!legacy?.finished||!/^writing-/.test(String(legacy.runId||'')))return null;
+  correct=Math.round((Number(legacy.score)||0)/10);maxCorrect=Number(legacy.total)||WRITING_BATTLE.length;
+ }else return null;
+ if(!Number.isFinite(correct)||!Number.isFinite(maxCorrect)||maxCorrect<=0)return null;
+ return {correct,maxCorrect,finished:true,updatedAt:Number(legacy.updatedAt)||0};
+}
 async function showBattleSeries(subject){
  stopSoloHeartbeat();const isMath=subject==='math',root=isMath?'mathProgress':'soloProgress',title=isMath?'Mathe':'Englisch';
  app.innerHTML=card(`<h2>🏆 ${title} · Battle-Auswertung</h2><p>Battle-Ergebnisse werden geladen …</p>`)+card(btn('Zurück','home','alt'));
  try{
   const snap=await get(ref(db,root)),data=snap.val()||{},activities=battleOverviewActivities(subject),rows=SOLO_NAMES.map(name=>({name,results:{},total:0,played:0}));
   for(const device of Object.values(data))for(const row of rows){const profile=device?.[row.name];if(!profile)continue;
-   for(const activity of activities){let record=profile.battleResults?.[activity.id]||null;
+   for(const activity of activities){let record=profile.battleResults?.[activity.id]||legacyBattleResult(profile,activity);
     if(!isMath&&/^vocab_[123]$/.test(activity.id)){const battle=Number(activity.id.slice(-1)),legacy=profile[`battle${battle}`];if(legacy?.seriesRoom&&Number(legacy.seriesBattle)===battle){const candidate={correct:Number(legacy.seriesCorrect)||0,maxCorrect:Number(legacy.seriesTotal)||30,finished:true,updatedAt:Number(legacy.seriesUpdatedAt)||0};if(!record||candidate.updatedAt>=Number(record.updatedAt||0))record=candidate;}}
     if(!record?.finished||!Number.isFinite(Number(record.correct))||Number(record.maxCorrect)<=0)continue;
     const old=row.results[activity.id];if(!old||Number(record.updatedAt||0)>=Number(old.updatedAt||0))row.results[activity.id]={correct:Math.min(Number(record.maxCorrect),Math.max(0,Number(record.correct)||0)),maxCorrect:Number(record.maxCorrect),updatedAt:Number(record.updatedAt)||0};
