@@ -1,0 +1,13 @@
+Vocab Battle 3 – Eltern-Live-Update
+
+GitHub Pages
+1. Entpacke dieses ZIP.
+2. Lade app.js, kinder-app.js, index.html und kinder.html ins Hauptverzeichnis des Repositories luzyfer29-debug/vocab-battle-3 hoch und ersetze die gleichnamigen Dateien.
+3. Committe die Änderungen. Die neuen Cache-Kennungen stehen bereits in index.html und kinder.html.
+
+Firebase Realtime Database
+1. Öffne Firebase Console → Realtime Database → Rules.
+2. Übernimm den vollständigen Inhalt aus firebase-regeln-komplett-grammatik.json und speichere die Regeln.
+3. Die Regeln schalten die geschützten Lernstände für Vokabelarbeit, Grammatik, Reading, Writing, Listening, Mathematik bis battle19 und Live-Fehler frei. Eltern-Lesezugriff bleibt auf die Schiedsrichter-Anmeldung beschränkt.
+
+Geprüft: JavaScript-Syntax für app.js und kinder-app.js; Firebase-Regeln als gültiges JSON; Frontend-Schlüssel gegen die freigegebenen Datenpfade.
