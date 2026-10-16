@@ -38,7 +38,7 @@ const ADMIN_UID='M41x9WNoHAfqpSmyrztAgf2IZYC3';
 let resetUnsubscribe=null,resetState={},resetReady=false;
 let db,uid='',code='',role='',slot='',room=null,unsubscribe=null,solo=null,joinExpectedRoomType='';
 let clock=null,busy=false,previousStageKey='',lastClockText='';
-let listeningRun=null,listeningSyncWarned=false,writingIndex=0,writingModelVisible=false,writingSyncTimer=null;
+let listeningRun=null,listeningSyncWarned=false,readingLearningSyncWarned=false,writingIndex=0,writingModelVisible=false,writingSyncTimer=null;
 let soloNameReturn='';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const mathText=s=>esc(s).replace(/(-?\d+)\s*\/\s*(\d+)/g,(_,n,d)=>`<span style="display:inline-flex;vertical-align:middle;flex-direction:column;align-items:center;line-height:1.05;margin:0 .12em"><span>${n}</span><span style="border-top:1.5px solid currentColor;padding:1px 2px 0">${d}</span></span>`);
@@ -597,6 +597,7 @@ const READING_STATEMENTS=[
 const readingKey=()=>`vb2reading_${soloName}_cardiff_castle`;
 function readingLoad(){try{return JSON.parse(localStorage.getItem(readingKey())||'null')||{matches:[],truth:[],answers:['',''],guestbook:'',own4:0,showSamples:false,checked:false};}catch{return {matches:[],truth:[],answers:['',''],guestbook:'',own4:0,showSamples:false,checked:false};}}
 function readingSave(s=readingLoad()){if(!soloName)return;try{localStorage.setItem(readingKey(),JSON.stringify(s));}catch{}}
+async function syncReadingLearningProgress(s){if(!db||!uid||!soloName)return;const matches=Math.min(4,(s.matches||[]).slice(0,4).filter(Boolean).length),truth=(s.truth||[]).filter(Boolean).length,done=matches+truth,result=readingResult(s),writingDone=[...(s.answers||[]),s.guestbook||''].filter(x=>String(x).trim()).length,now=Date.now();try{await set(ref(db,`soloProgress/${uid}/${soloName}/readingCardiff`),{done,total:12,score:(result.matches+result.truth)*10,writingDone:Math.min(3,writingDone),writingTotal:3,finished:done>=12&&writingDone>=3,updatedAt:now,timestamp:now});readingLearningSyncWarned=false;}catch(e){if(!readingLearningSyncWarned){readingLearningSyncWarned=true;msg('Reading bleibt auf diesem Handy gespeichert; die Elternübersicht konnte gerade nicht aktualisiert werden.',true);}}}
 function readingLearn(){if(!soloName){soloNameReturn='reading';soloChooseName();return;}readingLearnHome();}
 function readingLearnHome(){if(!soloName){readingLearn();return;}solo=null;void recordLearningActivity(soloName,'english_reading');readingRender();}
 function readingRender(){
@@ -607,7 +608,7 @@ function readingRender(){
 }
 function readingOpenScore(text,index){const value=String(text||'').toLowerCase();if(index===0)return /histor/.test(value)&&/(collection|armou?r|past|things from)/.test(value);return /(scared|afraid|frightened|real)/.test(value);}
 function readingResult(s){const matches=READING_HEADINGS.slice(0,4).reduce((n,h,i)=>n+(s.matches?.[i]===h.correct?1:0),0),truth=READING_STATEMENTS.reduce((n,q,i)=>n+(s.truth?.[i]===q[1]?1:0),0),open=READING_HEADINGS.length?((readingOpenScore(s.answers?.[0],0)?2:0)+(readingOpenScore(s.answers?.[1],1)?2:0)):0,own4=Math.max(0,Math.min(4,Number(s.own4)||0));return {matches,truth,open,own4,total:matches+truth+open+own4};}
-function readingCheck(){readingInputSave();const s=readingLoad();s.checked=true;readingSave(s);readingRender();}
+function readingCheck(){readingInputSave();const s=readingLoad();s.checked=true;readingSave(s);void syncReadingLearningProgress(s);readingRender();}
 function readingSamples(){readingInputSave();const s=readingLoad();s.showSamples=!s.showSamples;readingSave(s);readingRender();}
 function readingInputSave(){const s=readingLoad();document.querySelectorAll('[data-reading-match]').forEach(el=>s.matches[Number(el.dataset.readingMatch)]=el.value);document.querySelectorAll('[data-reading-truth]:checked').forEach(el=>s.truth[Number(el.dataset.readingTruth)]=el.value);document.querySelectorAll('[data-reading-answer]').forEach(el=>s.answers[Number(el.dataset.readingAnswer)]=el.value);const guest=document.querySelector('[data-reading-guestbook]');if(guest)s.guestbook=guest.value;const own=document.querySelector('[data-reading-own4]');if(own)s.own4=Number(own.value);readingSave(s);}
 
