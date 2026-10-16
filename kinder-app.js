@@ -68,6 +68,16 @@ const CLOZE_BATTLES=[
  ]}
 ];
 
+const ADMIN_UID='M41x9WNoHAfqpSmyrztAgf2IZYC3';
+let resetUnsubscribe=null,resetState={},resetReady=false;
+let db,uid='',code='',role='',slot='',room=null,unsubscribe=null,solo=null,joinExpectedRoomType='';
+let clock=null,busy=false,previousStageKey='',lastClockText='';
+let listeningRun=null,listeningSyncWarned=false,writingIndex=0,writingModelVisible=false,writingSyncTimer=null;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const mathText=s=>esc(s).replace(/(-?\d+)\s*\/\s*(\d+)/g,(_,n,d)=>`<span style="display:inline-flex;vertical-align:middle;flex-direction:column;align-items:center;line-height:1.05;margin:0 .12em"><span>${n}</span><span style="border-top:1.5px solid currentColor;padding:1px 2px 0">${d}</span></span>`);
+const btn=(t,fn,cl='')=>`<button ${cl?`class="${cl}"`:''} data-action="${fn}">${t}</button>`;
+const card=s=>`<section class="card">${s}</section>`;
+const msg=(s,bad=false)=>status.innerHTML=`<p class="${bad?'error':'good'}">${esc(s)}</p>`;
 const GAP_SETS=[
  {title:'Lückentext 1 · Station 1',groups:[{title:'Julies Nachricht an Beth · Aufgabe 4',parts:[
   'Hi Beth,\n\nHow was your trip to the activity centre?\n\nYou know I love ',
