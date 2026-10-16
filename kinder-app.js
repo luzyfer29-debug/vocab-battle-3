@@ -1,6 +1,5 @@
-import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-import {getAuth,signInAnonymously,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
-import {getDatabase,ref,onValue,get,set,update,runTransaction,remove} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js';
+let initializeApp,getAuth,signInAnonymously,onAuthStateChanged;
+let getDatabase,ref,onValue,get,set,update,runTransaction,remove;
 import {firebaseConfig} from './firebase-config.js';
 import {BATTLES} from './questions.js';
 import {MATH_BATTLES,MATH_EXAM_BATTLE,MATH_RATIONAL_EXAM_BATTLE,MATH_PROPORTIONAL_EXAM_BATTLE,MATH_PROPORTIONAL_CLASSWORKS,MATH_PROPORTIONAL_PRACTICE_BLOCKS,PROPORTIONAL_WORKSHEET_CARDS,PROPORTIONAL_FLASH_CARDS} from './math-questions.js?v=proportional-mixed-20261015c';
@@ -843,6 +842,25 @@ document.addEventListener('input',e=>{if(e.target.matches('[data-gap]'))gapColle
 document.addEventListener('change',e=>{if(e.target.matches('[data-grammar]'))grammarCollect();if(e.target.matches('[data-writingcheck]'))writingSaveField('checks',{index:Number(e.target.dataset.writingcheck),checked:e.target.checked});});
 document.addEventListener('focusout',e=>{if(e.target.matches('[data-grammar]'))grammarCollect();});
 window.addEventListener('pagehide',()=>grammarCollect());
-home();try{const fb=initializeApp(firebaseConfig),auth=getAuth(fb);db=getDatabase(fb);onAuthStateChanged(auth,u=>{if(u){uid=u.uid;watchResets();}else{uid='';resetReady=false;if(resetUnsubscribe){resetUnsubscribe();resetUnsubscribe=null;}signInAnonymously(auth).catch(e=>msg('Anmeldung fehlgeschlagen: '+e.message,true));}});}catch(e){msg('Firebase-Konfiguration fehlerhaft: '+e.message,true);}
+home();
+void initializeFirebase();
+
+async function initializeFirebase(){
+ try{
+  const [appModule,authModule,databaseModule]=await Promise.all([
+   import('https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js'),
+   import('https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js'),
+   import('https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js')
+  ]);
+  initializeApp=appModule.initializeApp;
+  ({getAuth,signInAnonymously,onAuthStateChanged}=authModule);
+  ({getDatabase,ref,onValue,get,set,update,runTransaction,remove}=databaseModule);
+  const fb=initializeApp(firebaseConfig),auth=getAuth(fb);db=getDatabase(fb);
+  onAuthStateChanged(auth,u=>{if(u){uid=u.uid;watchResets();}else{uid='';resetReady=false;if(resetUnsubscribe){resetUnsubscribe();resetUnsubscribe=null;}signInAnonymously(auth).catch(e=>msg('Anmeldung fehlgeschlagen: '+e.message,true));}});
+ }catch(e){
+  resetReady=true;
+  status.innerHTML='<p class="muted">Online-Funktionen sind derzeit nicht verfügbar. Der Lernbereich bleibt geöffnet.</p>';
+ }
+}
 
 
