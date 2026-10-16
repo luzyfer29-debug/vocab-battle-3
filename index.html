@@ -51,7 +51,7 @@ window.addEventListener('error', event => {
 window.addEventListener('unhandledrejection', event => {
   status.textContent = 'Startfehler: ' + String(event.reason?.stack || event.reason || 'Unbekannter Fehler');
 });
-import('./app.js?v=proportional-uebungsbloecke-20261015c-series-20261015a-mobile-fix-20261015a-seriesresults-20261015b-grammarseries-20261015b-grammar-total-20261015a-home-polish-20261015a-parent-vocab-overview-20261016f-visual-refresh').then(() => {
+import('./app.js?v=proportional-uebungsbloecke-20261015c-series-20261015a-mobile-fix-20261015a-seriesresults-20261015b-grammarseries-20261015b-grammar-total-20261015a-home-polish-20261015a-parent-vocab-overview-20261016f-visual-refresh-vocabwork-referee-20261016').then(() => {
   if (status.textContent === 'App wird gestartet …') status.textContent = '';
 }).catch(error => {
   status.style.whiteSpace = 'pre-wrap';
