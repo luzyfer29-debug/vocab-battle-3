@@ -58,12 +58,11 @@ function grammarReadResult(st,task){try{return JSON.parse(localStorage.getItem(g
 function grammarStationProgress(st){const total=GRAMMAR[st].tasks.length,done=GRAMMAR[st].tasks.filter((_,i)=>grammarReadResult(st,i)?.finished).length;return {done,total};}
 async function saveGrammarSeriesResult(st){
  const tasks=GRAMMAR[st].tasks.map((_,i)=>grammarReadResult(st,i));
- if(tasks.some(result=>!result?.finished))return {complete:false,done:tasks.filter(Boolean).length,total:tasks.length};
- const maxScore=GRAMMAR[st].tasks.reduce((sum,task)=>sum+(task.items?.length||0),0),correct=tasks.reduce((sum,result)=>sum+(Number(result.score)||0),0),now=Date.now(),activity=`grammar${st+1}`;
+ const completed=tasks.filter(result=>result?.finished),maxScore=GRAMMAR[st].tasks.reduce((sum,task)=>sum+(task.items?.length||0),0),correct=completed.reduce((sum,result)=>sum+(Number(result.score)||0),0),now=Date.now(),activity=`grammar${st+1}`;
  if(!db||!uid||!soloName)throw new Error('Keine Online-Verbindung zur Ergebnisspeicherung.');
- const result={name:soloName,activity,done:maxScore,total:maxScore,completedTasks:tasks.length,taskCount:tasks.length,correct,score:correct,maxScore,finished:true,updatedAt:now,timestamp:now,tasks:tasks.map((task,i)=>({task:i+1,score:Number(task.score)||0,maxScore:Number(task.maxScore)||0,attempted:Number(task.attempted)||0,updatedAt:Number(task.updatedAt)||now}))};
+ const result={name:soloName,activity,done:completed.length,total:tasks.length,completedTasks:completed.length,taskCount:tasks.length,correct,score:correct,maxScore,finished:completed.length===tasks.length,updatedAt:now,timestamp:now,tasks:tasks.map((task,i)=>({task:i+1,finished:!!task?.finished,score:Number(task?.score)||0,maxScore:Number(task?.maxScore)||0,attempted:Number(task?.attempted)||0,updatedAt:Number(task?.updatedAt)||now}))};
  await set(ref(db,`englishSeriesResults/${uid}/${soloName}/${activity}`),result);
- return {complete:true,result};
+ return {complete:result.finished,done:completed.length,total:tasks.length,result};
 }
 function grammarNormalize(v){return String(v||'').trim().toLowerCase().replace(/[’‘]/g,"'").replace(/\s+/g,' ');}
 function grammarMenu(){grammarCollect();if(!soloName){soloChooseName();return;}grammarStation=null;grammarTask=null;app.innerHTML=card(`<h2>📘 Grammatik · ${esc(soloName)}</h2><p>Wähle Station 1 oder 2. Die Aufgaben stehen in der Reihenfolge des Arbeitsblatts. Ohne Diff corner.</p><div class="buttons">${btn('Station 1 · Aufgaben 1–4','grammarStation0')}${btn('Station 2 · Aufgaben 1–7','grammarStation1')}</div>`)+card(btn('Zur Battle-Auswahl','soloHome','alt'));}
