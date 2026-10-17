@@ -75,7 +75,7 @@ let db,uid='',code='',role='',slot='',room=null,unsubscribe=null,solo=null;
 let clock=null,busy=false,previousStageKey='',lastClockText='';
 let readingRun=null,readingLanguage='en',readingBattleLanguage='en';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const btn=(t,fn,cl='')=>`<button ${cl?`class="${cl}"`:''} data-action="${fn}">${t}</button>`;
+const btn=(t,fn,cl='')=>`<button type="button" ${cl?`class="${cl}"`:''} data-action="${fn}">${t}</button>`;
 const card=s=>`<section class="card">${s}</section>`;
 const msg=(s,bad=false)=>{status.innerHTML=`<p class="${bad?'error':'good'}">${esc(s)}</p>`;if(bad)requestAnimationFrame(()=>status.scrollIntoView({behavior:'smooth',block:'center'}));};
 const key='vb2solo';
