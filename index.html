@@ -51,7 +51,9 @@ window.addEventListener('error', event => {
 window.addEventListener('unhandledrejection', event => {
   status.textContent = 'Startfehler: ' + String(event.reason?.stack || event.reason || 'Unbekannter Fehler');
 });
-import('./app.js?v=battle-results-all-battles-20261017b-referee-room-errors-20261018c-vocab-work-click-cache-refresh').then(() => {
+const appModuleUrl = new URL('./app.js', location.href);
+appModuleUrl.searchParams.set('v', 'battle-work-' + Date.now());
+import(appModuleUrl.href).then(() => {
   if (status.textContent === 'App wird gestartet …') status.textContent = '';
 }).catch(error => {
   status.style.whiteSpace = 'pre-wrap';
