@@ -1,0 +1,67 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>⚡ ENGLISCH &amp; MATHE BATTLE 3.0</title><style>
+:root{font-family:system-ui,-apple-system,sans-serif;background:#101827;color:white}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#304b6d,#101827 68%);min-height:100vh}main{max-width:650px;margin:auto;padding:24px 16px 60px}h1{font-size:clamp(30px,7vw,44px);margin:8px 0}h2{margin:4px 0 18px}.muted{color:#c3cfdf}.tag{display:inline-block;background:#3f78a8;padding:7px 13px;border-radius:30px;font-weight:800;font-size:12px}.card{background:linear-gradient(145deg,#202f47,#1a263b);border:1px solid #435770;border-radius:19px;padding:19px;margin:15px 0;box-shadow:0 10px 28px rgba(4,10,24,.22)}.row{display:flex;justify-content:space-between;gap:10px;align-items:center}.buttons{display:flex;flex-wrap:wrap;gap:10px}.buttons button{flex:1}button,input,select{font:inherit}button{min-height:50px;border:0;border-radius:12px;padding:12px 15px;background:#ffd166;color:#172337;font-weight:850;cursor:pointer}button.alt{background:#40536e;color:white}button:disabled{opacity:.5}input,select{width:100%;padding:14px;border:2px solid #5c7696;border-radius:12px;background:#162338;color:white;margin:8px 0 15px}.answers{display:grid;gap:10px}.answers button{background:#314662;color:white;text-align:left}.answers button.picked{border:3px solid #ffd166}.big{font-size:40px;color:#ffd166;font-weight:900;letter-spacing:3px;text-align:center}.score{font-size:25px;font-weight:900;color:#ffd166}.player{padding:12px;background:#2b3c55;border-radius:10px;margin:8px 0}.error{color:#ffaaaa}.good{color:#ffd166}.small{font-size:13px}.bar{height:10px;background:#314662;border-radius:10px;overflow:hidden}.fill{height:100%;background:#ffd166}#status{min-height:22px}footer{text-align:center;color:#aebbd0;font-size:12px;margin-top:25px}</style><style id="neon-theme-20261015">
+:root{color-scheme:dark;--cyan:#30efff;--blue:#3974ff;--pink:#ff42d0;--purple:#ad67ff;--yellow:#ffe45e;--orange:#ff9b45;--green:#55f0a8}
+body{background:radial-gradient(ellipse at 8% 8%,rgba(57,116,255,.34),transparent 34%),radial-gradient(ellipse at 92% 14%,rgba(255,66,208,.24),transparent 32%),radial-gradient(ellipse at 12% 88%,rgba(85,240,168,.15),transparent 30%),radial-gradient(ellipse at 85% 88%,rgba(255,155,69,.16),transparent 34%),linear-gradient(160deg,#121033,#080b20 72%);color:#faf8ff}
+h1{color:#fff;text-shadow:0 0 8px rgba(48,239,255,.8),0 0 22px rgba(57,116,255,.55)}h2,h3{color:#fff;text-shadow:0 0 12px rgba(173,103,255,.3)}
+.muted{color:#cad8f3}.tag{background:#151a43;border:1px solid var(--cyan);color:#fff;box-shadow:0 0 12px rgba(48,239,255,.5)}
+.card{background:linear-gradient(145deg,rgba(24,34,68,.97),rgba(14,19,45,.97));border:1px solid rgba(89,168,255,.65);box-shadow:0 0 0 1px rgba(48,239,255,.12),0 0 22px rgba(57,116,255,.18),0 12px 32px rgba(0,0,0,.35)}
+button{background:linear-gradient(135deg,#fff078,#ffb94e);color:#201638;border:1px solid #fff1a5;box-shadow:0 0 14px rgba(255,228,94,.3)}
+button.alt{background:linear-gradient(135deg,#202e5b,#172144);color:#faf8ff;border:1px solid var(--cyan);box-shadow:0 0 12px rgba(48,239,255,.22)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--pink);outline-offset:3px}
+input,select{background:#0d1430;border-color:#4269b2;box-shadow:inset 0 0 12px rgba(57,116,255,.12)}
+.answers button{background:linear-gradient(135deg,#1a2850,#171b3c);border:1px solid rgba(48,239,255,.55);box-shadow:0 0 10px rgba(48,239,255,.12);color:#fff}
+.answers button.picked{border:2px solid var(--pink);box-shadow:0 0 16px rgba(255,66,208,.42)}
+.big,.score{color:var(--yellow);text-shadow:0 0 14px rgba(255,228,94,.48)}.player{background:linear-gradient(110deg,#172d56,#211b49);border:1px solid rgba(48,239,255,.32)}
+.bar{background:#171e43;border:1px solid rgba(48,239,255,.28)}.fill{background:linear-gradient(90deg,var(--blue),var(--cyan),var(--green),var(--yellow),var(--orange),var(--pink));box-shadow:0 0 10px var(--cyan)}
+.good{color:var(--green)}.error{color:#ff8c9e}footer{color:#aab9d6}
+.solo-section{border-color:rgba(255,66,208,.48)}.solo-game{background:linear-gradient(145deg,#172c53,#251b4b);border-color:rgba(173,103,255,.65);box-shadow:0 0 16px rgba(173,103,255,.16)}
+.english-learn-action,.english-vocab-action,.english-reading-action,.math-battle-buttons .math-rational-action,.math-choice-rational{background:linear-gradient(135deg,#1e4dff,#202050)!important;color:#fff!important;border:1px solid var(--cyan)!important;box-shadow:0 0 15px rgba(48,239,255,.27)}
+.english-listening-action,.proportional-practice-anti{background:linear-gradient(135deg,#087f91,#124c83)!important;color:#fff!important;border:1px solid var(--cyan)!important;box-shadow:0 0 15px rgba(48,239,255,.25)}
+.english-grammar-action,.english-writing-action,.math-choice-exam-rational{background:linear-gradient(135deg,#ff42cf,#6311aa)!important;color:#fff!important;border:1px solid #ff9bea!important;box-shadow:0 0 15px rgba(255,66,208,.3)}
+.math-learn-action,.math-battle-buttons .math-fractions-action,.math-choice-fractions,.proportional-practice-pro{background:linear-gradient(135deg,#fff078,#ff9b45)!important;color:#201638!important;border:1px solid #fff1a5!important;box-shadow:0 0 14px rgba(255,228,94,.3)}
+.math-choice-exam-fractions,.math-battle-buttons .math-exam-action{background:linear-gradient(135deg,#ff8a47,#d93473)!important;color:#fff!important;border:1px solid #ffc07b!important;box-shadow:0 0 15px rgba(255,155,69,.3)}
+.math-choice-proportional,.proportional-practice-mixed{background:linear-gradient(135deg,#9a4de8,#4f35b5)!important;color:#fff!important;border:1px solid #d5a8ff!important;box-shadow:0 0 15px rgba(173,103,255,.3)}
+.proportional-practice-button.is-active{outline:2px solid var(--pink);outline-offset:2px}
+.proportional-meta{background:#171742;border-color:var(--pink);color:#fff;box-shadow:0 0 12px rgba(255,66,208,.18)}
+.proportional-card{background:linear-gradient(145deg,#15545a,#1c404f);border-left-color:var(--green)}
+.antiproportional-card{background:linear-gradient(145deg,#203f78,#29245f);border-left-color:var(--cyan)}
+.proportional-material-panel{border-color:var(--purple);background:linear-gradient(145deg,#322d53,#1c2a40)}
+.proportional-test-card{background:linear-gradient(145deg,#543768,#322b54);border-left-color:var(--purple)}
+.proportional-video-link,.download-button{background:linear-gradient(135deg,#fff078,#ffb94e);color:#201638;box-shadow:0 0 13px rgba(255,228,94,.25)}
+@media(prefers-reduced-motion:no-preference){button{transition:filter .15s ease,box-shadow .15s ease}button:hover{filter:brightness(1.1);box-shadow:0 0 18px rgba(48,239,255,.35)}}
+</style><style id="cohesive-refresh-20261016">
+:root{color-scheme:dark;--ink:#f2f5fa;--muted:#b8c4d5;--page:#0d1422;--surface:#172235;--surface-raised:#1c2a40;--line:#34445b;--accent:#67d8d0;--accent-soft:#b2f0e9;--math-accent:#b9a7f5;--warm:#f2c879;--radius:18px}
+html{background:var(--page)}body{background:radial-gradient(ellipse at 50% -12%,rgba(54,94,142,.35),transparent 47%),linear-gradient(180deg,#111a2b 0%,#0d1422 78%);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
+main{max-width:1060px;padding:30px 24px 52px}main>.tag{background:#172a3b;border:1px solid #436b7b;box-shadow:none;color:#bde8e5;letter-spacing:.06em}main>h1{max-width:900px;margin:15px 0 7px;color:#f7f9fc;font-size:clamp(30px,4vw,46px);line-height:1.12;letter-spacing:-.025em;text-shadow:none}main>p.muted{margin:0 0 20px;color:#b8c4d5;font-size:16px}#status{color:#ffd2d2}
+.card{background:linear-gradient(145deg,rgba(24,36,55,.98),rgba(19,29,45,.98));border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 10px 28px rgba(0,0,0,.18)}h2,h3{color:var(--ink);text-shadow:none;line-height:1.25}h2{font-size:clamp(22px,3vw,28px)}.muted{color:var(--muted)}
+button{min-height:52px;border:1px solid #4b637b;border-radius:13px;background:#263750;color:#f5f7fb;box-shadow:none;font-weight:750;transition:background-color .15s ease,border-color .15s ease,transform .15s ease}button:hover:not(:disabled){background:#30445f;border-color:#83a0bc;filter:none;box-shadow:0 5px 14px rgba(0,0,0,.18)}button.alt{background:#202d40;border-color:#45576e;color:#dae3ee;box-shadow:none}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #8ee5dc;outline-offset:3px}
+input,select{border:1px solid #455970;border-radius:12px;background:#101a2a;color:var(--ink);box-shadow:none}footer{margin-top:28px;color:#8e9db1}
+.player{background:#1c2a3d;border:1px solid #35475f;border-radius:13px}.bar{background:#27364b;border:0}.fill{background:linear-gradient(90deg,#54bdb4,#9de4d4);box-shadow:none}.good{color:#8ce1c9}.error{color:#ffabb0}.answers button{background:#25364c;border:1px solid #405771;box-shadow:none}.answers button:hover:not(:disabled){background:#304660;box-shadow:none}.answers button.picked{border:2px solid #89dfd5;box-shadow:0 0 0 2px rgba(137,223,213,.12)}
+.english-learn-action,.english-vocab-action,.english-reading-action,.english-listening-action,.english-grammar-action,.english-writing-action,.math-battle-buttons .math-rational-action,.math-choice-rational,.math-choice-exam-rational,.math-learn-action,.math-battle-buttons .math-fractions-action,.math-choice-fractions,.math-choice-exam-fractions,.math-battle-buttons .math-exam-action,.math-choice-proportional,.proportional-practice-pro,.proportional-practice-anti,.proportional-practice-mixed{background:#263750!important;border:1px solid #4b637b!important;color:#f5f7fb!important;box-shadow:none!important}
+.english-learn-action:hover,.english-vocab-action:hover,.english-reading-action:hover,.english-listening-action:hover,.english-grammar-action:hover,.english-writing-action:hover,.math-battle-buttons button:hover,.math-choice-rational:hover,.math-choice-fractions:hover,.math-choice-exam-rational:hover,.math-choice-exam-fractions:hover,.math-choice-proportional:hover,.proportional-practice-button:hover{background:#30445f!important;border-color:#83a0bc!important;filter:none!important;box-shadow:0 5px 14px rgba(0,0,0,.18)!important}
+.proportional-practice-button.is-active{outline:2px solid #8ee5dc;outline-offset:2px}
+.solo-section,.solo-game{border-color:#3a5663;background:#172638;box-shadow:none}.proportional-card,.antiproportional-card,.proportional-material-panel,.proportional-test-card{background:#19283b;border-color:#3b516a;box-shadow:none}.proportional-meta{background:#1b3040;border-color:#426775;color:#d2e9e6;box-shadow:none}
+@media(max-width:700px){main{padding:22px 14px 36px}main>h1{font-size:clamp(28px,8vw,38px)}main>p.muted{font-size:14px}.card{padding:16px;margin:12px 0}}
+</style></head><body><main><span class="tag">UNIT 2 · STATION 1 + 2</span><h1>⚡ ENGLISCH &amp; MATHE BATTLE 3.0</h1><p class="muted">Vokabel-Battles · Reading · Grammatik · Mathe · Bruchrechnung</p><div id="status" aria-live="polite"></div><div id="app"></div><footer>Für Mehrspieler benötigt jedes Gerät Internet und einen eigenen Browser.</footer></main><script type="module">
+const status = document.getElementById('status');
+status.textContent = 'App wird gestartet …';
+window.addEventListener('error', event => {
+  status.textContent = 'Startfehler: ' + (event.message || 'Unbekannter Fehler');
+});
+window.addEventListener('unhandledrejection', event => {
+  status.textContent = 'Startfehler: ' + String(event.reason?.stack || event.reason || 'Unbekannter Fehler');
+});
+const appModuleUrl = new URL('./app.js', location.href);
+appModuleUrl.searchParams.set('v', 'battle-work-' + Date.now());
+import(appModuleUrl.href).then(() => {
+  if (status.textContent === 'App wird gestartet …') status.textContent = '';
+}).catch(error => {
+  status.style.whiteSpace = 'pre-wrap';
+  status.textContent = 'Startfehler: ' + String(error?.stack || error?.message || error);
+});
+</script></body></html>
+
+
+
+
+
