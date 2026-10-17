@@ -413,10 +413,28 @@ function vocabWorkInput(page,index,label,width='100%'){
  return `<input data-vocabwork="${index}" aria-label="${esc(label)}" autocomplete="off" autocapitalize="none" spellcheck="false" value="${esc(value)}" style="width:${width};min-width:0;min-height:44px;margin:5px 0 8px;padding:9px 11px;border:2px solid #5c7696;border-radius:9px;background:#fff;color:#172337">`;
 }
 let vocabWorkCheckedPage=0;
+const vocabWorkDraftTimers={};
+function vocabWorkDraftKey(station,page){return station===1?`vocabWork${page}`:`vocabWorkStation2Page${page}`;}
+function cancelVocabWorkDraftSync(station,page){const key=`${station}_${page}`;if(vocabWorkDraftTimers[key]){clearTimeout(vocabWorkDraftTimers[key]);delete vocabWorkDraftTimers[key];}}
+function scheduleVocabWorkDraftSync(station,page){
+ const key=`${station}_${page}`;cancelVocabWorkDraftSync(station,page);
+ vocabWorkDraftTimers[key]=setTimeout(()=>{delete vocabWorkDraftTimers[key];void syncVocabWorkDraft(station,page);},700);
+}
+async function syncVocabWorkDraft(station,page){
+ if(!db||!uid||!soloName){msg('Zwischenstand noch nicht online gespeichert. Die Antworten bleiben auf diesem Gerät.',true);return;}
+ const values=station===1?vocabWorkLoad(page):vocabWorkStation2Load(page);
+ const answers=station===1?VOCAB_WORK_ANSWERS[page]:VOCAB_WORK_STATION2_ANSWERS[page];
+ if(!answers)return;
+ const now=Date.now(),activity=vocabWorkDraftKey(station,page),done=values.filter(value=>String(value||'').trim()).length;
+ const draft={name:soloName,activity,done,total:answers.length,correct:0,score:0,maxScore:answers.length,finished:false,updatedAt:now,timestamp:now};
+ try{await set(ref(db,`englishSeriesResults/${uid}/${soloName}/${activity}`),draft);msg(`Zwischenstand online gespeichert · ${done}/${answers.length} Felder ausgefüllt.`);}
+ catch(e){msg('Zwischenstand konnte nicht online gespeichert werden: '+e.message,true);}
+}
 function vocabWorkPage(page,checked=false,resultText=''){
  if(!soloName){soloChooseName();return;}
  vocabWorkCheckedPage=page;
  void recordLearningActivity(soloName,`english_vocab_work_page${page}`);
+ if(!checked){const saved=vocabWorkLoad(page),total=VOCAB_WORK_ANSWERS[page]?.length||0,filled=saved.filter(value=>String(value||'').trim()).length;if(filled>0&&filled<total)scheduleVocabWorkDraftSync(1,page);}
  const back=card(`<div class="solo-actions">${btn('Zurück zur Englisch-Auswahl','vocabWorkBack','alt')}</div>`);
  const result=checked?`<p class="good"><strong>${esc(resultText)}</strong></p>`:'';
  if(page===1){
@@ -431,11 +449,11 @@ function vocabWorkPage(page,checked=false,resultText=''){
    `4. You can ${vocabWorkInput(1,18,'Sentence 4 answer')} up a mountain or a tree.`,
    `5. To find out what you can or can’t do in a sport, you have to learn the ${vocabWorkInput(1,19,'Sentence 5 answer')}.`
   ].map(x=>`<p style="line-height:1.7;margin:14px 0">${x}</p>`).join('');
-  app.innerHTML=card(`<h2>📝 Vokabelarbeit · Station 1 · Seite 1</h2><p class="muted">${esc(soloName)} · Vocabulary</p><section class="solo-section"><h3>1. Name the sports. Fill in the table.</h3><div style="display:grid;grid-template-columns:1fr;gap:4px">${table}</div></section><section class="solo-section"><h3>2. Find the opposites (↔).</h3>${q2}</section><section class="solo-section"><h3>3. Finish the sentences.</h3>${sentences}</section>${result}<p class="small muted">Trage alle Antworten ein und prüfe sie. Das Ergebnis wird automatisch für die Gesamtwertung gespeichert.</p><div class="buttons">${btn('✅ Prüfen und Ergebnis speichern','vocabWorkCheck')}</div>`)+back;
+  app.innerHTML=card(`<h2>📝 Vokabelarbeit · Station 1 · Seite 1</h2><p class="muted">${esc(soloName)} · Vocabulary</p><section class="solo-section"><h3>1. Name the sports. Fill in the table.</h3><div style="display:grid;grid-template-columns:1fr;gap:4px">${table}</div></section><section class="solo-section"><h3>2. Find the opposites (↔).</h3>${q2}</section><section class="solo-section"><h3>3. Finish the sentences.</h3>${sentences}</section>${result}<p class="small muted">Der Zwischenstand wird beim Tippen online gespeichert. Für die Punkte bitte anschließend „Prüfen“ wählen.</p><div class="buttons">${btn('✅ Prüfen und Ergebnis speichern','vocabWorkCheck')}</div>`)+back;
  }else{
   const inline=(i,word)=>vocabWorkInput(2,i,`Aufgabe 4 · ${word}`,'clamp(100px,30vw,190px)');
   const letter=`<div style="padding:14px 8px;line-height:2;font-size:clamp(16px,4.3vw,19px)"><p>Hi Beth,</p><p>How was your trip to the activity centre?</p><p>You know I love ${inline(0,'outdoor')} (Freiluft-) activities, so I tried canoeing last weekend. Our group took a trip down the River Wye.</p><p>The trip wasn’t ${inline(1,'dangerous')} (gefährlich), of course, but we had to wear special ${inline(2,'equipment')} (Ausrüstung) to keep us ${inline(3,'safe')} (sicher).</p><p>Guess what? I wasn’t so bad. We had a friendly and ${inline(4,'patient')} (geduldig) instructor. She said I was very ${inline(5,'talented')} (begabt). ☺</p><p>Mara was there too. She’s a really ${inline(6,'competitive')} (leistungsorientiert) girl and always wants to be most ${inline(7,'successful')} (erfolgreich). She was even ${inline(8,'cheeky')} (frech) to me. Well, forget about that …</p><p>The canoeing trip was great fun. In the evening I was ${inline(9,'exhausted')} (erschöpft) too, but I had a fantastic day.</p><p>See you soon!<br>Julie</p></div>`;
-  app.innerHTML=card(`<h2>📝 Vokabelarbeit · Station 1 · Seite 2</h2><p class="muted">${esc(soloName)} · Vocabulary</p><section class="solo-section"><h3>4. Julie is Beth’s friend. Complete her message with the right words.</h3>${letter}</section>${result}<p class="small muted">Trage alle Antworten ein und prüfe sie. Das Ergebnis wird automatisch für die Gesamtwertung gespeichert.</p><div class="buttons">${btn('✅ Prüfen und Ergebnis speichern','vocabWorkCheck')}</div>`)+back;
+  app.innerHTML=card(`<h2>📝 Vokabelarbeit · Station 1 · Seite 2</h2><p class="muted">${esc(soloName)} · Vocabulary</p><section class="solo-section"><h3>4. Julie is Beth’s friend. Complete her message with the right words.</h3>${letter}</section>${result}<p class="small muted">Der Zwischenstand wird beim Tippen online gespeichert. Für die Punkte bitte anschließend „Prüfen“ wählen.</p><div class="buttons">${btn('✅ Prüfen und Ergebnis speichern','vocabWorkCheck')}</div>`)+back;
  }
  window.scrollTo(0,0);
 }
@@ -445,6 +463,7 @@ function vocabWorkCollect(){
  const values=vocabWorkLoad(page);
  document.querySelectorAll('[data-vocabwork]').forEach(input=>{values[Number(input.dataset.vocabwork)]=input.value;});
  try{localStorage.setItem(vocabWorkKey(page),JSON.stringify(values));}catch{}
+ scheduleVocabWorkDraftSync(1,page);
 }
 const VOCAB_WORK_ANSWERS={
  1:[['swimming'],['canoeing'],['rafting'],['rugby'],['netball'],['basketball'],['skiing'],['small'],['loud'],['slow'],['boring'],['dangerous'],['difficult','hard'],['bad'],['unfit'],['tough'],['wood','woods'],['trip'],['climb'],['rules']],
@@ -454,6 +473,7 @@ function vocabWorkCheck(){
  const page=vocabWorkCheckedPage;if(!page||!soloName)return;vocabWorkCollect();
  const values=vocabWorkLoad(page),answers=VOCAB_WORK_ANSWERS[page],allFilled=answers.every((_,i)=>String(values[i]||'').trim());
  if(!allFilled){msg('Bitte erst alle Antworten eintragen.',true);return;}
+ cancelVocabWorkDraftSync(1,page);
  const normalized=values.map(grammarNormalize),correct=answers.reduce((sum,accepted,i)=>sum+(accepted.some(answer=>grammarNormalize(answer)===normalized[i])?1:0),0),now=Date.now();
  const result={name:soloName,activity:`vocabWork${page}`,done:answers.length,total:answers.length,correct,score:correct,maxScore:answers.length,finished:true,updatedAt:now,timestamp:now};
  if(db&&uid)void set(ref(db,`englishSeriesResults/${uid}/${soloName}/vocabWork${page}`),result).then(()=>vocabWorkPage(page,true,`${correct} von ${answers.length} richtig · Ergebnis gespeichert`)).catch(e=>msg('Ergebnis konnte nicht online gespeichert werden: '+e.message,true));
@@ -471,6 +491,7 @@ function vocabWorkStation2Page(page,checked=false,resultText=''){
  if(!soloName){soloChooseName();return;}
  vocabWorkStation2CheckedPage=page;
  void recordLearningActivity(soloName,`english_vocab_work_station2_page${page}`);
+ if(!checked){const saved=vocabWorkStation2Load(page),total=VOCAB_WORK_STATION2_ANSWERS[page]?.length||0,filled=saved.filter(value=>String(value||'').trim()).length;if(filled>0&&filled<total)scheduleVocabWorkDraftSync(2,page);}
  const result=checked?`<p class="good"><strong>${esc(resultText)}</strong></p>`:'';
  const back=card(`<div class="solo-actions">${btn('Zurück zur Englisch-Auswahl','vocabWorkBack','alt')}</div>`);
  if(page===1){
@@ -484,7 +505,7 @@ function vocabWorkStation2Page(page,checked=false,resultText=''){
    `5. “Yummy! Our pizza is ready. Let’s take it out.” – “Be careful! It’s hot. Don’t ${vocabWorkStation2Input(1,10,'Aufgabe 2 · Satz 5','clamp(120px,30vw,220px)')} your hand when you take it out.”`,
    `6. Call 999 for the ${vocabWorkStation2Input(1,11,'Aufgabe 2 · Satz 6','clamp(120px,30vw,220px)')} services in the UK.`
   ].map(x=>`<p style="line-height:1.8;margin:14px 0">${x}</p>`).join('');
-  app.innerHTML=card(`<h2>🩹 Vokabelarbeit · Station 2 · Seite 1</h2><p class="muted">${esc(soloName)} · Vocabulary</p><section class="solo-section"><h3>1. What is it? Write the right word under each picture.</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px">${images}</div></section><section class="solo-section"><h3>2. Complete the sentences with the right words.</h3><p><em>Example:</em> I have a sore throat. I need my scarf.</p>${sentences}</section>${result}<p class="small muted">Trage alle Antworten ein und prüfe sie. Das Ergebnis wird gespeichert.</p><div class="buttons">${btn('✅ Prüfen und Ergebnis speichern','vocabWorkStation2Check')}</div>`)+back;
+   app.innerHTML=card(`<h2>🩹 Vokabelarbeit · Station 2 · Seite 1</h2><p class="muted">${esc(soloName)} · Vocabulary</p><section class="solo-section"><h3>1. What is it? Write the right word under each picture.</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px">${images}</div></section><section class="solo-section"><h3>2. Complete the sentences with the right words.</h3><p><em>Example:</em> I have a sore throat. I need my scarf.</p>${sentences}</section>${result}<p class="small muted">Der Zwischenstand wird beim Tippen online gespeichert. Für die Punkte bitte anschließend „Prüfen“ wählen.</p><div class="buttons">${btn('✅ Prüfen und Ergebnis speichern','vocabWorkStation2Check')}</div>`)+back;
  }else{
   const verbs=[
    `1. You ${vocabWorkStation2Input(2,0,'Aufgabe 3 · Satz 1','clamp(120px,30vw,220px)')} (have / make) an accident.`,
@@ -495,7 +516,7 @@ function vocabWorkStation2Page(page,checked=false,resultText=''){
    `6. You ${vocabWorkStation2Input(2,5,'Aufgabe 3 · Satz 6','clamp(120px,30vw,220px)')} (take / bring) a person to hospital.`
   ].map(x=>`<p style="line-height:1.8;margin:14px 0">${x}</p>`).join('');
   const services=['1.','2.','3.','4.'].map((n,i)=>`<label style="display:flex;align-items:center;gap:8px;margin:12px 0;font-weight:700"><span>${n}</span>${vocabWorkStation2Input(2,6+i,`Aufgabe 4 · Emergency service ${n}`)}</label>`).join('');
-  app.innerHTML=card(`<h2>🩹 Vokabelarbeit · Station 2 · Seite 2</h2><p class="muted">${esc(soloName)} · Vocabulary</p><section class="solo-section"><h3>3. Put in the right verb.</h3>${verbs}</section><section class="solo-section"><h3>4. Name the four emergency services in the UK.</h3>${services}</section>${result}<p class="small muted">Trage alle Antworten ein und prüfe sie. Das Ergebnis wird gespeichert.</p><div class="buttons">${btn('✅ Prüfen und Ergebnis speichern','vocabWorkStation2Check')}</div>`)+back;
+   app.innerHTML=card(`<h2>🩹 Vokabelarbeit · Station 2 · Seite 2</h2><p class="muted">${esc(soloName)} · Vocabulary</p><section class="solo-section"><h3>3. Put in the right verb.</h3>${verbs}</section><section class="solo-section"><h3>4. Name the four emergency services in the UK.</h3>${services}</section>${result}<p class="small muted">Der Zwischenstand wird beim Tippen online gespeichert. Für die Punkte bitte anschließend „Prüfen“ wählen.</p><div class="buttons">${btn('✅ Prüfen und Ergebnis speichern','vocabWorkStation2Check')}</div>`)+back;
  }
  window.scrollTo(0,0);
 }
@@ -504,6 +525,7 @@ function vocabWorkStation2Collect(){
  const page=vocabWorkStation2CheckedPage,values=vocabWorkStation2Load(page);
  document.querySelectorAll('[data-vocabwork-s2]').forEach(input=>{values[Number(input.dataset.vocabworkS2)]=input.value;});
  try{localStorage.setItem(vocabWorkStation2Key(page),JSON.stringify(values));}catch{}
+ scheduleVocabWorkDraftSync(2,page);
 }
 const VOCAB_WORK_STATION2_ANSWERS={
  1:[['plaster'],['bandage'],['ambulance'],['tooth'],['tablet','medicine','tablet/medicine','tablet / medicine'],['cast'],['accident'],['bleed'],['knee'],['sprain','twist','hurt'],['burn'],['emergency']],
@@ -513,6 +535,7 @@ function vocabWorkStation2Check(){
  const page=vocabWorkStation2CheckedPage;if(!page||!soloName)return;vocabWorkStation2Collect();
  const values=vocabWorkStation2Load(page),answers=VOCAB_WORK_STATION2_ANSWERS[page];
  if(!answers.every((_,i)=>String(values[i]||'').trim())){msg('Bitte erst alle Antworten eintragen.',true);return;}
+ cancelVocabWorkDraftSync(2,page);
  const normalized=values.map(grammarNormalize),correct=answers.reduce((sum,accepted,i)=>sum+(accepted.some(answer=>grammarNormalize(answer)===normalized[i])?1:0),0),now=Date.now();
  const result={name:soloName,activity:`vocabWorkStation2Page${page}`,done:answers.length,total:answers.length,correct,score:correct,maxScore:answers.length,finished:true,updatedAt:now,timestamp:now};
  if(db&&uid)void set(ref(db,`englishSeriesResults/${uid}/${soloName}/vocabWorkStation2Page${page}`),result).then(()=>vocabWorkStation2Page(page,true,`${correct} von ${answers.length} richtig · Ergebnis gespeichert`)).catch(e=>msg('Ergebnis konnte nicht online gespeichert werden: '+e.message,true));
