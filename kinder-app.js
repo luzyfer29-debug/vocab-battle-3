@@ -271,7 +271,10 @@ function competitionRank(entries){
 }
 function legacyBattleResult(profile,activity){
  let legacy=null,correct=0,maxCorrect=0;
- if(activity.id==='grammar_station1'||activity.id==='grammar_station2'){
+ if(/^vocab_[123]$/.test(activity.id)){
+  const battle=Number(activity.id.slice(-1));legacy=profile[`battle${battle}`];if(!legacy||(!legacy.finished&&Number(legacy.done)<30))return null;
+  correct=Number.isFinite(Number(legacy.correct))?Number(legacy.correct):Math.floor((Number(legacy.score)||0)/10);maxCorrect=30;
+ }else if(activity.id==='grammar_station1'||activity.id==='grammar_station2'){
   legacy=profile[`grammarStation${activity.id.endsWith('1')?'1':'2'}`];if(!legacy?.finished||!legacy.runId)return null;
   correct=Number(legacy.correct);maxCorrect=Number(legacy.total);
  }else if(activity.id==='listening'){
