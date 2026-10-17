@@ -251,7 +251,7 @@ function stopClock(){if(clock!==null){clearInterval(clock);clock=null;}lastClock
 function battleOverviewActivities(subject){
  if(subject==='math')return [
   ...FRACTION_MODULES.map(item=>({id:`fraction_${item.id}`,label:`Bruchrechnung · ${item.title}`})),
-  ...RATIONAL_MATH_TITLES.map((label,i)=>({id:`rational_${i+1}`,label})),
+  ...RATIONAL_MATH_TITLES.slice(0,3).map((label,i)=>({id:`rational_${i+1}`,label})),
   {id:'proportional_exam',label:'Proportional-/Antiproportional-Klassenarbeit'}
  ];
  return [

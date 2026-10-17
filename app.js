@@ -211,7 +211,7 @@ async function saveCompetitionResults(m,playersList,activity,roomCode,runId){
  if(!adminLoggedIn||uid!==ADMIN_UID||!db||!activity||m.stage!=='finished')return;
  const runKey=`${roomCode}:${runId||m.createdAt||'run'}`;if(savedCompetitionRuns.has(runKey))return;savedCompetitionRuns.add(runKey);
  const root=activity.subject==='math'?'mathProgress':'soloProgress',ranked=rankByScore(playersList,p=>Number(p.score)||0),updatedAt=Number(m.finishedAt)||Date.now();
- try{for(const {row:p,place,tied} of ranked){if(!p.uid||!SOLO_NAMES.includes(p.name))continue;const resultRef=ref(db,`${root}/${p.uid}/${p.name}/battleResults/${activity.id}`),result={name:p.name,activity:activity.id,label:activity.label,correct:Math.min(activity.max,Math.max(0,Math.floor((Number(p.score)||0)/10))),maxCorrect:activity.max,bonusPoints:battleBonusPoints(place),place,tied:!!tied,finished:true,roomCode,runId:String(runId||m.createdAt||roomCode),updatedAt},publicResult={name:p.name,activity:activity.id,label:activity.label,correct:result.correct,maxCorrect:result.maxCorrect,bonusPoints:result.bonusPoints,place:result.place,tied:result.tied,finished:true,updatedAt};await runTransaction(ref(db,`battleRankings/${activity.subject}/${activity.id}/${p.name}`),current=>Number(current?.updatedAt)>=updatedAt?current:publicResult);await runTransaction(resultRef,current=>{if(current?.runId===result.runId)return current;if(Number(current?.updatedAt)>updatedAt)return current;return result;});}}
+ try{for(const {row:p,place,tied} of ranked){if(!p.uid||!SOLO_NAMES.includes(p.name))continue;const publicResult={name:p.name,activity:activity.id,label:activity.label,correct:Math.min(activity.max,Math.max(0,Math.floor((Number(p.score)||0)/10))),maxCorrect:activity.max,bonusPoints:battleBonusPoints(place),place,tied:!!tied,finished:true,updatedAt};await runTransaction(ref(db,`battleRankings/${activity.subject}/${activity.id}/${p.name}`),current=>Number(current?.updatedAt)>=updatedAt?current:publicResult);}}
  catch(e){savedCompetitionRuns.delete(runKey);msg('Battle-Ergebnis konnte nicht vollständig gespeichert werden: '+e.message,true);}
 }
 let savedEnglishSeriesRoom='';
@@ -579,7 +579,7 @@ function showDashboard(){
 function battleOverviewActivities(subject){
  if(subject==='math')return [
   ...FRACTION_MODULES.map(item=>({id:`fraction_${item.id}`,label:`Bruchrechnung · ${item.title}`})),
-  ...RATIONAL_MATH_TITLES.map((label,i)=>({id:`rational_${i+1}`,label})),
+  ...RATIONAL_MATH_TITLES.slice(0,3).map((label,i)=>({id:`rational_${i+1}`,label})),
   {id:'proportional_exam',label:'Proportional-/Antiproportional-Klassenarbeit'}
  ];
  return [
