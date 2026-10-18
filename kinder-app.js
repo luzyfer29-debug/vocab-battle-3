@@ -12,7 +12,7 @@ const RATIONAL_MATH_TITLES=['Rationale Zahlen · Aufgabe 1','Rationale Zahlen ·
 
 const app=document.querySelector('#app'),status=document.querySelector('#status');
 const names=['Luca','Semir','Talea','Nele'];
-const VOCAB_QUESTION_MS=8000,OTHER_QUESTION_MS=15000,REVEAL_MS=3000;
+const VOCAB_QUESTION_MS=8000,OTHER_QUESTION_MS=8000,REVEAL_MS=3000;
 const ADMIN_UID='M41x9WNoHAfqpSmyrztAgf2IZYC3';
 let resetUnsubscribe=null,resetState={},resetReady=false;
 let db,uid='',code='',role='',slot='',room=null,unsubscribe=null,solo=null,joinExpectedRoomType='';

@@ -8,13 +8,13 @@ import {BATTLES} from './questions.js';
 import {MATH_BATTLES,MATH_EXAM_BATTLE,MATH_RATIONAL_EXAM_BATTLE,MATH_PROPORTIONAL_EXAM_BATTLE,MATH_PROPORTIONAL_CLASSWORKS,MATH_PROPORTIONAL_PRACTICE_BLOCKS} from './math-questions.js?v=proportional-uebungsbloecke-20261015b';
 let gbCode='',gbRoom=null,gbOff=null,gbRole='',gbSlot='',gbBusy=false,gbTimer=null,gbChooseAction='',gbRoomReady=false,gbRoomListenError=false;
 const VOCAB_WORK_BATTLE_QUESTIONS=[
- {title:'Seite 1 · Aufgabe 1 · water sports',prompt:'Name the sports. Fill in the table. Water sports · 1.',accepted:['swimming']},
- {title:'Seite 1 · Aufgabe 1 · water sports',prompt:'Name the sports. Fill in the table. Water sports · 2.',accepted:['canoeing']},
- {title:'Seite 1 · Aufgabe 1 · water sports',prompt:'Name the sports. Fill in the table. Water sports · 3.',accepted:['rafting']},
- {title:'Seite 1 · Aufgabe 1 · ball sports',prompt:'Name the sports. Fill in the table. Ball sports · 1.',accepted:['rugby']},
- {title:'Seite 1 · Aufgabe 1 · ball sports',prompt:'Name the sports. Fill in the table. Ball sports · 2.',accepted:['netball']},
- {title:'Seite 1 · Aufgabe 1 · ball sports',prompt:'Name the sports. Fill in the table. Ball sports · 3.',accepted:['basketball']},
- {title:'Seite 1 · Aufgabe 1 · winter sport',prompt:'Name the sports. Fill in the table. Winter sport · 1.',accepted:['skiing']},
+ {title:'Seite 1 · Aufgabe 1 · water sports',prompt:'Name the sports. Fill in the table. Water sports · 1.',accepted:['swimming','canoeing','rafting','surfing','sailing','kayaking','rowing','windsurfing','wind surfing','water skiing','diving','scuba diving','snorkelling','water polo'],displayAnswer:'e.g. swimming, canoeing, rafting or surfing'},
+ {title:'Seite 1 · Aufgabe 1 · water sports',prompt:'Name the sports. Fill in the table. Water sports · 2.',accepted:['swimming','canoeing','rafting','surfing','sailing','kayaking','rowing','windsurfing','wind surfing','water skiing','diving','scuba diving','snorkelling','water polo'],displayAnswer:'e.g. swimming, canoeing, rafting or surfing'},
+ {title:'Seite 1 · Aufgabe 1 · water sports',prompt:'Name the sports. Fill in the table. Water sports · 3.',accepted:['swimming','canoeing','rafting','surfing','sailing','kayaking','rowing','windsurfing','wind surfing','water skiing','diving','scuba diving','snorkelling','water polo'],displayAnswer:'e.g. swimming, canoeing, rafting or surfing'},
+ {title:'Seite 1 · Aufgabe 1 · ball sports',prompt:'Name the sports. Fill in the table. Ball sports · 1.',accepted:['rugby','netball','basketball','football','soccer','volleyball','handball','tennis','table tennis','ping-pong','cricket','baseball','softball','hockey','field hockey','golf','lacrosse','dodgeball','polo'],displayAnswer:'e.g. rugby, football, basketball or tennis'},
+ {title:'Seite 1 · Aufgabe 1 · ball sports',prompt:'Name the sports. Fill in the table. Ball sports · 2.',accepted:['rugby','netball','basketball','football','soccer','volleyball','handball','tennis','table tennis','ping-pong','cricket','baseball','softball','hockey','field hockey','golf','lacrosse','dodgeball','polo'],displayAnswer:'e.g. rugby, football, basketball or tennis'},
+ {title:'Seite 1 · Aufgabe 1 · ball sports',prompt:'Name the sports. Fill in the table. Ball sports · 3.',accepted:['rugby','netball','basketball','football','soccer','volleyball','handball','tennis','table tennis','ping-pong','cricket','baseball','softball','hockey','field hockey','golf','lacrosse','dodgeball','polo'],displayAnswer:'e.g. rugby, football, basketball or tennis'},
+ {title:'Seite 1 · Aufgabe 1 · winter sport',prompt:'Name the sports. Fill in the table. Winter sport · 1.',accepted:['skiing','snowboarding','ice skating','figure skating','ice hockey','curling','bobsleigh','sledging'],displayAnswer:'e.g. skiing, snowboarding or ice skating'},
  {title:'Seite 1 · Aufgabe 2 · Find the opposites',prompt:'Find the opposite of “big”.',accepted:['small']},
  {title:'Seite 1 · Aufgabe 2 · Find the opposites',prompt:'Find the opposite of “quiet”.',accepted:['loud']},
  {title:'Seite 1 · Aufgabe 2 · Find the opposites',prompt:'Find the opposite of “quick”.',accepted:['slow']},
@@ -71,7 +71,7 @@ import {WRITING_TASKS,WRITING_BATTLE} from './writing-data.js';
 
 const app=document.querySelector('#app'),status=document.querySelector('#status');
 const names=['Luca','Semir','Talea','Nele'];
-const VOCAB_QUESTION_MS=8000,OTHER_QUESTION_MS=15000,REVEAL_MS=3000;
+const VOCAB_QUESTION_MS=8000,OTHER_QUESTION_MS=8000,REVEAL_MS=3000;
 let db,uid='',code='',role='',slot='',room=null,unsubscribe=null,solo=null;
 let clock=null,busy=false,previousStageKey='',lastClockText='';
 let readingRun=null,readingLanguage='en',readingBattleLanguage='en';
@@ -657,11 +657,33 @@ function mathAction(v){if(v==='mathChoose')mathChoose();else if(v==='mathHome')m
 
 
 // Grammatik-Battle: Originalaufgaben, Texteingaben und Bewertung durch den Schiedsrichter.
-const GB_TIME=45000;
+const GB_TIME=8000;
 const gbNorm=s=>String(s||'').trim().toLowerCase().replace(/[’‘]/g,"'").replace(/\s+/g,' ');
 const gbQuestions=st=>GRAMMAR[st].tasks.flatMap((t,ti)=> (t.items||t.open||[]).map((item,i)=>({task:ti,number:i+1,title:t.title,intro:t.intro||'',prompt:t.items?item[0]+' _____ '+item[1]:(t.prompts?.[i]||'Schreibe einen vollständigen englischen Satz.'),accepted:t.items?item[2]:null,example:t.open?.[i]||null})));
+const gbAnswerKey=s=>String(s||'').trim().toLowerCase().replace(/[’‘]/g,"'").replace(/[-‐‑–—]/g,' ').replace(/[.,!?;:]/g,'').replace(/\s+/g,' ');
+const gbAutoBusy=new Set();
+async function gbAutoGrade(){
+ const m=gbRoom?.meta||{},codeAtStart=gbCode,index=Number(m.index||0);
+ if(gbRole!=='host'||!uid||m.hostUid!==uid||m.stage!=='question')return;
+ const isVocabWork=m.kind==='vocab-work'||m.kind==='vocab-work-station2';
+ const qs=m.kind==='vocab-work-station2'?VOCAB_WORK_STATION2_BATTLE_QUESTIONS:isVocabWork?VOCAB_WORK_BATTLE_QUESTIONS:gbQuestions(Number(m.station||0));
+ const q=qs[index];if(!Array.isArray(q?.accepted)||!q.accepted.length)return;
+ const runKey=codeAtStart+'/'+(m.runId||m.createdAt||'run')+'/'+index;
+ for(const [playerUid,ans] of Object.entries(gbRoom.submissions?.[index]||{})){
+  if(!ans?.text||gbRoom.reviews?.[index]?.[playerUid])continue;
+  const key=runKey+'/'+playerUid;if(gbAutoBusy.has(key))continue;gbAutoBusy.add(key);
+  try{
+   const correct=q.accepted.some(expected=>gbAnswerKey(expected)===gbAnswerKey(ans.text));
+   const player=gbPlayers().find(p=>p.uid===playerUid);
+   if(player&&correct)await awardRoomPointsOnce('grammarRooms/'+codeAtStart,player.id,String(m.runId||m.createdAt||'grammar')+':'+index,10);
+   if(player&&!isVocabWork)await saveGrammarProgress(player,Number(m.station)||0,index,correct,m.runId||(codeAtStart+'-'+(m.createdAt||0)),qs.length);
+   await runTransaction(ref(db,'grammarRooms/'+codeAtStart+'/reviews/'+index+'/'+playerUid),current=>current||{correct,at:Date.now(),automatic:true});
+  }catch(e){msg('Automatische Bewertung fehlgeschlagen: '+e.message,true);}
+  finally{gbAutoBusy.delete(key);}
+ }
+}
 function gbStop(){if(gbOff){gbOff();gbOff=null;}if(gbTimer){clearInterval(gbTimer);gbTimer=null;}gbRoom=null;gbCode='';gbRole='';gbSlot='';gbChooseAction='';gbRoomReady=false;gbRoomListenError=false;}
-function gbListen(){if(gbOff)gbOff();gbOff=onValue(ref(db,`grammarRooms/${gbCode}`),s=>{const liveRoom=s.val();if(!liveRoom){if(gbRole==='player')msg('Grammatik-Raum nicht gefunden.',true);return;}gbRoom=liveRoom;gbRoomReady=true;gbRender();},e=>{if(gbRole==='host'&&gbChooseAction){gbRoomListenError=true;vocabWorkStartError(e,gbChooseAction);}else msg('Grammatik-Battle: '+e.message,true);});}
+function gbListen(){if(gbOff)gbOff();gbOff=onValue(ref(db,`grammarRooms/${gbCode}`),s=>{const liveRoom=s.val();if(!liveRoom){if(gbRole==='player')msg('Grammatik-Raum nicht gefunden.',true);return;}gbRoom=liveRoom;gbRoomReady=true;gbRender();void gbAutoGrade();},e=>{if(gbRole==='host'&&gbChooseAction){gbRoomListenError=true;vocabWorkStartError(e,gbChooseAction);}else msg('Grammatik-Battle: '+e.message,true);});}
 function gbPlayers(){return Object.entries(gbRoom?.slots||{}).map(([id,v])=>({id,...v})).sort((a,b)=>(b.score||0)-(a.score||0));}
 function gbRanking(){return rankByScore(gbPlayers()).map(({row:p,place,tied})=>`<div class="player row"><span>${place}. ${esc(p.name)}</span><strong>${p.score||0} P${gbRoom?.meta?.stage==='finished'?` · ${Math.floor((Number(p.score)||0)/10)} richtig · +${battleBonusPoints(place)} Battle-Punkte${tied?' (Gleichstand)':''}`:''}</strong></div>`).join('')||'<p>Warte auf Spieler.</p>';}
 function gbClock(){if(!gbRoom||gbRoom.meta?.stage!=='question')return;const el=document.querySelector('#gb-clock');if(el)el.textContent='⏱️ '+Math.max(0,Math.ceil((Number(gbRoom.meta.deadline||0)-Date.now())/1000))+' Sekunden';}
@@ -670,7 +692,7 @@ function gbChoose(){if(!adminLoggedIn||uid!==ADMIN_UID){loginForm();return;}app.
 async function gbCreate(){const station=Number(document.querySelector('#gb-station')?.value||0);gbStop();gbCode=String(Math.floor(100000+Math.random()*900000));gbRole='host';try{await set(ref(db,`grammarRooms/${gbCode}/meta`),{hostUid:uid,station,index:0,stage:'lobby',deadline:0,createdAt:Date.now()});gbListen();}catch(e){msg('Raum erstellen: '+e.message,true);}}
 function gbRender(){const m=gbRoom.meta||{};if(m.stage==='finished'&&gbRole==='host')void saveCompetitionResults(m,gbPlayers(),competitionActivity(m),gbCode,m.runId);const isVocabWork=m.kind==='vocab-work'||m.kind==='vocab-work-station2',isVocabWork2=m.kind==='vocab-work-station2',qs=isVocabWork2?VOCAB_WORK_STATION2_BATTLE_QUESTIONS:isVocabWork?VOCAB_WORK_BATTLE_QUESTIONS:gbQuestions(Number(m.station||0)),q=qs[Number(m.index||0)],image=q?.image?`<img src="${esc(q.image)}" alt="Bild zu ${esc(q.title)}" style="display:block;width:min(100%,340px);height:190px;object-fit:contain;background:#fff;border-radius:14px;border:2px solid #a9bad0;padding:8px;margin:12px auto">`:'',stage=m.stage,title=isVocabWork2?'Vokabelarbeit · Station 2 · Seiten 1 + 2':isVocabWork?'Vokabelarbeit · Station 1 · Seiten 1 + 2':`Grammatik · Station ${Number(m.station)+1}`;if(gbRole==='player'){const answer=gbRoom.submissions?.[m.index]?.[uid],review=gbRoom.reviews?.[m.index]?.[uid],body=stage==='lobby'?'<h3>Warteraum</h3><p>Warte, bis der Schiedsrichter startet.</p>':stage==='finished'?`<h3>${isVocabWork?'Vokabelarbeit':'Grammatik'}-Battle beendet</h3><p>Deine Punkte stehen in der Rangliste.</p>`:q?`<h3>${esc(q.title)}</h3>${image}<p>${esc(q.prompt)}</p><p id="gb-clock"></p>${review?`<p class="${review.correct?'good':'error'}">${review.correct?'✅ Als richtig gewertet':'❌ Als falsch gewertet'}</p>`:answer?'<p>Antwort abgegeben. Warte auf den Schiedsrichter.</p>':`<label>Deine Antwort<input data-gbtext maxlength="500" autocomplete="off" style="background:#fff;color:#172033;border:2px solid #a9bad0;border-radius:12px;padding:14px;font-size:1.1rem;width:100%;box-sizing:border-box"></label>${btn('Antwort abgeben','gbSubmit')}`}<p class="muted">Schreibe die vollständige englische Lösung.</p>`:'<p>Aufgabe wird geladen …</p>';app.innerHTML=card(`<h2>📝 ${esc(title)}</h2><p>Raumcode <strong>${esc(gbCode)}</strong> · Aufgabe ${Math.min(qs.length,Number(m.index)+1)} von ${qs.length}</p>${body}`)+card(btn('Zur Startseite','home','alt'));if(gbTimer)clearInterval(gbTimer);if(stage==='question'){gbTimer=setInterval(gbClock,1000);gbClock();}return;}let out=card(`<h2>${isVocabWork?'📝':'🏆'} ${esc(title)}</h2><p>Raumcode</p><div class="big">${esc(gbCode)}</div><p>${stage==='finished'?'Beendet':`Aufgabe ${Math.min(qs.length,Number(m.index)+1)} von ${qs.length}`}</p>${gbRanking()}`);
 if(stage==='lobby')out+=card('<h3>Warteraum</h3><p>Die Kinder treten mit dem Raumcode bei.</p>'+(gbRoomReady?btn('▶️ Battle starten','gbStart'):'<p class="muted">Warteraum wird bestätigt …</p><button type="button" disabled>⏳ Warteraum wird angelegt</button>'));
-if(stage==='question'&&q){const submissions=gbRoom.submissions?.[m.index]||{},reviews=gbRoom.reviews?.[m.index]||{};out+=card(`<h3>${esc(q.title)}</h3>${image}<p>${esc(q.prompt)}</p><p id="gb-clock"></p><p><strong>Musterlösung:</strong> ${esc(q.accepted?.join(' / ')||q.example||'')}</p><p class="muted">Jede Antwort einzeln bewerten. Bei freien Sätzen sind andere richtige Formulierungen möglich.</p>`+gbPlayers().map(p=>{const ans=submissions[p.uid];const r=reviews[p.uid];return `<div class="player"><strong>${esc(p.name)}</strong><p>${ans?esc(ans.text):'Noch keine Antwort'}</p>${r?`<p>${r.correct?'✅ Richtig':'❌ Falsch'} – bewertet</p>`:ans?`${btn('✅ Richtig',`gbYes_${p.uid}`)} ${btn('❌ Falsch',`gbNo_${p.uid}`,'alt')}`:''}</div>`;}).join('')+btn('Nächste Aufgabe ➜','gbNext'));
+if(stage==='question'&&q){const submissions=gbRoom.submissions?.[m.index]||{},reviews=gbRoom.reviews?.[m.index]||{};out+=card(`<h3>${esc(q.title)}</h3>${image}<p>${esc(q.prompt)}</p><p id="gb-clock"></p><p><strong>${q.accepted?.length?'Akzeptierte Antworten':'Musterlösung'}:</strong> ${esc(q.displayAnswer||q.accepted?.join(' / ')||q.example||'')}</p><p class="muted">${q.accepted?.length?'Antworten werden automatisch bewertet.':'Freie Sätze können unterschiedliche richtige Formulierungen haben und müssen geprüft werden.'}</p>`+gbPlayers().map(p=>{const ans=submissions[p.uid];const r=reviews[p.uid];return `<div class="player"><strong>${esc(p.name)}</strong><p>${ans?esc(ans.text):'Noch keine Antwort'}</p>${r?`<p>${r.correct?'✅ Richtig':'❌ Falsch'} · ${r.automatic?'automatisch bewertet':'bewertet'}</p>`:ans?(q.accepted?.length?'<p>🤖 Wird automatisch bewertet …</p>':`${btn('✅ Richtig',`gbYes_${p.uid}`)} ${btn('❌ Falsch',`gbNo_${p.uid}`,'alt')}`):''}</div>`;}).join('')+btn('Nächste Aufgabe ➜','gbNext'));
 if(stage==='finished')out+=card('<h2>🏆 Endstand</h2>'+gbRanking()+btn('Neues Spiel','gbRestart'));
 app.innerHTML=out+card(btn('Zur Startseite','home','alt'));if(gbTimer)clearInterval(gbTimer);if(stage==='question'){gbTimer=setInterval(gbClock,1000);gbClock();}}
 }
