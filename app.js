@@ -8,13 +8,13 @@ import {BATTLES} from './questions.js';
 import {MATH_BATTLES,MATH_EXAM_BATTLE,MATH_RATIONAL_EXAM_BATTLE,MATH_PROPORTIONAL_EXAM_BATTLE,MATH_PROPORTIONAL_CLASSWORKS,MATH_PROPORTIONAL_PRACTICE_BLOCKS} from './math-questions.js?v=proportional-uebungsbloecke-20261015b';
 let gbCode='',gbRoom=null,gbOff=null,gbRole='',gbSlot='',gbBusy=false,gbTimer=null,gbChooseAction='',gbRoomReady=false,gbRoomListenError=false;
 const VOCAB_WORK_BATTLE_QUESTIONS=[
- {title:'Seite 1 · Aufgabe 1 · water sports',prompt:'Name the sports. Fill in the table. Water sports · 1.',accepted:['swimming']},
- {title:'Seite 1 · Aufgabe 1 · water sports',prompt:'Name the sports. Fill in the table. Water sports · 2.',accepted:['canoeing']},
- {title:'Seite 1 · Aufgabe 1 · water sports',prompt:'Name the sports. Fill in the table. Water sports · 3.',accepted:['rafting']},
- {title:'Seite 1 · Aufgabe 1 · ball sports',prompt:'Name the sports. Fill in the table. Ball sports · 1.',accepted:['rugby']},
- {title:'Seite 1 · Aufgabe 1 · ball sports',prompt:'Name the sports. Fill in the table. Ball sports · 2.',accepted:['netball']},
- {title:'Seite 1 · Aufgabe 1 · ball sports',prompt:'Name the sports. Fill in the table. Ball sports · 3.',accepted:['basketball']},
- {title:'Seite 1 · Aufgabe 1 · winter sport',prompt:'Name the sports. Fill in the table. Winter sport · 1.',accepted:['skiing']},
+ {title:'Seite 1 · Aufgabe 1 · water sports',prompt:'Name a water sport. Any correct water sports is accepted.',accepted:['swimming', 'canoeing', 'rafting', 'water polo', 'waterball', 'diving', 'scuba diving', 'surfing', 'sailing', 'rowing', 'kayaking', 'snorkelling', 'snorkeling', 'windsurfing', 'water skiing', 'wakeboarding', 'synchronized swimming', 'synchronised swimming']},
+ {title:'Seite 1 · Aufgabe 1 · water sports',prompt:'Name a water sport. Any correct water sports is accepted.',accepted:['swimming', 'canoeing', 'rafting', 'water polo', 'waterball', 'diving', 'scuba diving', 'surfing', 'sailing', 'rowing', 'kayaking', 'snorkelling', 'snorkeling', 'windsurfing', 'water skiing', 'wakeboarding', 'synchronized swimming', 'synchronised swimming']},
+ {title:'Seite 1 · Aufgabe 1 · water sports',prompt:'Name a water sport. Any correct water sports is accepted.',accepted:['swimming', 'canoeing', 'rafting', 'water polo', 'waterball', 'diving', 'scuba diving', 'surfing', 'sailing', 'rowing', 'kayaking', 'snorkelling', 'snorkeling', 'windsurfing', 'water skiing', 'wakeboarding', 'synchronized swimming', 'synchronised swimming']},
+ {title:'Seite 1 · Aufgabe 1 · ball sports',prompt:'Name a ball sport. Any correct ball sports is accepted.',accepted:['rugby', 'netball', 'basketball', 'football', 'soccer', 'volleyball', 'tennis', 'table tennis', 'water polo', 'waterball', 'handball', 'baseball', 'softball', 'cricket', 'hockey', 'field hockey']},
+ {title:'Seite 1 · Aufgabe 1 · ball sports',prompt:'Name a ball sport. Any correct ball sports is accepted.',accepted:['rugby', 'netball', 'basketball', 'football', 'soccer', 'volleyball', 'tennis', 'table tennis', 'water polo', 'waterball', 'handball', 'baseball', 'softball', 'cricket', 'hockey', 'field hockey']},
+ {title:'Seite 1 · Aufgabe 1 · ball sports',prompt:'Name a ball sport. Any correct ball sports is accepted.',accepted:['rugby', 'netball', 'basketball', 'football', 'soccer', 'volleyball', 'tennis', 'table tennis', 'water polo', 'waterball', 'handball', 'baseball', 'softball', 'cricket', 'hockey', 'field hockey']},
+ {title:'Seite 1 · Aufgabe 1 · winter sport',prompt:'Name a winter sport. Any correct winter sport is accepted.',accepted:['skiing', 'snowboarding', 'ice skating', 'figure skating', 'ice hockey', 'curling', 'sledding', 'sleighing', 'bobsleigh', 'bobsled', 'luge', 'skeleton', 'cross-country skiing', 'biathlon']},
  {title:'Seite 1 · Aufgabe 2 · Find the opposites',prompt:'Find the opposite of “big”.',accepted:['small']},
  {title:'Seite 1 · Aufgabe 2 · Find the opposites',prompt:'Find the opposite of “quiet”.',accepted:['loud']},
  {title:'Seite 1 · Aufgabe 2 · Find the opposites',prompt:'Find the opposite of “quick”.',accepted:['slow']},
