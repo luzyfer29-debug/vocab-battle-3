@@ -657,7 +657,7 @@ function mathAction(v){if(v==='mathChoose')mathChoose();else if(v==='mathHome')m
 
 
 // Grammatik-Battle: Originalaufgaben, Texteingaben und Bewertung durch den Schiedsrichter.
-const GB_TIME=45000,GB_VOCAB_TIME=15000,GB_REVEAL_TIME=1800;
+const GB_TIME=45000,GB_VOCAB_TIME=20000,GB_REVEAL_TIME=1800;
 const gbNorm=s=>String(s||'').trim().toLowerCase().replace(/[’‘]/g,"'").replace(/[.,!?;:]+$/g,'').replace(/\s+/g,' ');
 const gbIsAutoVocab=m=>m?.kind==='vocab-work'||m?.kind==='vocab-work-station2';
 const gbQuestionTime=m=>gbIsAutoVocab(m)?GB_VOCAB_TIME:GB_TIME;
