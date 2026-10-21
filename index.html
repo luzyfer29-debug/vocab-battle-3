@@ -8,10 +8,12 @@ window.addEventListener('error', event => {
 window.addEventListener('unhandledrejection', event => {
   status.textContent = 'Startfehler: ' + String(event.reason?.stack || event.reason || 'Unbekannter Fehler');
 });
-import('./app.js?v=referee-vocabwork-reset-20261021a').then(() => {
+import('./app.js?v=referee-battle-reset-20261021b').then(() => {
   if (status.textContent === 'App wird gestartet …') status.textContent = '';
 }).catch(error => {
   status.style.whiteSpace = 'pre-wrap';
   status.textContent = 'Startfehler: ' + String(error?.stack || error?.message || error);
 });
 </script></body></html>
+
+
