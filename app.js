@@ -569,11 +569,20 @@ async function resetLearning(subject){
    }
   }
   if(Object.keys(paths).length)await update(ref(db,progressPath),paths);
-  const seriesKeys=subject==='english'?(selected&&String(moduleId).startsWith('vocabWork')?[moduleId]:selected?[]:['vocabWork1','vocabWork2','vocabWorkStation2Page1','vocabWorkStation2Page2']):[];
+  // Grammar's live drafts and completed answers are stored separately from soloProgress.
+  // Clear the matching series result too, otherwise the referee dashboard keeps showing
+  // the child's old typed answers after Grammatik Station 1/2 is reset.
+  const seriesKeys=subject==='english'?(selected?(String(moduleId).startsWith('vocabWork')?[moduleId]:moduleId==='grammar1'?['grammar1']:moduleId==='grammar2'?['grammar2']:[]):['vocabWork1','vocabWork2','vocabWorkStation2Page1','vocabWorkStation2Page2','grammar1','grammar2']):[];
   if(seriesKeys.length){
    const seriesSnap=await get(ref(db,'englishSeriesResults')),seriesPaths={};
    for(const [device,perDevice] of Object.entries(seriesSnap.val()||{}))for(const name of targets)for(const key of seriesKeys)if(Object.prototype.hasOwnProperty.call(perDevice?.[name]||{},key))seriesPaths[`${device}/${name}/${key}`]=null;
    if(Object.keys(seriesPaths).length)await update(ref(db,'englishSeriesResults'),seriesPaths);
+  }
+  const activityKeys=subject==='english'?(selected&&moduleId==='grammar1'?['english_grammar_1_task1','english_grammar_1_task2','english_grammar_1_task3','english_grammar_1_task4']:selected&&moduleId==='grammar2'?['english_grammar_2_task1','english_grammar_2_task2','english_grammar_2_task3','english_grammar_2_task4']:selected?[]:['english_grammar_1_task1','english_grammar_1_task2','english_grammar_1_task3','english_grammar_1_task4','english_grammar_2_task1','english_grammar_2_task2','english_grammar_2_task3','english_grammar_2_task4']):[];
+  if(activityKeys.length){
+   const activitySnap=await get(ref(db,'learningActivity')),activityPaths={};
+   for(const [device,perDevice] of Object.entries(activitySnap.val()||{}))for(const name of targets)for(const key of activityKeys)if(Object.prototype.hasOwnProperty.call(perDevice?.[name]||{},key))activityPaths[`${device}/${name}/${key}`]=null;
+   if(Object.keys(activityPaths).length)await update(ref(db,'learningActivity'),activityPaths);
   }
   msg(`${moduleLabel} für ${label} zurückgesetzt. Die übrigen Lernkästchen bleiben erhalten.`);
  }catch(e){msg('Rücksetzen nicht vollständig abgeschlossen: '+e.message,true);}
