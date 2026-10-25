@@ -183,8 +183,8 @@ async function learningReview(name){
    const hasAttemptEvidence=item?.attempted===true||legacyAttempts.has(`${subject}::${exercise}::${index}`)||Number(index)<Math.max(0,Number(entry?.live?.done)||0);
     if(itemSubject!==subject||item?.resolved||!hasAttemptEvidence)continue;
    const reviewItem={...item,subject};
-   const vocabMatch=String(exercise).match(/^english_vocab_work_page(\d+)$/),vocabPage=vocabMatch?Number(vocabMatch[1]):0,vocabIndex=Number(index);
-   if(vocabPage&&VOCAB_WORK_REVIEW_PROMPTS[vocabPage]?.[vocabIndex]&&(!reviewItem.prompt||/^Vokabelarbeit · Station 1 · Seite \d+ · Aufgabe \d+$/.test(reviewItem.prompt))){reviewItem.prompt=VOCAB_WORK_REVIEW_PROMPTS[vocabPage][vocabIndex];reviewItem.instruction=vocabPage===2?'Complete Julie’s message with the right words.':'Complete the vocabulary exercise.';}
+   const vocabWorkReview=vocabWorkReviewData(String(exercise),Number(index));
+   if(vocabWorkReview&&(String(exercise).includes('_station2_')||!reviewItem.prompt||/^Vokabelarbeit · Station [12] · Seite \d+ · Aufgabe \d+$/.test(reviewItem.prompt))){reviewItem.prompt=vocabWorkReview.prompt;reviewItem.instruction=vocabWorkReview.instruction;}
    const title=String(item.topic||learningActivityLabel(exercise)),key=`${subject}::${title}`;
    if(!topics.has(key))topics.set(key,{title,subject,items:[]});
    topics.get(key).items.push({exercise,index,item:reviewItem});
@@ -608,7 +608,41 @@ const VOCAB_WORK_REVIEW_PROMPTS={
   'Julie’s message: “In the evening I was ___ (erschöpft) too …”'
  ]
 };
-async function recordVocabWorkErrors(exercise,topic,answers,values){const page=Number(exercise.match(/page(\d+)/)?.[1])||1,instruction=page===2?'Complete Julie’s message with the right words.':'Complete the vocabulary exercise.';await Promise.all(answers.map((accepted,index)=>{const answer=String(values[index]||'').trim();if(!answer)return false;const correct=accepted.some(value=>grammarNormalize(value)===grammarNormalize(answer));return recordLearningError(soloName,'english',exercise,index,topic,{prompt:VOCAB_WORK_REVIEW_PROMPTS[page]?.[index]||`${topic} · Aufgabe ${index+1}`,instruction,accepted},correct);}));}
+const VOCAB_WORK_STATION2_REVIEW_PROMPTS={
+ 1:[
+  'Picture 1: What is the first-aid item?',
+  'Picture 2: What is the first-aid item?',
+  'Picture 3: What is the first-aid item?',
+  'Picture 4: What is the first-aid item?',
+  'Picture 5: What is the first-aid item?',
+  'Picture 6: What is the first-aid item?',
+  'Complete: “There has been an ___ . We must call an ambulance!”',
+  'Complete: “When I cut my finger, it started to ___ badly.”',
+  'Complete: “Your ___ is a part of your leg.”',
+  'Complete: “When you ___ your ankle, you should put a bandage on it.”',
+  'Complete: “Don’t ___ your hand when you take it out.”',
+  'Complete: “Call 999 for the ___ services in the UK.”'
+ ],
+ 2:[
+  'Choose the right verb: You ___ an accident. (have / make)',
+  'Choose the right verb: You ___ the operator. (invite / call)',
+  'Choose the right verb: You ___ your name on the phone. (give / ask)',
+  'Choose the right verb: You ___ where you are. (speak / say)',
+  'Choose the right verb: You ___ the hurt person. (stay with / wait for)',
+  'Choose the right verb: You ___ a person to hospital. (take / bring)',
+  'Name an emergency service: 1',
+  'Name an emergency service: 2',
+  'Name an emergency service: 3',
+  'Name an emergency service: 4'
+ ]
+};
+function vocabWorkReviewData(exercise,index){
+ const id=String(exercise),i=Number(index),station2=id.match(/^english_vocab_work_station2_page(\d+)$/),station1=id.match(/^english_vocab_work_page(\d+)$/);
+ if(station2){const page=Number(station2[1]);return {prompt:VOCAB_WORK_STATION2_REVIEW_PROMPTS[page]?.[i]||`Vokabelarbeit · Station 2 · Seite ${page} · Aufgabe ${i+1}`,instruction:page===1?'Name the first-aid item or complete the sentence.':'Complete the sentences or name the emergency services.'};}
+ if(station1){const page=Number(station1[1]);return {prompt:VOCAB_WORK_REVIEW_PROMPTS[page]?.[i]||`Vokabelarbeit · Station 1 · Seite ${page} · Aufgabe ${i+1}`,instruction:page===2?'Complete Julie’s message with the right words.':'Complete the vocabulary exercise.'};}
+ return null;
+}
+async function recordVocabWorkErrors(exercise,topic,answers,values){const saved=await Promise.all(answers.map((accepted,index)=>{const answer=String(values[index]||'').trim();if(!answer)return true;const correct=accepted.some(value=>grammarNormalize(value)===grammarNormalize(answer)),review=vocabWorkReviewData(exercise,index);return recordLearningError(soloName,'english',exercise,index,topic,{prompt:review?.prompt||`${topic} · Aufgabe ${index+1}`,instruction:review?.instruction||'Complete the vocabulary exercise.',accepted},correct);}));return saved.every(Boolean);}
 async function vocabWorkCheck(){
  const page=vocabWorkCheckedPage;if(!page||!soloName)return;vocabWorkCollect(false);
  const values=vocabWorkLoad(page),answers=VOCAB_WORK_ANSWERS[page],allFilled=answers.every((_,i)=>String(values[i]||'').trim());
@@ -617,7 +651,7 @@ async function vocabWorkCheck(){
  await (vocabWorkDraftQueues[`1_${page}`]||Promise.resolve());
  const normalized=values.map(grammarNormalize),correct=answers.reduce((sum,accepted,i)=>sum+(accepted.some(answer=>grammarNormalize(answer)===normalized[i])?1:0),0),now=Date.now();
  const result={name:soloName,activity:`vocabWork${page}`,done:answers.length,total:answers.length,correct,score:correct,maxScore:answers.length,finished:true,draftAnswers:values.map(value=>String(value||'')),updatedAt:now,timestamp:now};
- if(db&&uid){const exercise=`english_vocab_work_page${page}`,topic=`Vokabelarbeit · Station 1 · Seite ${page}`;touchLearningActivity(soloName,exercise,{taskTitle:topic,done:answers.length,total:answers.length,score:correct,maxScore:answers.length,finished:true,status:'Ergebnis geprüft',draftAnswers:result.draftAnswers});void recordVocabWorkErrors(exercise,topic,answers,values);void set(ref(db,`englishSeriesResults/${uid}/${soloName}/vocabWork${page}`),result).then(()=>{try{localStorage.setItem(vocabWorkResultKey(page),JSON.stringify({correct,total:answers.length}));localStorage.removeItem(vocabWorkKey(page));}catch{}vocabWorkPage(page,true,`${correct} von ${answers.length} richtig · Ergebnis gespeichert`);}).catch(e=>{try{localStorage.setItem(vocabWorkResultKey(page),JSON.stringify({correct,total:answers.length}));}catch{}vocabWorkPage(page,true,`${correct} von ${answers.length} richtig · Ergebnis gespeichert`);msg('Punkte-Ergebnis konnte nicht separat gespeichert werden; Antworten und Wiederholfehler wurden übertragen. '+e.message,true);});}
+ if(db&&uid){const exercise=`english_vocab_work_page${page}`,topic=`Vokabelarbeit · Station 1 · Seite ${page}`;touchLearningActivity(soloName,exercise,{taskTitle:topic,done:answers.length,total:answers.length,score:correct,maxScore:answers.length,finished:true,status:'Ergebnis geprüft',draftAnswers:result.draftAnswers});if(!await recordVocabWorkErrors(exercise,topic,answers,values)){msg('Fehler konnten nicht sicher gespeichert werden. Bitte Verbindung prüfen und erneut auswerten.',true);return;}void set(ref(db,`englishSeriesResults/${uid}/${soloName}/vocabWork${page}`),result).then(()=>{try{localStorage.setItem(vocabWorkResultKey(page),JSON.stringify({correct,total:answers.length}));localStorage.removeItem(vocabWorkKey(page));}catch{}vocabWorkPage(page,true,`${correct} von ${answers.length} richtig · Ergebnis gespeichert`);}).catch(e=>{try{localStorage.setItem(vocabWorkResultKey(page),JSON.stringify({correct,total:answers.length}));}catch{}vocabWorkPage(page,true,`${correct} von ${answers.length} richtig · Ergebnis gespeichert`);msg('Punkte-Ergebnis konnte nicht separat gespeichert werden; Antworten und Wiederholfehler wurden übertragen. '+e.message,true);});}
  else msg('Verbindung wird hergestellt. Bitte gleich noch einmal prüfen.',true);
 }
 function vocabWorkRetry(){const page=vocabWorkCheckedPage;if(!page||!soloName)return;try{localStorage.removeItem(vocabWorkKey(page));localStorage.removeItem(vocabWorkResultKey(page));}catch{}vocabWorkPage(page);}
@@ -684,7 +718,7 @@ async function vocabWorkStation2Check(){
  await (vocabWorkDraftQueues[`2_${page}`]||Promise.resolve());
  const normalized=values.map(grammarNormalize),correct=answers.reduce((sum,accepted,i)=>sum+(accepted.some(answer=>grammarNormalize(answer)===normalized[i])?1:0),0),now=Date.now();
  const result={name:soloName,activity:`vocabWorkStation2Page${page}`,done:answers.length,total:answers.length,correct,score:correct,maxScore:answers.length,finished:true,draftAnswers:values.map(value=>String(value||'')),updatedAt:now,timestamp:now};
- if(db&&uid){const exercise=`english_vocab_work_station2_page${page}`,topic=`Vokabelarbeit · Station 2 · Seite ${page}`;touchLearningActivity(soloName,exercise,{taskTitle:topic,done:answers.length,total:answers.length,score:correct,maxScore:answers.length,finished:true,status:'Ergebnis geprüft',draftAnswers:result.draftAnswers});void recordVocabWorkErrors(exercise,topic,answers,values);void set(ref(db,`englishSeriesResults/${uid}/${soloName}/vocabWorkStation2Page${page}`),result).then(()=>{try{localStorage.setItem(vocabWorkStation2ResultKey(page),JSON.stringify({correct,total:answers.length}));localStorage.removeItem(vocabWorkStation2Key(page));}catch{}vocabWorkStation2Page(page,true,`${correct} von ${answers.length} richtig · Ergebnis gespeichert`);}).catch(e=>{try{localStorage.setItem(vocabWorkStation2ResultKey(page),JSON.stringify({correct,total:answers.length}));}catch{}vocabWorkStation2Page(page,true,`${correct} von ${answers.length} richtig · Ergebnis gespeichert`);msg('Punkte-Ergebnis konnte nicht separat gespeichert werden; Antworten und Wiederholfehler wurden übertragen. '+e.message,true);});}
+ if(db&&uid){const exercise=`english_vocab_work_station2_page${page}`,topic=`Vokabelarbeit · Station 2 · Seite ${page}`;touchLearningActivity(soloName,exercise,{taskTitle:topic,done:answers.length,total:answers.length,score:correct,maxScore:answers.length,finished:true,status:'Ergebnis geprüft',draftAnswers:result.draftAnswers});if(!await recordVocabWorkErrors(exercise,topic,answers,values)){msg('Fehler konnten nicht sicher gespeichert werden. Bitte Verbindung prüfen und erneut auswerten.',true);return;}void set(ref(db,`englishSeriesResults/${uid}/${soloName}/vocabWorkStation2Page${page}`),result).then(()=>{try{localStorage.setItem(vocabWorkStation2ResultKey(page),JSON.stringify({correct,total:answers.length}));localStorage.removeItem(vocabWorkStation2Key(page));}catch{}vocabWorkStation2Page(page,true,`${correct} von ${answers.length} richtig · Ergebnis gespeichert`);}).catch(e=>{try{localStorage.setItem(vocabWorkStation2ResultKey(page),JSON.stringify({correct,total:answers.length}));}catch{}vocabWorkStation2Page(page,true,`${correct} von ${answers.length} richtig · Ergebnis gespeichert`);msg('Punkte-Ergebnis konnte nicht separat gespeichert werden; Antworten und Wiederholfehler wurden übertragen. '+e.message,true);});}
  else msg('Verbindung wird hergestellt. Bitte gleich noch einmal prüfen.',true);
 }
 function vocabWorkStation2Retry(){const page=vocabWorkStation2CheckedPage;if(!page||!soloName)return;try{localStorage.removeItem(vocabWorkStation2Key(page));localStorage.removeItem(vocabWorkStation2ResultKey(page));}catch{}vocabWorkStation2Page(page);}
