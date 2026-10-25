@@ -125,7 +125,7 @@ let errorEvalSubject='',errorEvalPeriod='',errorEvalTopics=[],errorEvalQueue=[],
 async function recordLearningError(name,subject,exercise,index,topic,q,correct){
  if(!db||!uid||!SOLO_NAMES.includes(name)||!exercise)return false;
  const now=Date.now(),{dayKey,weekKey}=activityPeriodKeys(now),path=`learningActivity/${uid}/${name}/${exercise}`;
- try{await runTransaction(ref(db,path),current=>{const value=current&&typeof current==='object'?{...current}:{};if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}value.lastAt=now;const errors={...(value.errorItems||{})},key=String(index),old=errors[key];if(correct){if(!old)return current;errors[key]={...old,resolved:true,resolvedAt:now};}else{errors[key]={subject,topic,prompt:String(q?.prompt||q?.q||q?.word||topic||''),type:String(q?.type||''),task:Number(q?.task)||0,instruction:String(q?.instruction||''),images:Array.isArray(q?.images)?q.images:null,options:Array.isArray(q?.options)?q.options.map(String):null,correctIndex:Number.isInteger(q?.correct)?q.correct:null,accepted:Array.isArray(q?.accepted)?q.accepted.map(String):Array.isArray(q?.required)?q.required.map(String):null,required:Array.isArray(q?.required)?q.required.map(String):null,explanation:String(q?.explanation||q?.explain||''),answer:String(q?.answer||q?.answerText||''),count:(Number(old?.count)||0)+1,lastWrongAt:now,dayKey,weekKey,resolved:false,resolvedAt:null};}value.errorItems=errors;return value;});return true;}catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg('Fehler konnten gerade nicht online gespeichert werden. Bitte Verbindung prüfen.',true);}return false;}
+ try{await runTransaction(ref(db,path),current=>{const value=current&&typeof current==='object'?{...current}:{};if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}value.lastAt=now;const errors={...(value.errorItems||{})},key=String(index),old=errors[key];if(correct){if(!old)return current;errors[key]={...old,resolved:true,resolvedAt:now};}else{errors[key]={attempted:true,source:'answer_check',subject,topic,prompt:String(q?.prompt||q?.q||q?.word||topic||''),type:String(q?.type||''),task:Number(q?.task)||0,instruction:String(q?.instruction||''),images:Array.isArray(q?.images)?q.images:null,options:Array.isArray(q?.options)?q.options.map(String):null,correctIndex:Number.isInteger(q?.correct)?q.correct:null,accepted:Array.isArray(q?.accepted)?q.accepted.map(String):Array.isArray(q?.required)?q.required.map(String):null,required:Array.isArray(q?.required)?q.required.map(String):null,explanation:String(q?.explanation||q?.explain||''),answer:String(q?.answer||q?.answerText||''),count:(Number(old?.count)||0)+1,lastWrongAt:now,dayKey,weekKey,resolved:false,resolvedAt:null};}value.errorItems=errors;return value;});return true;}catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg('Fehler konnten gerade nicht online gespeichert werden. Bitte Verbindung prüfen.',true);}return false;}
 }
 function childLearningExercises(subject){if(subject==='math')return ['math_rational_battle1','math_rational_battle2','math_rational_battle3','math_rational_cards','math_exam','math_rational_exam','math_proportional_practice','math_proportional_exam1','math_proportional_exam2','math_proportional_exam3',...MATH_PROPORTIONAL_PRACTICE_BLOCKS.map(b=>`math_proportional_practice_${b.id}`),'math_proportional_worksheet','math_proportional_flashcards',...FRACTION_MODULES.map(m=>`math_fraction_${m.id}`)];return ['english_vocab_battle1','english_vocab_battle2','english_vocab_battle3','english_vocab_work_page1','english_vocab_work_page2','english_vocab_work_station2_page1','english_vocab_work_station2_page2','english_listening','english_reading',...GRAMMAR.flatMap((station,s)=>station.tasks.map((_,i)=>`english_grammar_${s+1}_task${i+1}`)),...WRITING_TASKS.map((_,i)=>`english_writing_task${i+1}`)];}
 async function loadChildLearningActivity(name,subject){const ids=childLearningExercises(subject);const rows=await Promise.all(ids.map(async id=>[id,(await get(ref(db,`learningActivity/${uid}/${name}/${id}`))).val()]));return Object.fromEntries(rows.filter(([,value])=>value));}
@@ -149,9 +149,10 @@ async function importLegacyLearningErrors(subject,name){
   const reading=readingLoad(),draft=reading;
   if(reading?.checked&&draft){const paragraphOptions=['1','2','3','4','-'];READING_HEADINGS.forEach((question,index)=>{if(question.correct==='-')return;const selected=String(draft.matches?.[index]||'').trim();if(selected&&selected!==question.correct)rows.push({exercise:'english_reading',index,topic:'Reading · Cardiff Castle · Überschriften',q:{prompt:question.text,options:paragraphOptions,correct:paragraphOptions.indexOf(question.correct),type:'tf'}});});const truthOptions=['Right','Wrong','Not in the text'];READING_STATEMENTS.forEach(([prompt,correct],index)=>{const selected=String(draft.truth?.[index]||'').trim();if(selected&&selected!==correct)rows.push({exercise:'english_reading',index:READING_HEADINGS.length+index,topic:'Reading · Cardiff Castle · Aussagen',q:{prompt,options:truthOptions,correct:truthOptions.indexOf(({right:'Right',wrong:'Wrong',not:'Not in the text'})[correct]),type:'tf'}});});}
  }
- if(!rows.length)return;
+ if(!rows.length)return [];
  const existing=await loadChildLearningActivity(name,subject);
  await Promise.all(rows.filter(row=>!existing[row.exercise]?.errorItems?.[String(row.index)]).map(row=>recordLearningError(name,subject,row.exercise,row.index,row.topic,row.q,false)));
+  return rows;
 }
 function errorPeriodChoice(subject){errorEvalSubject=subject;errorEvalPeriod='';errorEvalTopics=[];errorEvalQueue=[];errorEvalCurrent=null;const names=SOLO_NAMES.map((n,i)=>btn(esc(n),`errorName${subject}_${i}`));app.innerHTML=card(`<h2>📊 ${subject==='math'?'Mathe':'Englisch'}-Auswertung</h2><p>Wähle dein Kind.</p><div class="name-actions">${names.join('')}</div>`)+card(btn('Zurück','home','alt'));}
 function learningActivityLabel(exercise){
@@ -173,12 +174,14 @@ async function learningReview(name){
  errorEvalSubject='all';errorEvalPeriod='';errorEvalName=name;errorEvalTopics=[];errorEvalQueue=[];errorEvalCurrent=null;
  app.innerHTML=card(`<h2>📘 ${esc(name)} · Das muss ich erneut lernen</h2><p>Fehler werden nach Fach und Thema sortiert geladen …</p>`);
  try{
-  await Promise.all([importLegacyLearningErrors('english',name),importLegacyLearningErrors('math',name)]);
+  const [legacyEnglish,legacyMath]=await Promise.all([importLegacyLearningErrors('english',name),importLegacyLearningErrors('math',name)]);
   const [english,math]=await Promise.all([loadChildLearningActivity(name,'english'),loadChildLearningActivity(name,'math')]);
-  const topics=new Map();
+  const legacyAttempts=new Set([...(legacyEnglish||[]).map(row=>`english::${row.exercise}::${row.index}`),...(legacyMath||[]).map(row=>`math::${row.exercise}::${row.index}`)]);
+   const topics=new Map();
   for(const [subject,data] of [['english',english],['math',math]])for(const [exercise,entry] of Object.entries(data))for(const [index,item] of Object.entries(entry?.errorItems||{})){
    const itemSubject=item?.subject|| (exercise.startsWith('math_')?'math':'english');
-   if(itemSubject!==subject||item?.resolved)continue;
+   const hasAttemptEvidence=item?.attempted===true||legacyAttempts.has(`${subject}::${exercise}::${index}`)||Number(index)<Math.max(0,Number(entry?.live?.done)||0);
+    if(itemSubject!==subject||item?.resolved||!hasAttemptEvidence)continue;
    const title=String(item.topic||learningActivityLabel(exercise)),key=`${subject}::${title}`;
    if(!topics.has(key))topics.set(key,{title,subject,items:[]});
    topics.get(key).items.push({exercise,index,item:{...item,subject}});
@@ -1005,6 +1008,7 @@ async function initializeFirebase(){
   status.innerHTML='<p class="muted">Online-Funktionen sind derzeit nicht verfügbar. Der Lernbereich bleibt geöffnet.</p>';
  }
 }
+
 
 
 
