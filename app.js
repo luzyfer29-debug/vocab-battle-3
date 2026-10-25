@@ -368,6 +368,51 @@ function activitySnapshot(activityData,name,id,dayKey,weekKey){let today=0,week=
 function activityDateKeys(timestamp=Date.now()){const p=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(timestamp)).map(x=>[x.type,x.value]));const date=new Date(Date.UTC(Number(p.year),Number(p.month)-1,Number(p.day))),day=date.getUTCDay()||7;date.setUTCDate(date.getUTCDate()+4-day);const isoYear=date.getUTCFullYear(),yearStart=new Date(Date.UTC(isoYear,0,1)),week=Math.ceil((((date-yearStart)/86400000)+1)/7);return {dayKey:`${p.year}-${p.month}-${p.day}`,weekKey:`${isoYear}-W${String(week).padStart(2,'0')}`};}
 function activityCounts(activityData,name,ids){const {dayKey,weekKey}=activityDateKeys();let today=0,week=0;for(const id of ids){const c=activitySnapshot(activityData,name,id,dayKey,weekKey);today+=c.today;week+=c.week;}return `<small class="activity-inline">Heute ${today}× · Woche ${week}×</small>`;}
 function activityBreakdown(activityData,name,items){const {dayKey,weekKey}=activityDateKeys();return `<small class="activity-inline">${items.map(({id,title})=>{const c=activitySnapshot(activityData,name,id,dayKey,weekKey);return `${esc(title)}: heute ${c.today}× · Woche ${c.week}×`;}).join('<br>')}</small>`;}
+function learningActivityTitle(id){
+ if(/^english_vocab_battle[1-3]$/.test(id))return 'Vokabel-Battle '+id.slice(-1);
+ if(/^english_vocab_work_page[12]$/.test(id))return 'Vokabelarbeit Station 1 · Seite '+id.slice(-1);
+ if(/^english_vocab_work_station2_page[12]$/.test(id))return 'Vokabelarbeit Station 2 · Seite '+id.slice(-1);
+ const grammar=id.match(/^english_grammar_([12])_task([0-9]+)$/);
+ if(grammar)return 'Grammatik Station '+grammar[1]+' · '+(GRAMMAR[Number(grammar[1])-1]?.tasks[Number(grammar[2])-1]?.title||'Aufgabe '+grammar[2]);
+ if(id==='english_listening')return 'Listening · Activity weekend in Cardiff';
+ if(id==='english_reading')return 'Reading · A trip to Cardiff Castle';
+ const writing=id.match(/^english_writing_task([0-9]+)$/);
+ if(writing)return 'Writing · '+(WRITING_TASKS[Number(writing[1])-1]?.title||'Aufgabe '+writing[1]);
+ const rational=id.match(/^math_rational_battle([1-4])$/);
+ if(rational)return rational[1]==='4'?'Rationale Zahlen · Lernkarten':'Rationale Zahlen · Aufgabe '+rational[1];
+ if(id==='math_exam')return 'Klassenarbeit Brüche & Rationale Zahlen';
+ if(id==='math_rational_exam')return 'Klassenarbeit Rationale Zahlen';
+ if(id==='math_proportional_practice')return 'Proportional / Antiproportional · Übung';
+ if(/^math_proportional_exam[1-3]$/.test(id))return 'Proportional / Antiproportional · Klassenarbeit '+id.slice(-1);
+ if(id==='math_proportional_worksheet')return 'Proportional · Arbeitsblatt';
+ if(id==='math_proportional_flashcards')return 'Proportional · Lernkarten';
+ const block=id.match(/^math_proportional_practice_(.+)$/);
+ if(block){const found=MATH_PROPORTIONAL_PRACTICE_BLOCKS.find(x=>x.id===block[1]);if(found)return 'Proportional · '+found.title;}
+ if(id.startsWith('math_fraction_')){const found=FRACTION_MODULES.find(x=>x.id===id.slice('math_fraction_'.length));return 'Bruchrechnung · '+(found?.title||id.slice('math_fraction_'.length));}
+ return id.replaceAll('_',' ');
+}
+function learningActivityPanel(activityData,names){
+ const {dayKey,weekKey}=activityDateKeys();
+ const children=names.map(name=>{
+  const latest=new Map();
+  for(const device of Object.values(activityData||{}))for(const [id,entry] of Object.entries(device?.[name]||{})){
+   const at=Number(entry?.lastAt)||0;if(!at)continue;
+   const old=latest.get(id);if(!old||at>old.at)latest.set(id,{entry,at});
+  }
+  const rows=[...latest.entries()].sort((a,b)=>b[1].at-a[1].at).map(([id,row])=>{
+   const counts=activitySnapshot(activityData,name,id,dayKey,weekKey),live=row.entry.live||{},parts=[];
+   if(live.taskTitle)parts.push(String(live.taskTitle));
+   if(Number.isFinite(Number(live.done))&&Number.isFinite(Number(live.total))&&Number(live.total)>0)parts.push(Number(live.done)+'/'+Number(live.total)+' Aufgaben');
+   if(live.status)parts.push(String(live.status));
+   if(live.finished)parts.push('abgeschlossen');
+   const state=parts.length?'<div class="muted small">'+parts.map(esc).join(' · ')+'</div>':'';
+   const when=new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(row.at));
+   return '<div class="player"><div class="row"><strong>'+(Date.now()-row.at<90000?'🟢 ':'⚪ ')+esc(learningActivityTitle(id))+'</strong><span>'+when+' · heute '+counts.today+'× · Woche '+counts.week+'×</span></div>'+state+'</div>';
+  }).join('');
+  return '<section class="live-child-activity"><h3>'+esc(name)+'</h3>'+(rows||'<p class="muted small">Noch keine Übungsaktivität online erfasst.</p>')+'</section>';
+ }).join('');
+ return '<details class="card live-panel fraction-topic" data-live-key="all-live-activities" open><summary><span class="fraction-title">🕒 Alle Übungen · letzte Aktivität</span></summary><div class="live-panel-content fraction-children"><p class="muted small">Alle begonnenen Übungen erscheinen hier mit letzter Aktivität und Tages-/Wochenzähler. Die Fachbereiche darunter zeigen den detaillierten Lernstand und gespeicherte Antworten.</p>'+children+'</div></details>';
+}
 function livePanel(title,content,key,accent){return `<details class="card live-panel fraction-topic" data-live-key="${key}" style="--live-accent:${accent};--fraction-accent:${accent}"><summary><span class="fraction-title">${title}</span></summary><div class="live-panel-content fraction-children">${content}</div></details>`;}
 function errorEvaluationPanel(subject,period,activityData,names){const {dayKey,weekKey}=activityDateKeys(),label=period==='day'?'Heute':'Diese Woche';const content=names.map(name=>{const found=new Map();for(const device of Object.values(activityData||{}))for(const [exercise,entry] of Object.entries(device?.[name]||{}))for(const [index,item] of Object.entries(entry?.errorItems||{})){if(item?.subject!==subject)continue;if(exercise==='english_vocab_work_battle1'||exercise==='english_vocab_work_battle2')continue;const matches=period==='day'?item.dayKey===dayKey:item.weekKey===weekKey;if(!matches&&!item.resolved){}else if(!matches)continue;const key=`${exercise}:${index}`,old=found.get(key);if(!old||Number(item.lastWrongAt||0)>Number(old.item.lastWrongAt||0))found.set(key,{exercise,index,item});}const topics=new Map();for(const row of found.values()){const title=String(row.item.topic||row.exercise);if(!topics.has(title))topics.set(title,[]);topics.get(title).push(row);}if(!topics.size)return `<div class="player"><strong>${esc(name)}</strong><p class="muted">${label}: noch keine Fehler erfasst. Neue Fehler erscheinen hier automatisch.</p></div>`;return `<div class="player"><h3>${esc(name)}</h3>${[...topics.entries()].map(([title,rows])=>{const open=rows.filter(x=>!x.item.resolved).length,done=rows.length-open;return `<details class="fraction-errors"><summary>${esc(title)} · ${open} offen · ${done} richtig bearbeitet</summary>${rows.map(({item})=>`<div class="fraction-error-item"><strong>${esc(item.prompt||'Aufgabe')}</strong><p>${item.answer?`Musterlösung: ${esc(item.answer)}`:item.options?`Richtige Antwort: ${esc(item.options[item.correctIndex]??'')}`:`Richtige Lösung: ${esc((item.accepted||[]).join(' / '))}`}</p>${subject==='math'&&item.explanation?`<p class="muted" style="white-space:pre-line">Rechenweg: ${esc(item.explanation)}</p>`:''}<p class="${item.resolved?'good':'error'}">${item.resolved?'✅ Richtig bearbeitet':'❌ Noch offen'} · ${Number(item.count)||1}× falsch</p></div>`).join('')}</details>`;}).join('')}</div>`;}).join('');return livePanel(`📊 ${subject==='math'?'Mathe':'Englisch'} · ${period==='day'?'Tägliche':'Wöchentliche'} Fehlerauswertung`,content,`live-errors-${subject}-${period}`,period==='day'?'#ffd166':'#c4b5fd');}
 const LEARNING_RESET_MODULES={
@@ -535,7 +580,7 @@ ffd166;font-weight:750}.activity-state.is-done{color:#8cebd8;font-weight:750}.ac
  const classworkOverview='<div class="live-classworks"><h3>📝 Klassenarbeiten</h3><p class="muted small">Alle Arbeiten stehen hier einzeln untereinander.</p>'+examProgress+rationalExamProgress+proportionalClassworkProgress+'</div>';
  const mathContent=resetControls('math')+errorEvaluationPanel('math','day',activityData,visibleNames)+errorEvaluationPanel('math','week',activityData,visibleNames)+mathTopicsOverview+classworkOverview;
  const childOptions=['<option value="all"'+(liveChildFilter==='all'?' selected':'')+'>Alle Kinder</option>',...SOLO_NAMES.map(name=>`<option value="${name}"${liveChildFilter===name?' selected':''}>${name}</option>`)].join('');
- app.innerHTML=card('<h2>📊 Live-Lernübersicht</h2><p>Wähle zuerst ein Fach. Die übrigen Bereiche öffnen sich dann darunter.</p><label for="live-child-filter-main">Ansicht für</label><select id="live-child-filter-main">'+childOptions+'</select><p class="muted small">🟢 = Aktivität in den letzten 90 Sekunden · Häufigkeiten: heute und diese Woche.</p><p class="muted small">❌ in einem Themenblock zeigt die Fehlerzahl je Kind. Thema öffnen und „Fehler ansehen“ antippen, um die falschen Aufgaben und Lösungen zu sehen.</p>')+`<details class="card dashboard-subject english-main" data-live-key="dashboard-english"><summary><span class="dashboard-subject-icon">🇬🇧</span><strong>Englisch</strong><span class="dashboard-subject-hint">Vokabeln · Grammatik · Listening · Reading · Writing</span></summary><div class="dashboard-subject-content">${englishContent}</div></details><details class="card dashboard-subject math-main" data-live-key="dashboard-math"><summary><span class="dashboard-subject-icon">🔢</span><strong>Mathe</strong><span class="dashboard-subject-hint">Brüche · Rationale Zahlen · Proportional / Antiproportional</span></summary><div class="dashboard-subject-content">${mathContent}</div></details>`+card(btn('Zurück','home','alt'));
+ app.innerHTML=card('<h2>📊 Live-Lernübersicht</h2><p>Wähle zuerst ein Fach. Die übrigen Bereiche öffnen sich dann darunter.</p><label for="live-child-filter-main">Ansicht für</label><select id="live-child-filter-main">'+childOptions+'</select><p class="muted small">🟢 = Aktivität in den letzten 90 Sekunden · Häufigkeiten: heute und diese Woche.</p><p class="muted small">❌ in einem Themenblock zeigt die Fehlerzahl je Kind. Thema öffnen und „Fehler ansehen“ antippen, um die falschen Aufgaben und Lösungen zu sehen.</p>')+learningActivityPanel(activityData,visibleNames)+`<details class="card dashboard-subject english-main" data-live-key="dashboard-english"><summary><span class="dashboard-subject-icon">🇬🇧</span><strong>Englisch</strong><span class="dashboard-subject-hint">Vokabeln · Grammatik · Listening · Reading · Writing</span></summary><div class="dashboard-subject-content">${englishContent}</div></details><details class="card dashboard-subject math-main" data-live-key="dashboard-math"><summary><span class="dashboard-subject-icon">🔢</span><strong>Mathe</strong><span class="dashboard-subject-hint">Brüche · Rationale Zahlen · Proportional / Antiproportional</span></summary><div class="dashboard-subject-content">${mathContent}</div></details>`+card(btn('Zurück','home','alt'));
  for(const el of app.querySelectorAll('details[data-live-key],details[id]')){const key=el.dataset.liveKey||el.id;if(liveOpenDetails.has(key))el.open=true;}
  window.scrollTo(0,liveScrollTop);
 }
