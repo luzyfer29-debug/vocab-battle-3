@@ -399,7 +399,7 @@ function learningActivityPanel(activityData,names,subject){
  const children=names.map(name=>{
   const latest=new Map();
   for(const device of Object.values(activityData||{}))for(const [id,entry] of Object.entries(device?.[name]||{})){
-   if(!id.startsWith(activityPrefix))continue;
+   if(!id.startsWith(activityPrefix)||(subject==='english'&&/^english_gap_?[12]$/i.test(id)))continue;
    const at=Number(entry?.lastAt)||0;if(!at)continue;
    const old=latest.get(id);if(!old||at>old.at)latest.set(id,{entry:mergeLearningActivityEntries(old?.entry,entry),at});else latest.set(id,{entry:mergeLearningActivityEntries(entry,old.entry),at:old.at});
   }
