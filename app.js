@@ -830,3 +830,26 @@ home();try{const fb=initializeApp(firebaseConfig),auth=getAuth(fb);authClient=au
 
 
 
+
+
+// One-time cleanup of legacy English gap activity records in the referee dashboard.
+const originalShowDashboardForGapCleanup = showDashboard;
+showDashboard = async function(...args) {
+  if (!adminLoggedIn || uid !== ADMIN_UID) return originalShowDashboardForGapCleanup.apply(this, args);
+  try {
+    const snapshot = await get(ref(db, 'learningActivity'));
+    const paths = [];
+    for (const [device, profiles] of Object.entries(snapshot.val() || {})) {
+      for (const [name, activities] of Object.entries(profiles || {})) {
+        for (const id of Object.keys(activities || {})) {
+          if (/^english_gap_?[12]$/i.test(id)) paths.push(`learningActivity/${device}/${name}/${id}`);
+        }
+      }
+    }
+    await Promise.all(paths.map(path => remove(ref(db, path))));
+    if (paths.length) msg('Die alten English-gap-Einträge wurden gelöscht.');
+  } catch (error) {
+    msg('English-gap-Einträge konnten nicht gelöscht werden: ' + error.message, true);
+  }
+  return originalShowDashboardForGapCleanup.apply(this, args);
+};
