@@ -185,8 +185,8 @@ async function learningReview(name){
   }
   errorEvalTopics=[...topics.values()].map(group=>({...group,items:group.items.sort((a,b)=>Number(a.item.lastWrongAt||0)-Number(b.item.lastWrongAt||0))}));
   const count=errorEvalTopics.reduce((total,group)=>total+group.items.length,0);
-  const blocks=errorEvalTopics.length?errorEvalTopics.map((group,index)=>`<div class="player"><h3>${group.subject==='math'?'🔢 Mathe':'🇬🇧 Englisch'} · ${esc(group.title)}</h3><p>${group.items.length} Aufgabe${group.items.length===1?'':'n'} offen</p>${btn(`Jetzt üben (${group.items.length})`,`reviewTopic${index}`)}</div>`).join(''):'<p class="good">🎉 Gerade gibt es keine offenen Fehler.</p>';
-  app.innerHTML=card(`<h2>📘 ${esc(name)} · Das muss ich erneut lernen</h2><p>Jede Aufgabe bleibt hier, bis sie richtig gelöst ist. Danach verschwindet sie aus der Liste.</p><p><strong>${count} Aufgabe${count===1?'':'n'} offen</strong></p>${blocks}`)+card(btn('Zurück zum Lernen','reviewBack','alt'));
+  const subjectSections=[['english','🇬🇧 Englisch'],['math','🔢 Mathe']].map(([subject,title])=>{const groups=errorEvalTopics.map((group,index)=>({...group,index})).filter(group=>group.subject===subject);const blocks=groups.length?groups.map(group=>`<div class="player"><h3>${esc(group.title)}</h3><p>${group.items.length} Aufgabe${group.items.length===1?'':'n'} offen</p>${btn(`Jetzt üben (${group.items.length})`,`reviewTopic${group.index}`)}</div>`).join(''):'<p class="muted">Keine offenen Fehler.</p>';return `<section class="solo-section"><h3>${title}</h3>${blocks}</section>`;}).join('');
+  app.innerHTML=card(`<h2>📘 ${esc(name)} · Das muss ich erneut lernen</h2><p>Jede Aufgabe bleibt hier, bis sie richtig gelöst ist. Danach verschwindet sie aus der Liste.</p><p><strong>${count} Aufgabe${count===1?'':'n'} offen</strong></p>${subjectSections}`)+card(btn('Zurück zum Lernen','reviewBack','alt'));
  }catch(e){msg('Wiederholaufgaben konnten nicht geladen werden: '+e.message,true);}
 }
 async function errorEvaluation(subject,period){
