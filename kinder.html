@@ -36,7 +36,7 @@ const status=document.getElementById('status');
 status.textContent='Kinderbereich wird gestartet …';
 window.addEventListener('error',event=>{if(event.target&&event.target.tagName==='SCRIPT'){status.className='error';status.style.whiteSpace='pre-wrap';status.textContent='Ladefehler im Kinderbereich: '+(event.message||event.target.src||'Unbekannt');}});
 window.addEventListener('unhandledrejection',event=>{status.className='error';status.style.whiteSpace='pre-wrap';status.textContent='Startfehler im Kinderbereich: '+String(event.reason?.stack||event.reason||'Unbekannt');});
-import('./kinder-app.js?v=20261026-learning-review-cross-device-v1').then(()=>{if(status.textContent==='Kinderbereich wird gestartet …')status.textContent='';}).catch(error=>{status.className='error';status.style.whiteSpace='pre-wrap';status.textContent='Kinderbereich konnte nicht starten: '+String(error?.stack||error?.message||error);});
+import('./kinder-app.js?v=20261026-learning-review-cross-device-v2').then(()=>{if(status.textContent==='Kinderbereich wird gestartet …')status.textContent='';}).catch(error=>{status.className='error';status.style.whiteSpace='pre-wrap';status.textContent='Kinderbereich konnte nicht starten: '+String(error?.stack||error?.message||error);});
 </script></body></html>
 
 
