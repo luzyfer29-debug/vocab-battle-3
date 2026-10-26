@@ -456,7 +456,7 @@ function learningActivityPanel(activityData,names,subject){
    const sessions=Array.isArray(entry.sessions)?entry.sessions:[];
    const history=sessions.length?`<details class="live-session-history"><summary>Bearbeitungsverlauf · Datum und Uhrzeit · ${sessions.length} Sitzung${sessions.length===1?'':'en'}</summary>${sessions.map((session,index)=>{const sessionLive=session?.live||{},description=[sessionLive.taskTitle,Number.isFinite(Number(sessionLive.done))&&Number.isFinite(Number(sessionLive.total))&&Number(sessionLive.total)>0?`${Number(sessionLive.done)} von ${Number(sessionLive.total)} Aufgaben`:null,sessionLive.status,sessionLive.finished?'abgeschlossen':null].filter(Boolean).map(esc).join(' · ');return `<p><strong>${index+1}. ${evaluationDate(session.startedAt||session.lastAt)}</strong>${Number(session.lastAt)>Number(session.startedAt)?` – zuletzt ${evaluationDate(session.lastAt)}`:''}${description?`<br><span class="muted small">${description}</span>`:''}</p>`;}).join('')}</details>`:'';
    const state=[...parts].map(esc).join(' · ')||'Bearbeitung gespeichert';
-   rows.push({name,title:learningActivityTitle(id),when:at,state:state+history+answers+errorDetailsForActivity(entry)});
+   rows.push({name,title:learningActivityTitle(id),when:row.at,state:state+history+answers+errorDetailsForActivity(entry)});
   }
  }
  rows.sort((x,y)=>y.when-x.when);
