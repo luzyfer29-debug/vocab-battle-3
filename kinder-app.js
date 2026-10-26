@@ -155,7 +155,7 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
    return next;
   });
   activitySyncWarned=false;return true;
- }catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg('Fehler konnten nicht geräteübergreifend gespeichert werden. Bitte Firebase-Regeln für learningReview veröffentlichen.',true);}return false;}
+ }catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg(`Fehler konnten nicht geräteübergreifend gespeichert werden (${e.code||e.message||'Firebase-Zugriff verweigert'}).`,true);}return false;}
 }
 function childLearningExercises(subject){if(subject==='math')return ['math_rational_battle1','math_rational_battle2','math_rational_battle3','math_rational_cards','math_exam','math_rational_exam','math_proportional_practice','math_proportional_exam1','math_proportional_exam2','math_proportional_exam3',...MATH_PROPORTIONAL_PRACTICE_BLOCKS.map(b=>`math_proportional_practice_${b.id}`),'math_proportional_worksheet','math_proportional_flashcards',...FRACTION_MODULES.map(m=>`math_fraction_${m.id}`)];return ['english_vocab_battle1','english_vocab_battle2','english_vocab_battle3','english_vocab_work_page1','english_vocab_work_page2','english_vocab_work_station2_page1','english_vocab_work_station2_page2','english_listening','english_reading',...GRAMMAR.flatMap((station,s)=>station.tasks.map((_,i)=>`english_grammar_${s+1}_task${i+1}`)),...WRITING_TASKS.map((_,i)=>`english_writing_task${i+1}`)];}
 async function mergeSharedLearningReview(name,subject,exercise,index,item){
@@ -243,7 +243,20 @@ async function learningReview(name){
     if(itemSubject!==subject||item?.resolved||item?.source==='live_battle'||item?.source==='battle'||!hasAttemptEvidence)continue;
    const reviewItem={...item,subject};
    const vocabWorkReview=vocabWorkReviewData(String(exercise),Number(index));
-   if(vocabWorkReview&&(String(exercise).includes('_station2_')||!reviewItem.prompt||/^Vokabelarbeit · Station [12] · Seite \d+ · Aufgabe \d+$/.test(reviewItem.prompt))){reviewItem.prompt=vocabWorkReview.prompt;reviewItem.instruction=vocabWorkReview.instruction;}
+   if(vocabWorkReview){
+    reviewItem.prompt=vocabWorkReview.prompt;
+    reviewItem.instruction=vocabWorkReview.instruction;
+    const station1=String(exercise).match(/^english_vocab_work_page(\d+)$/),station2=String(exercise).match(/^english_vocab_work_station2_page(\d+)$/);
+    const canonicalAnswers=station1?VOCAB_WORK_ANSWERS[Number(station1[1])]?.[Number(index)]:station2?VOCAB_WORK_STATION2_ANSWERS[Number(station2[1])]?.[Number(index)]:null;
+    if(Array.isArray(canonicalAnswers)){
+     reviewItem.accepted=canonicalAnswers.map(String);
+     reviewItem.answer='';
+     reviewItem.type='text';
+     delete reviewItem.options;
+     delete reviewItem.correctIndex;
+     delete reviewItem.required;
+    }
+   }
    const storedTitle=String(item.topic||''),title=/^Vokabel-Battle [1-3]$/.test(storedTitle)?learningActivityLabel(exercise):storedTitle||learningActivityLabel(exercise),key=`${subject}::${title}`;
    if(!topics.has(key))topics.set(key,{title,subject,items:[]});
    topics.get(key).items.push({exercise,index,item:reviewItem});
