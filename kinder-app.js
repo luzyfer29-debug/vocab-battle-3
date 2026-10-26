@@ -145,12 +145,12 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
    if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}
    value.lastAt=Math.max(Number(value.lastAt)||0,eventAt);
    const errors={...(value.errorItems||{})},key=String(index),old=errors[key];
-   if(correct){if(!old){changedItem=null;return current;}changedItem={...old,resolved:true,resolvedAt:Math.max(eventAt,Number(old.lastWrongAt)||0)+1};errors[key]=changedItem;}
+   if(correct){const base=old||learningErrorRecord(name,subject,topic,q,null,eventAt);changedItem={...base,resolved:true,resolvedAt:Math.max(eventAt,Number(base.lastWrongAt)||0)+1};errors[key]=changedItem;}
    else{changedItem=learningErrorRecord(name,subject,topic,q,old,eventAt);errors[key]=changedItem;}
    value.errorItems=errors;return value;
   });
   await runTransaction(ref(db,sharedPath),current=>{
-   if(correct){if(!current)return;return {...current,resolved:true,resolvedAt:Math.max(eventAt,Number(current.lastWrongAt)||0)+1};}
+   if(correct){const base=current||learningErrorRecord(name,subject,topic,q,null,eventAt);return {...base,resolved:true,resolvedAt:Math.max(eventAt,Number(base.lastWrongAt)||0)+1};}
    const next=learningErrorRecord(name,subject,topic,q,current,eventAt);
    return next;
   });
@@ -302,23 +302,29 @@ async function errorPracticeAnswer(value){
  if(!errorEvalCurrent||!errorEvalQueue.length)return;
  const entry=errorEvalQueue[0],item=entry.item,typed=String(value??'').trim();
  let correct;
+ const accepted=Array.isArray(item.accepted)&&item.accepted.length?item.accepted:Array.isArray(item.required)&&item.required.length?item.required:item.answer?[item.answer]:[];
  if(item.type==='order')correct=Array.isArray(value)&&value.map(String).join(',')===(item.accepted||[]).join(',');
- else if(item.options)correct=Number(value)===Number(item.correctIndex);
- else if(item.type==='open')correct=(item.required||[]).every(term=>grammarNormalize(typed).includes(grammarNormalize(term)));
- else correct=(item.accepted||[]).some(x=>grammarNormalize(x)===grammarNormalize(typed));
+ else if(Array.isArray(item.options)&&item.correctIndex!==null&&item.correctIndex!==undefined&&Number.isInteger(Number(item.correctIndex)))correct=Number(value)===Number(item.correctIndex);
+ else if(Array.isArray(item.options)){const selected=item.options[Number(value)];correct=Boolean(selected)&&accepted.some(x=>grammarNormalize(x)===grammarNormalize(selected));}
+ else if(item.type==='open'){const required=Array.isArray(item.required)&&item.required.length?item.required:accepted;correct=required.length>0&&required.every(term=>grammarNormalize(typed).includes(grammarNormalize(term)));}
+ else correct=accepted.some(x=>grammarNormalize(x)===grammarNormalize(typed));
  const subject=errorEvalSubject==='math'||errorEvalSubject==='english'?errorEvalSubject:(item.subject||(entry.exercise.startsWith('math_')?'math':'english'));
  const saved=await recordLearningError(errorEvalName,subject,entry.exercise,entry.index,item.topic,item,correct);
  if(!saved){const fb=document.querySelector('#error-feedback');if(fb)fb.innerHTML='<p class="error">Der Lernstand konnte nicht gespeichert werden. Bitte Verbindung prüfen und erneut versuchen.</p>';return;}
  if(correct){
   item.resolved=true;errorEvalQueue.shift();
-  if(errorEvalMode==='childReview'&&!errorEvalQueue.length){await learningReview(errorEvalName,errorEvalSubject);return;}
+  if(errorEvalMode==='childReview'){
+   if(errorEvalQueue.length){msg('✅ Richtig. Die gelöste Aufgabe wurde entfernt.',false);errorPracticeShow();}
+   else await learningReview(errorEvalName,errorEvalSubject);
+   return;
+  }
   const feedback=document.querySelector('#error-feedback');
   if(feedback)feedback.innerHTML='<p class="good"><strong>✅ Richtig! Die Aufgabe ist erledigt und aus der offenen Liste entfernt.</strong></p>'+btn(errorEvalQueue.length?'Weiter ➜':'Zur Themenliste','errorPracticeNext');
   else errorPracticeShow();
   return;
  }
  const fb=document.querySelector('#error-feedback');
- if(fb)fb.innerHTML=`<p class="error"><strong>❌ Noch nicht richtig.</strong> ${item.options?`Richtige Antwort: ${esc(item.options[item.correctIndex]??'')}`:item.accepted?.length?`Richtige Lösung: ${esc(item.accepted.join(' / '))}`:item.answer?`Musterlösung: ${esc(item.answer)}`:'Bitte kontrolliere deine Antwort noch einmal.'}</p><p>Versuche dieselbe Aufgabe noch einmal. Sie bleibt offen, bis sie richtig ist.</p>`;
+ if(fb)fb.innerHTML=`<p class="error"><strong>❌ Noch nicht richtig.</strong> ${Array.isArray(item.options)&&item.correctIndex!==null&&item.correctIndex!==undefined?`Richtige Antwort: ${esc(item.options[item.correctIndex]??'')}`:accepted.length?`Richtige Lösung: ${esc(accepted.join(' / '))}`:'Bitte kontrolliere deine Antwort noch einmal.'}</p><p>Versuche dieselbe Aufgabe noch einmal. Sie bleibt offen, bis sie richtig ist.</p>`;
 }
 function subjectNameForErrors(){return errorEvalSubject==='math'?mathName:soloName;}
 function errorPracticeNext(){if(errorEvalCurrent&&errorEvalQueue.length){errorPracticeShow();return;}if(errorEvalMode==='childReview')void learningReview(errorEvalName,errorEvalSubject);else void errorEvaluation(errorEvalSubject,errorEvalPeriod);}
