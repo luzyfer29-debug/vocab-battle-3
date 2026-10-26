@@ -128,6 +128,7 @@ async function restoreLearningActivityAt(name,exercise,timestamp){
 }
 function mathActivityId(b){if(b<3)return `math_rational_battle${b+1}`;if(b===3)return 'math_rational_cards';if(b===4)return 'math_exam';if(b===5)return 'math_rational_exam';if(b===6)return 'math_proportional_practice';if(b>=7&&b<=9)return `math_proportional_exam${b-6}`;if(b>=10&&b<=18)return `math_proportional_practice_${MATH_PROPORTIONAL_PRACTICE_BLOCKS[b-10]?.id||''}`;return '';}
 let errorEvalSubject='',errorEvalPeriod='',errorEvalTopics=[],errorEvalQueue=[],errorEvalCurrent=null,errorEvalName='',errorEvalMode='';
+const legacyLearningImportPending=new Set();
 function learningErrorRecord(name,subject,topic,q,old,eventAt){
  const {dayKey,weekKey}=activityPeriodKeys(eventAt);
  return {attempted:true,source:'answer_check',subject,topic,prompt:String(q?.prompt||q?.q||q?.word||topic||''),type:String(q?.type||''),task:Number(q?.task)||0,instruction:String(q?.instruction||''),images:Array.isArray(q?.images)?q.images:null,options:Array.isArray(q?.options)?q.options.map(String):null,correctIndex:Number.isInteger(q?.correct)?q.correct:null,accepted:Array.isArray(q?.accepted)?q.accepted.map(String):Array.isArray(q?.required)?q.required.map(String):null,required:Array.isArray(q?.required)?q.required.map(String):null,explanation:String(q?.explanation||q?.explain||''),answer:String(q?.answer||q?.answerText||''),count:(Number(old?.count)||0)+1,lastWrongAt:eventAt,dayKey,weekKey,resolved:false,resolvedAt:null};
@@ -168,21 +169,27 @@ async function mergeSharedLearningReview(name,subject,exercise,index,item){
  await runTransaction(ref(db,path),current=>!current||reviewItemAt(normalized)>=reviewItemAt(current)?normalized:current);
 }
 async function loadChildLearningActivity(name,subject){
- const ids=childLearningExercises(subject),rows=await Promise.all(ids.map(async id=>[id,(await get(ref(db,`learningActivity/${uid}/${name}/${id}`))).val()])),data=Object.fromEntries(rows.filter(([,value])=>value));
- let migrationError=null;
- for(const exercise of ids)for(const [index,item] of Object.entries(data[exercise]?.errorItems||{})){
-  try{await mergeSharedLearningReview(name,subject,exercise,index,item);}catch(e){migrationError=e;}
+ const ids=childLearningExercises(subject),[rows,sharedResult]=await Promise.all([
+  Promise.all(ids.map(async id=>[id,(await get(ref(db,`learningActivity/${uid}/${name}/${id}`))).val()])),
+  get(ref(db,`learningReview/${name}/${subject}`)).then(snapshot=>({shared:snapshot.val()||{}})).catch(error=>({error}))
+ ]),data=Object.fromEntries(rows.filter(([,value])=>value));
+ const shared=sharedResult.shared||{};
+ if(sharedResult.error&&!activitySyncWarned){activitySyncWarned=true;msg(`Fehler von anderen Geräten konnten nicht geladen werden (${sharedResult.error.code||sharedResult.error.message||'Firebase-Zugriff verweigert'}).`,true);}
+ const migrations=[];
+ if(!sharedResult.error)for(const [exercise,entry] of Object.entries(data))for(const [index,item] of Object.entries(entry?.errorItems||{})){
+  const current=shared[exercise]?.[index];
+  if(!current||reviewItemAt(item)>reviewItemAt(current))migrations.push(mergeSharedLearningReview(name,subject,exercise,index,item));
  }
- try{
-  const shared=(await get(ref(db,`learningReview/${name}/${subject}`))).val()||{};
-  for(const [exercise,errorItems] of Object.entries(shared)){
-   if(!data[exercise])data[exercise]={};
-   const merged={...(data[exercise].errorItems||{})};
-   for(const [index,item] of Object.entries(errorItems||{}))if(!merged[index]||reviewItemAt(item)>=reviewItemAt(merged[index]))merged[index]=item;
-   data[exercise].errorItems=merged;
-  }
-  if(migrationError&&!activitySyncWarned){activitySyncWarned=true;msg(`Alte Fehler sind geladen, konnten aber nicht alle auf andere Geräte übertragen werden (${migrationError.code||migrationError.message||'Firebase-Regelprüfung'}).`,true);}
- }catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg(`Fehler von anderen Geräten konnten nicht geladen werden (${e.code||e.message||'Firebase-Zugriff verweigert'}).`,true);}}
+ if(migrations.length)void Promise.allSettled(migrations).then(results=>{
+  const failure=results.find(result=>result.status==='rejected');
+  if(failure&&!activitySyncWarned){activitySyncWarned=true;msg(`Alte Fehler sind geladen, konnten aber nicht alle auf andere Geräte übertragen werden (${failure.reason?.code||failure.reason?.message||'Firebase-Regelprüfung'}).`,true);}
+ });
+ for(const [exercise,errorItems] of Object.entries(shared)){
+  if(!data[exercise])data[exercise]={};
+  const merged={...(data[exercise].errorItems||{})};
+  for(const [index,item] of Object.entries(errorItems||{}))if(!merged[index]||reviewItemAt(item)>=reviewItemAt(merged[index]))merged[index]=item;
+  data[exercise].errorItems=merged;
+ }
  return data;
 }
 async function importLegacyLearningErrors(subject,name){
@@ -240,11 +247,10 @@ async function learningReview(name,subject=''){
  errorEvalSubject=subject;errorEvalMode='childReview';errorEvalPeriod='';errorEvalName=name;errorEvalTopics=[];errorEvalQueue=[];errorEvalCurrent=null;
  app.innerHTML=card(`<h2>📘 ${esc(name)} · ${subject==='math'?'Mathe':'Englisch'}-Fehler</h2><p>Offene Fehler werden nach Thema geladen …</p>`);
  try{
-  const legacyAttempts=new Set((await importLegacyLearningErrors(subject,name)||[]).map(row=>`${subject}::${row.exercise}::${row.index}`));
   const data=await loadChildLearningActivity(name,subject),topics=new Map();
   for(const [exercise,entry] of Object.entries(data))for(const [index,item] of Object.entries(entry?.errorItems||{})){
    const itemSubject=item?.subject|| (exercise.startsWith('math_')?'math':'english');
-   const hasAttemptEvidence=item?.attempted===true||legacyAttempts.has(`${subject}::${exercise}::${index}`)||Number(index)<Math.max(0,Number(entry?.live?.done)||0);
+   const hasAttemptEvidence=item?.attempted===true||Number(index)<Math.max(0,Number(entry?.live?.done)||0);
    if(itemSubject!==subject||item?.resolved===true||item?.source==='live_battle'||item?.source==='battle'||!hasAttemptEvidence)continue;
    const reviewItem={...item,subject};
    const vocabWorkReview=vocabWorkReviewData(String(exercise),Number(index));
@@ -269,7 +275,15 @@ async function learningReview(name,subject=''){
   errorEvalTopics=[...topics.values()].map(group=>({...group,items:group.items.sort((a,b)=>Number(a.item.lastWrongAt||0)-Number(b.item.lastWrongAt||0))}));
   const count=errorEvalTopics.reduce((total,group)=>total+group.items.length,0),label=subject==='math'?'🔢 Mathe':'🇬🇧 Englisch';
   const blocks=errorEvalTopics.length?errorEvalTopics.map((group,index)=>`<div class="player"><h3>${esc(group.title)}</h3><p>${group.items.length} Aufgabe${group.items.length===1?'':'n'} offen</p>${btn(`Jetzt üben (${group.items.length})`,`reviewTopic${index}`)}</div>`).join(''):'<p class="muted">Keine offenen Fehler in diesem Fach. ✅</p>';
-  app.innerHTML=card(`<h2>📘 ${esc(name)} · ${label} · Das muss ich erneut lernen</h2><p>Jede Aufgabe bleibt hier, bis sie richtig gelöst ist. Danach wird sie aus dieser Liste entfernt.</p><p><strong>${count} Aufgabe${count===1?'':'n'} offen</strong></p>${blocks}<div class="buttons">${btn('🔢 Mathe-Fehler','reviewSwitchMath','alt')}${btn('🇬🇧 Englisch-Fehler','reviewSwitchEnglish','alt')}</div>`)+card(btn(`Zurück zum ${subject==='math'?'Mathe-':'Englisch-'}Lernen`,'reviewBack','alt'));
+  app.innerHTML=card(`<h2>📘 ${esc(name)} · ${label} · Das muss ich erneut lernen</h2><p>Jede Aufgabe bleibt hier, bis sie richtig gelöst ist. Danach wird sie aus dieser Liste entfernt.</p><p><strong>${count} Aufgabe${count===1?'':'n'} offen</strong></p>${blocks}`)+card(btn(`Zurück zum ${subject==='math'?'Mathe-':'Englisch-'}Lernen`,'reviewBack','alt'));
+  const importKey=`vb2_legacy_review_import_${uid}_${name}_${subject}`;
+  if(localStorage.getItem(importKey)!=='1'&&!legacyLearningImportPending.has(importKey)){
+   legacyLearningImportPending.add(importKey);
+   void importLegacyLearningErrors(subject,name).then(()=>{
+    localStorage.setItem(importKey,'1');
+    if(errorEvalMode==='childReview'&&errorEvalName===name&&errorEvalSubject===subject)void learningReview(name,subject);
+   }).catch(error=>{if(errorEvalMode==='childReview'&&errorEvalName===name&&errorEvalSubject===subject)msg(`Ältere Fehler konnten nicht ergänzt werden (${error.code||error.message}).`,true);}).finally(()=>legacyLearningImportPending.delete(importKey));
+  }
  }catch(e){msg('Wiederholaufgaben konnten nicht geladen werden: '+e.message,true);}
 }
 async function errorEvaluation(subject,period){
