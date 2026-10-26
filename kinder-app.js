@@ -159,20 +159,30 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
 }
 function childLearningExercises(subject){if(subject==='math')return ['math_rational_battle1','math_rational_battle2','math_rational_battle3','math_rational_cards','math_exam','math_rational_exam','math_proportional_practice','math_proportional_exam1','math_proportional_exam2','math_proportional_exam3',...MATH_PROPORTIONAL_PRACTICE_BLOCKS.map(b=>`math_proportional_practice_${b.id}`),'math_proportional_worksheet','math_proportional_flashcards',...FRACTION_MODULES.map(m=>`math_fraction_${m.id}`)];return ['english_vocab_battle1','english_vocab_battle2','english_vocab_battle3','english_vocab_work_page1','english_vocab_work_page2','english_vocab_work_station2_page1','english_vocab_work_station2_page2','english_listening','english_reading',...GRAMMAR.flatMap((station,s)=>station.tasks.map((_,i)=>`english_grammar_${s+1}_task${i+1}`)),...WRITING_TASKS.map((_,i)=>`english_writing_task${i+1}`)];}
 async function mergeSharedLearningReview(name,subject,exercise,index,item){
- if(!item||item.subject!==subject||item.source==='live_battle'||item.source==='battle')return;
+ if(!item||(item.subject&&item.subject!==subject)||item.source==='live_battle'||item.source==='battle')return;
+ const at=Number(item.lastWrongAt)||Date.now(),period=activityPeriodKeys(at),resolved=item.resolved===true;
+ const normalized={...item,attempted:true,source:'answer_check',subject,topic:String(item.topic||exercise),prompt:String(item.prompt||item.q||item.word||exercise),count:Math.max(1,Number(item.count)||1),lastWrongAt:at,dayKey:String(item.dayKey||period.dayKey),weekKey:String(item.weekKey||period.weekKey),resolved};
+ delete normalized.resolvedAt;
+ if(resolved&&Number(item.resolvedAt)>0)normalized.resolvedAt=Number(item.resolvedAt);
  const path=`learningReview/${name}/${subject}/${exercise}/${index}`;
- await runTransaction(ref(db,path),current=>!current||reviewItemAt(item)>=reviewItemAt(current)?item:current);
+ await runTransaction(ref(db,path),current=>!current||reviewItemAt(normalized)>=reviewItemAt(current)?normalized:current);
 }
 async function loadChildLearningActivity(name,subject){
  const ids=childLearningExercises(subject),rows=await Promise.all(ids.map(async id=>[id,(await get(ref(db,`learningActivity/${uid}/${name}/${id}`))).val()])),data=Object.fromEntries(rows.filter(([,value])=>value));
+ let migrationError=null;
+ for(const exercise of ids)for(const [index,item] of Object.entries(data[exercise]?.errorItems||{})){
+  try{await mergeSharedLearningReview(name,subject,exercise,index,item);}catch(e){migrationError=e;}
+ }
  try{
-  for(const exercise of ids)for(const [index,item] of Object.entries(data[exercise]?.errorItems||{}))await mergeSharedLearningReview(name,subject,exercise,index,item);
   const shared=(await get(ref(db,`learningReview/${name}/${subject}`))).val()||{};
   for(const [exercise,errorItems] of Object.entries(shared)){
    if(!data[exercise])data[exercise]={};
-   data[exercise].errorItems={...(data[exercise].errorItems||{}),...errorItems};
+   const merged={...(data[exercise].errorItems||{})};
+   for(const [index,item] of Object.entries(errorItems||{}))if(!merged[index]||reviewItemAt(item)>=reviewItemAt(merged[index]))merged[index]=item;
+   data[exercise].errorItems=merged;
   }
- }catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg('Fehler von anderen Geräten konnten nicht geladen werden. Bitte Firebase-Regeln für learningReview veröffentlichen.',true);}}
+  if(migrationError&&!activitySyncWarned){activitySyncWarned=true;msg(`Alte Fehler sind geladen, konnten aber nicht alle auf andere Geräte übertragen werden (${migrationError.code||migrationError.message||'Firebase-Regelprüfung'}).`,true);}
+ }catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg(`Fehler von anderen Geräten konnten nicht geladen werden (${e.code||e.message||'Firebase-Zugriff verweigert'}).`,true);}}
  return data;
 }
 async function importLegacyLearningErrors(subject,name){
