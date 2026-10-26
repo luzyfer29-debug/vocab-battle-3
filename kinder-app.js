@@ -127,12 +127,12 @@ async function restoreLearningActivityAt(name,exercise,timestamp){
  try{await runTransaction(ref(db,path),current=>{const value=current&&typeof current==='object'?{...current}:{};if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}value.dayCount=Math.max(1,Number(value.dayCount)||0);value.weekCount=Math.max(1,Number(value.weekCount)||0);value.lastAt=Math.max(Number(value.lastAt)||0,at);if(!Array.isArray(value.sessions)||!value.sessions.length)value.sessions=[{startedAt:at,lastAt:at,live:null}];return value;});}catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg('Lernaktivität konnte nicht übernommen werden. Bitte Firebase-Regeln prüfen.',true);}}
 }
 function mathActivityId(b){if(b<3)return `math_rational_battle${b+1}`;if(b===3)return 'math_rational_cards';if(b===4)return 'math_exam';if(b===5)return 'math_rational_exam';if(b===6)return 'math_proportional_practice';if(b>=7&&b<=9)return `math_proportional_exam${b-6}`;if(b>=10&&b<=18)return `math_proportional_practice_${MATH_PROPORTIONAL_PRACTICE_BLOCKS[b-10]?.id||''}`;return '';}
-let errorEvalSubject='',errorEvalPeriod='',errorEvalTopics=[],errorEvalQueue=[],errorEvalCurrent=null,errorEvalName='';
+let errorEvalSubject='',errorEvalPeriod='',errorEvalTopics=[],errorEvalQueue=[],errorEvalCurrent=null,errorEvalName='',errorEvalMode='';
 function learningErrorRecord(name,subject,topic,q,old,eventAt){
  const {dayKey,weekKey}=activityPeriodKeys(eventAt);
  return {attempted:true,source:'answer_check',subject,topic,prompt:String(q?.prompt||q?.q||q?.word||topic||''),type:String(q?.type||''),task:Number(q?.task)||0,instruction:String(q?.instruction||''),images:Array.isArray(q?.images)?q.images:null,options:Array.isArray(q?.options)?q.options.map(String):null,correctIndex:Number.isInteger(q?.correct)?q.correct:null,accepted:Array.isArray(q?.accepted)?q.accepted.map(String):Array.isArray(q?.required)?q.required.map(String):null,required:Array.isArray(q?.required)?q.required.map(String):null,explanation:String(q?.explanation||q?.explain||''),answer:String(q?.answer||q?.answerText||''),count:(Number(old?.count)||0)+1,lastWrongAt:eventAt,dayKey,weekKey,resolved:false,resolvedAt:null};
 }
-function reviewItemAt(item){return Math.max(Number(item?.lastWrongAt)||0,Number(item?.resolvedAt)||0);}
+function reviewItemAt(item){const lastWrongAt=Number(item?.lastWrongAt)||0,resolvedAt=Number(item?.resolvedAt)||0;return item?.resolved===true?Math.max(lastWrongAt,resolvedAt)+1:lastWrongAt;}
 async function recordLearningError(name,subject,exercise,index,topic,q,correct,occurredAt=Date.now()){
  if(!db||!uid||!SOLO_NAMES.includes(name)||!exercise)return false;
  const eventAt=Number(occurredAt)||Date.now(),path=`learningActivity/${uid}/${name}/${exercise}`,sharedPath=`learningReview/${name}/${subject}/${exercise}/${index}`;
@@ -145,12 +145,12 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
    if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}
    value.lastAt=Math.max(Number(value.lastAt)||0,eventAt);
    const errors={...(value.errorItems||{})},key=String(index),old=errors[key];
-   if(correct){if(!old){changedItem=null;return current;}changedItem={...old,resolved:true,resolvedAt:eventAt};errors[key]=changedItem;}
+   if(correct){if(!old){changedItem=null;return current;}changedItem={...old,resolved:true,resolvedAt:Math.max(eventAt,Number(old.lastWrongAt)||0)+1};errors[key]=changedItem;}
    else{changedItem=learningErrorRecord(name,subject,topic,q,old,eventAt);errors[key]=changedItem;}
    value.errorItems=errors;return value;
   });
   await runTransaction(ref(db,sharedPath),current=>{
-   if(correct){if(!current)return; if(eventAt<Number(current.lastWrongAt||0))return current;return {...current,resolved:true,resolvedAt:eventAt};}
+   if(correct){if(!current)return;return {...current,resolved:true,resolvedAt:Math.max(eventAt,Number(current.lastWrongAt)||0)+1};}
    const next=learningErrorRecord(name,subject,topic,q,current,eventAt);
    return next;
   });
@@ -163,7 +163,7 @@ async function mergeSharedLearningReview(name,subject,exercise,index,item){
  const at=Number(item.lastWrongAt)||Date.now(),period=activityPeriodKeys(at),resolved=item.resolved===true;
  const normalized={...item,attempted:true,source:'answer_check',subject,topic:String(item.topic||exercise),prompt:String(item.prompt||item.q||item.word||exercise),count:Math.max(1,Number(item.count)||1),lastWrongAt:at,dayKey:String(item.dayKey||period.dayKey),weekKey:String(item.weekKey||period.weekKey),resolved};
  delete normalized.resolvedAt;
- if(resolved&&Number(item.resolvedAt)>0)normalized.resolvedAt=Number(item.resolvedAt);
+ if(resolved)normalized.resolvedAt=Math.max(Number(item.resolvedAt)||0,at)+1;
  const path=`learningReview/${name}/${subject}/${exercise}/${index}`;
  await runTransaction(ref(db,path),current=>!current||reviewItemAt(normalized)>=reviewItemAt(current)?normalized:current);
 }
@@ -212,7 +212,7 @@ async function importLegacyLearningErrors(subject,name){
  await Promise.all(rows.filter(row=>!existing[row.exercise]?.errorItems?.[String(row.index)]).map(row=>recordLearningError(name,subject,row.exercise,row.index,row.topic,row.q,false,row.at||Date.now())));
   return rows;
 }
-function errorPeriodChoice(subject){errorEvalSubject=subject;errorEvalPeriod='';errorEvalTopics=[];errorEvalQueue=[];errorEvalCurrent=null;const names=SOLO_NAMES.map((n,i)=>btn(esc(n),`errorName${subject}_${i}`));app.innerHTML=card(`<h2>📊 ${subject==='math'?'Mathe':'Englisch'}-Auswertung</h2><p>Wähle dein Kind.</p><div class="name-actions">${names.join('')}</div>`)+card(btn('Zurück','home','alt'));}
+function errorPeriodChoice(subject){errorEvalSubject=subject;errorEvalMode='analytics';errorEvalPeriod='';errorEvalTopics=[];errorEvalQueue=[];errorEvalCurrent=null;const names=SOLO_NAMES.map((n,i)=>btn(esc(n),`errorName${subject}_${i}`));app.innerHTML=card(`<h2>📊 ${subject==='math'?'Mathe':'Englisch'}-Auswertung</h2><p>Wähle dein Kind.</p><div class="name-actions">${names.join('')}</div>`)+card(btn('Zurück','home','alt'));}
 function learningActivityLabel(exercise){
  const fixed={english_vocab_battle1:'Vokabeln 1',english_vocab_battle2:'Vokabeln 2',english_vocab_battle3:'Vokabeln 3',english_listening:'Listening',english_reading:'Reading',math_rational_cards:'Rationale Zahlen · Merkkarten',math_proportional_practice:'Proportional / Antiproportional · Übung',math_proportional_worksheet:'Proportional · Arbeitsblatt',math_proportional_flashcards:'Proportional · Lernkarten'};
  if(fixed[exercise])return fixed[exercise];
@@ -225,22 +225,27 @@ function learningActivityLabel(exercise){
  match=String(exercise).match(/^math_proportional_practice_(.+)$/);if(match){const block=MATH_PROPORTIONAL_PRACTICE_BLOCKS.find(item=>item.id===match[1]);return block?'Proportional / Antiproportional · '+block.title:'Proportional / Antiproportional';}
  return String(exercise).replace(/^(english|math)_/,'').replace(/_/g,' ');
 }
-async function learningReview(name){
+function learningReviewSubjectChoice(name){
+ if(!SOLO_NAMES.includes(name)){soloChooseName();return;}
+ if(!db||!uid){msg('Verbindung wird hergestellt. Bitte gleich noch einmal öffnen.',true);return;}
+ errorEvalName=name;errorEvalSubject='child';errorEvalMode='childReview';errorEvalPeriod='';errorEvalTopics=[];errorEvalQueue=[];errorEvalCurrent=null;
+ app.innerHTML=card(`<h2>📘 ${esc(name)} · Fehler wiederholen</h2><p>Wähle ein Fach. Die Fehler werden getrennt angezeigt.</p><div class="name-actions">${btn('🇬🇧 Englisch · Fehler üben','reviewEnglishChild','english-learn-action')}${btn('🔢 Mathe · Fehler üben','reviewMathChild','math-learn-action')}</div>`)+card(btn('Zurück zum Lernen','reviewBack','alt'));
+}
+async function learningReview(name,subject=''){
  if(!SOLO_NAMES.includes(name)){soloChooseName();return;}
 
  if(!db||!uid){msg('Verbindung wird hergestellt. Bitte gleich noch einmal öffnen.',true);return;}
  soloName=name;mathName=name;localStorage.setItem('vb2solo_name',name);localStorage.setItem('vb2math_name',name);
- errorEvalSubject='all';errorEvalPeriod='';errorEvalName=name;errorEvalTopics=[];errorEvalQueue=[];errorEvalCurrent=null;
- app.innerHTML=card(`<h2>📘 ${esc(name)} · Das muss ich erneut lernen</h2><p>Fehler werden nach Fach und Thema sortiert geladen …</p>`);
+ if(subject!=='english'&&subject!=='math'){learningReviewSubjectChoice(name);return;}
+ errorEvalSubject=subject;errorEvalMode='childReview';errorEvalPeriod='';errorEvalName=name;errorEvalTopics=[];errorEvalQueue=[];errorEvalCurrent=null;
+ app.innerHTML=card(`<h2>📘 ${esc(name)} · ${subject==='math'?'Mathe':'Englisch'}-Fehler</h2><p>Offene Fehler werden nach Thema geladen …</p>`);
  try{
-  const [legacyEnglish,legacyMath]=await Promise.all([importLegacyLearningErrors('english',name),importLegacyLearningErrors('math',name)]);
-  const [english,math]=await Promise.all([loadChildLearningActivity(name,'english'),loadChildLearningActivity(name,'math')]);
-  const legacyAttempts=new Set([...(legacyEnglish||[]).map(row=>`english::${row.exercise}::${row.index}`),...(legacyMath||[]).map(row=>`math::${row.exercise}::${row.index}`)]);
-   const topics=new Map();
-  for(const [subject,data] of [['english',english],['math',math]])for(const [exercise,entry] of Object.entries(data))for(const [index,item] of Object.entries(entry?.errorItems||{})){
+  const legacyAttempts=new Set((await importLegacyLearningErrors(subject,name)||[]).map(row=>`${subject}::${row.exercise}::${row.index}`));
+  const data=await loadChildLearningActivity(name,subject),topics=new Map();
+  for(const [exercise,entry] of Object.entries(data))for(const [index,item] of Object.entries(entry?.errorItems||{})){
    const itemSubject=item?.subject|| (exercise.startsWith('math_')?'math':'english');
    const hasAttemptEvidence=item?.attempted===true||legacyAttempts.has(`${subject}::${exercise}::${index}`)||Number(index)<Math.max(0,Number(entry?.live?.done)||0);
-    if(itemSubject!==subject||item?.resolved||item?.source==='live_battle'||item?.source==='battle'||!hasAttemptEvidence)continue;
+   if(itemSubject!==subject||item?.resolved===true||item?.source==='live_battle'||item?.source==='battle'||!hasAttemptEvidence)continue;
    const reviewItem={...item,subject};
    const vocabWorkReview=vocabWorkReviewData(String(exercise),Number(index));
    if(vocabWorkReview){
@@ -262,13 +267,14 @@ async function learningReview(name){
    topics.get(key).items.push({exercise,index,item:reviewItem});
   }
   errorEvalTopics=[...topics.values()].map(group=>({...group,items:group.items.sort((a,b)=>Number(a.item.lastWrongAt||0)-Number(b.item.lastWrongAt||0))}));
-  const count=errorEvalTopics.reduce((total,group)=>total+group.items.length,0);
-  const subjectSections=[['english','🇬🇧 Englisch'],['math','🔢 Mathe']].map(([subject,title])=>{const groups=errorEvalTopics.map((group,index)=>({...group,index})).filter(group=>group.subject===subject);const blocks=groups.length?groups.map(group=>`<div class="player"><h3>${esc(group.title)}</h3><p>${group.items.length} Aufgabe${group.items.length===1?'':'n'} offen</p>${btn(`Jetzt üben (${group.items.length})`,`reviewTopic${group.index}`)}</div>`).join(''):'<p class="muted">Keine offenen Fehler.</p>';return `<section class="solo-section"><h3>${title}</h3>${blocks}</section>`;}).join('');
-  app.innerHTML=card(`<h2>📘 ${esc(name)} · Das muss ich erneut lernen</h2><p>Jede Aufgabe bleibt hier, bis sie richtig gelöst ist. Danach verschwindet sie aus der Liste.</p><p><strong>${count} Aufgabe${count===1?'':'n'} offen</strong></p>${subjectSections}`)+card(btn('Zurück zum Lernen','reviewBack','alt'));
+  const count=errorEvalTopics.reduce((total,group)=>total+group.items.length,0),label=subject==='math'?'🔢 Mathe':'🇬🇧 Englisch';
+  const blocks=errorEvalTopics.length?errorEvalTopics.map((group,index)=>`<div class="player"><h3>${esc(group.title)}</h3><p>${group.items.length} Aufgabe${group.items.length===1?'':'n'} offen</p>${btn(`Jetzt üben (${group.items.length})`,`reviewTopic${index}`)}</div>`).join(''):'<p class="muted">Keine offenen Fehler in diesem Fach. ✅</p>';
+  app.innerHTML=card(`<h2>📘 ${esc(name)} · ${label} · Das muss ich erneut lernen</h2><p>Jede Aufgabe bleibt hier, bis sie richtig gelöst ist. Danach wird sie aus dieser Liste entfernt.</p><p><strong>${count} Aufgabe${count===1?'':'n'} offen</strong></p>${blocks}<div class="buttons">${btn('🔢 Mathe','reviewMathChild','alt')}${btn('🇬🇧 Englisch','reviewEnglishChild','alt')}</div>`)+card(btn('Zur Fachauswahl','reviewSubjectBack','alt'));
  }catch(e){msg('Wiederholaufgaben konnten nicht geladen werden: '+e.message,true);}
 }
 async function errorEvaluation(subject,period){
  const name=subject==='math'?mathName:soloName;if(!name||!SOLO_NAMES.includes(name)){errorPeriodChoice(subject);return;}if(!db||!uid){msg('Verbindung wird hergestellt. Bitte gleich noch einmal öffnen.',true);return;}
+ errorEvalMode='analytics';errorEvalName=name;
  if(!period){errorEvalSubject=subject;errorEvalPeriod='';app.innerHTML=card(`<h2>📊 ${subject==='math'?'Mathe':'Englisch'}-Auswertung · ${esc(name)}</h2><p>Welchen Zeitraum möchtest du ansehen?</p><div class="name-actions">${btn('📅 Tägliche Auswertung','errorPeriod_day')}${btn('🗓️ Wöchentliche Auswertung','errorPeriod_week')}</div>`)+card(btn('Zurück','home','alt'));return;}
  errorEvalSubject=subject;errorEvalPeriod=period;app.innerHTML=card('<h2>Auswertung wird geladen …</h2>');
  try{await importLegacyLearningErrors(subject,name);const data=await loadChildLearningActivity(name,subject),keys=activityPeriodKeys(),topics=new Map();for(const [exercise,entry] of Object.entries(data)){if(exercise==='english_vocab_work_battle1'||exercise==='english_vocab_work_battle2')continue;for(const [index,item] of Object.entries(entry?.errorItems||{})){if(item?.subject!==subject)continue;const inPeriod=period==='day'?item.dayKey===keys.dayKey:item.weekKey===keys.weekKey;if(!inPeriod&&!item.resolved){/* offene Fehler bleiben sichtbar, bis sie richtig gelöst sind */}else if(!inPeriod)continue;const topic=String(item.topic||exercise);if(!topics.has(topic))topics.set(topic,[]);topics.get(topic).push({exercise,index,item});}}
@@ -280,11 +286,43 @@ async function errorEvaluation(subject,period){
  }catch(e){msg('Auswertung konnte nicht geladen werden: '+e.message,true);}
 }
 function errorPracticeStart(topicIndex){const topic=errorEvalTopics[topicIndex];if(!topic)return;errorEvalQueue=topic.items.filter(x=>!x.item.resolved);errorEvalCurrent={topicIndex,position:0};errorPracticeShow();}
-function errorPracticeShow(){if(!errorEvalCurrent)return;const group=errorEvalTopics[errorEvalCurrent.topicIndex];errorEvalQueue=group.items.filter(x=>!x.item.resolved);if(!errorEvalQueue.length){void learningReview(errorEvalName);return;}const entry=errorEvalQueue[0],item=entry.item,worksheet={...item,q:item.prompt,answerText:item.answer};let input;if(item.type==='order')input=`${listeningControls(worksheet,'error')}<button data-error-listening-submit="order">Antwort prüfen</button>`;else if(item.options)input=`<div class="answers">${item.options.map((o,i)=>`<button data-error-answer="${i}">${esc(o)}</button>`).join('')}</div>`;else input=`<label>Deine Antwort<textarea data-error-text rows="${item.type==='open'?3:1}" autocomplete="off" autocapitalize="none"></textarea></label>${btn('Antwort prüfen','errorTextCheck')}`;app.innerHTML=card(`<p class="muted">${group.subject==='math'?'🔢 Mathe':'🇬🇧 Englisch'} · ${esc(group.title)} · ${errorEvalQueue.length} noch offen</p><h2>${item.subject==='math'?mathText(item.prompt||'Aufgabe'):esc(item.prompt||'Aufgabe')}</h2>${item.instruction?`<p class="muted">${esc(item.instruction)}</p>`:''}${item.type==='order'||item.task?listeningTaskImage(item.task):''}${input}<div id="error-feedback"></div>`)+card(btn('Zur Themenliste','errorRefresh','alt'));}
-async function errorPracticeAnswer(value){if(!errorEvalCurrent||!errorEvalQueue.length)return;const entry=errorEvalQueue[0],item=entry.item,typed=String(value??'').trim();let correct;if(item.type==='order')correct=Array.isArray(value)&&value.map(String).join(',')===(item.accepted||[]).join(',');else if(item.options)correct=Number(value)===Number(item.correctIndex);else if(item.type==='open')correct=(item.required||[]).every(term=>grammarNormalize(typed).includes(grammarNormalize(term)));else correct=(item.accepted||[]).some(x=>grammarNormalize(x)===grammarNormalize(typed));const subject=item.subject||(entry.exercise.startsWith('math_')?'math':'english'),saved=await recordLearningError(errorEvalName,subject,entry.exercise,entry.index,item.topic,item,correct);if(!saved){const fb=document.querySelector('#error-feedback');if(fb)fb.innerHTML='<p class="error">Der Lernstand konnte nicht gespeichert werden. Bitte Verbindung prüfen und erneut versuchen.</p>';return;}if(correct){item.resolved=true;errorEvalQueue.shift();const feedback=document.querySelector('#error-feedback');if(feedback){feedback.innerHTML='<p class="good"><strong>✅ Richtig! Die Aufgabe ist erledigt und verschwindet aus der Liste.</strong></p>'+btn(errorEvalQueue.length?'Weiter ➜':'Zur Themenliste','errorPracticeNext');}else errorPracticeShow();return;}const fb=document.querySelector('#error-feedback');if(fb)fb.innerHTML=`<p class="error"><strong>❌ Noch nicht richtig.</strong> ${item.answer?`Musterlösung: ${esc(item.answer)}`:item.options?`Richtige Antwort: ${esc(item.options[item.correctIndex]??'')}`:`Richtige Lösung: ${esc((item.accepted||[]).join(' / '))}`}</p><p>Versuche dieselbe Aufgabe noch einmal. Sie bleibt offen, bis sie richtig ist.</p>`;}
+function errorPracticeShow(){
+ if(!errorEvalCurrent)return;
+ const group=errorEvalTopics[errorEvalCurrent.topicIndex];
+ errorEvalQueue=group.items.filter(x=>!x.item.resolved);
+ if(!errorEvalQueue.length){if(errorEvalMode==='childReview')void learningReview(errorEvalName,errorEvalSubject);else void errorEvaluation(errorEvalSubject,errorEvalPeriod);return;}
+ const entry=errorEvalQueue[0],item=entry.item,worksheet={...item,q:item.prompt,answerText:item.answer};
+ let input;
+ if(item.type==='order')input=`${listeningControls(worksheet,'error')}<button data-error-listening-submit="order">Antwort prüfen</button>`;
+ else if(item.options)input=`<div class="answers">${item.options.map((o,i)=>`<button data-error-answer="${i}">${esc(o)}</button>`).join('')}</div>`;
+ else input=`<label>Deine Antwort<textarea data-error-text rows="${item.type==='open'?3:1}" autocomplete="off" autocapitalize="none"></textarea></label>${btn('Antwort prüfen','errorTextCheck')}`;
+ app.innerHTML=card(`<p class="muted">${group.subject==='math'?'🔢 Mathe':'🇬🇧 Englisch'} · ${esc(group.title)} · ${errorEvalQueue.length} noch offen</p><h2>${item.subject==='math'?mathText(item.prompt||'Aufgabe'):esc(item.prompt||'Aufgabe')}</h2>${item.instruction?`<p class="muted">${esc(item.instruction)}</p>`:''}${item.type==='order'||item.task?listeningTaskImage(item.task):''}${input}<div id="error-feedback"></div>`)+card(btn('Zur Themenliste','errorRefresh','alt'));
+}
+async function errorPracticeAnswer(value){
+ if(!errorEvalCurrent||!errorEvalQueue.length)return;
+ const entry=errorEvalQueue[0],item=entry.item,typed=String(value??'').trim();
+ let correct;
+ if(item.type==='order')correct=Array.isArray(value)&&value.map(String).join(',')===(item.accepted||[]).join(',');
+ else if(item.options)correct=Number(value)===Number(item.correctIndex);
+ else if(item.type==='open')correct=(item.required||[]).every(term=>grammarNormalize(typed).includes(grammarNormalize(term)));
+ else correct=(item.accepted||[]).some(x=>grammarNormalize(x)===grammarNormalize(typed));
+ const subject=errorEvalSubject==='math'||errorEvalSubject==='english'?errorEvalSubject:(item.subject||(entry.exercise.startsWith('math_')?'math':'english'));
+ const saved=await recordLearningError(errorEvalName,subject,entry.exercise,entry.index,item.topic,item,correct);
+ if(!saved){const fb=document.querySelector('#error-feedback');if(fb)fb.innerHTML='<p class="error">Der Lernstand konnte nicht gespeichert werden. Bitte Verbindung prüfen und erneut versuchen.</p>';return;}
+ if(correct){
+  item.resolved=true;errorEvalQueue.shift();
+  if(errorEvalMode==='childReview'&&!errorEvalQueue.length){await learningReview(errorEvalName,errorEvalSubject);return;}
+  const feedback=document.querySelector('#error-feedback');
+  if(feedback)feedback.innerHTML='<p class="good"><strong>✅ Richtig! Die Aufgabe ist erledigt und aus der offenen Liste entfernt.</strong></p>'+btn(errorEvalQueue.length?'Weiter ➜':'Zur Themenliste','errorPracticeNext');
+  else errorPracticeShow();
+  return;
+ }
+ const fb=document.querySelector('#error-feedback');
+ if(fb)fb.innerHTML=`<p class="error"><strong>❌ Noch nicht richtig.</strong> ${item.options?`Richtige Antwort: ${esc(item.options[item.correctIndex]??'')}`:item.accepted?.length?`Richtige Lösung: ${esc(item.accepted.join(' / '))}`:item.answer?`Musterlösung: ${esc(item.answer)}`:'Bitte kontrolliere deine Antwort noch einmal.'}</p><p>Versuche dieselbe Aufgabe noch einmal. Sie bleibt offen, bis sie richtig ist.</p>`;
+}
 function subjectNameForErrors(){return errorEvalSubject==='math'?mathName:soloName;}
-function errorPracticeNext(){if(errorEvalCurrent&&errorEvalQueue.length){errorPracticeShow();return;}void learningReview(errorEvalName);}
-function errorEvaluationAction(action){const reviewMatch=action.match(/^reviewChild(\d)$/);if(reviewMatch){void learningReview(SOLO_NAMES[Number(reviewMatch[1])]);return true;}if(action==='reviewEnglishChild'){void learningReview(soloName);return true;}if(action==='reviewMathChild'){void learningReview(mathName);return true;}if(/^reviewTopic\d+$/.test(action)){errorPracticeStart(Number(action.slice(11)));return true;}if(action==='errorMath'){errorPeriodChoice('math');return true;}if(action==='errorEnglish'){errorPeriodChoice('english');return true;}if(action.startsWith('errorName')){const [,subject,index]=action.match(/^errorName(math|english)_(\d)$/)||[];if(!subject)return true;const name=SOLO_NAMES[Number(index)];if(subject==='math'){mathName=name;localStorage.setItem('vb2math_name',name);}else{soloName=name;localStorage.setItem('vb2solo_name',name);}errorEvaluation(subject);return true;}if(action==='errorPeriod_day'||action==='errorPeriod_week'){errorEvaluation(errorEvalSubject,action.endsWith('day')?'day':'week');return true;}if(/^errorTopic\d+$/.test(action)){errorPracticeStart(Number(action.slice(10)));return true;}if(action==='errorPracticeNext'){errorPracticeNext();return true;}if(action==='errorRefresh'){if(errorEvalSubject==='all')void learningReview(errorEvalName);else errorEvaluation(errorEvalSubject,errorEvalPeriod);return true;}if(action==='reviewBack'){if(errorEvalName){soloName=errorEvalName;mathName=errorEvalName;soloHome();}else home();return true;}if(action==='errorSubjectHome'){if(errorEvalSubject==='math')mathHome();else soloHome();return true;}if(action==='errorTextCheck'){const value=document.querySelector('[data-error-text]')?.value||'';void errorPracticeAnswer(value);return true;}return false;}
+function errorPracticeNext(){if(errorEvalCurrent&&errorEvalQueue.length){errorPracticeShow();return;}if(errorEvalMode==='childReview')void learningReview(errorEvalName,errorEvalSubject);else void errorEvaluation(errorEvalSubject,errorEvalPeriod);}
+function errorEvaluationAction(action){const reviewMatch=action.match(/^reviewChild(\d)$/);if(reviewMatch){void learningReview(SOLO_NAMES[Number(reviewMatch[1])]);return true;}if(action==='reviewEnglishChild'){void learningReview(errorEvalName||soloName,'english');return true;}if(action==='reviewMathChild'){void learningReview(errorEvalName||mathName,'math');return true;}if(action==='reviewSubjectBack'){learningReviewSubjectChoice(errorEvalName);return true;}if(/^reviewTopic\d+$/.test(action)){errorPracticeStart(Number(action.slice(11)));return true;}if(action==='errorMath'){errorPeriodChoice('math');return true;}if(action==='errorEnglish'){errorPeriodChoice('english');return true;}if(action.startsWith('errorName')){const [,subject,index]=action.match(/^errorName(math|english)_(\d)$/)||[];if(!subject)return true;const name=SOLO_NAMES[Number(index)];if(subject==='math'){mathName=name;localStorage.setItem('vb2math_name',name);}else{soloName=name;localStorage.setItem('vb2solo_name',name);}errorEvaluation(subject);return true;}if(action==='errorPeriod_day'||action==='errorPeriod_week'){errorEvaluation(errorEvalSubject,action.endsWith('day')?'day':'week');return true;}if(/^errorTopic\d+$/.test(action)){errorPracticeStart(Number(action.slice(10)));return true;}if(action==='errorPracticeNext'){errorPracticeNext();return true;}if(action==='errorRefresh'){if(errorEvalMode==='childReview')void learningReview(errorEvalName,errorEvalSubject);else void errorEvaluation(errorEvalSubject,errorEvalPeriod);return true;}if(action==='reviewBack'){if(errorEvalName&&errorEvalMode==='childReview')home();else if(errorEvalName){soloName=errorEvalName;mathName=errorEvalName;soloHome();}else home();return true;}if(action==='errorSubjectHome'){if(errorEvalSubject==='math')mathHome();else soloHome();return true;}if(action==='errorTextCheck'){const value=document.querySelector('[data-error-text]')?.value||'';void errorPracticeAnswer(value);return true;}return false;}
 let soloName=localStorage.getItem('vb2solo_name')||'';
 let dashboardUnsubscribe=null,soloHeartbeat=null;
 function resetStamp(name,subject='english'){
