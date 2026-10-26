@@ -419,6 +419,21 @@ function errorDetailsForActivity(entry){
  }).join('');
  return `<details class="live-error-details"><summary>Fehler: ${rows.length} · ${open} offen · ${done} richtig wiederholt</summary>${details}</details>`;
 }
+function activityWithSharedLearningReview(activityData,reviewData){
+ const merged={...(activityData||{})},shared={};
+ for(const name of SOLO_NAMES){
+  const profile={};
+  for(const [subject,exercises] of Object.entries(reviewData?.[name]||{}))for(const [exercise,errorItems] of Object.entries(exercises||{})){
+   const items=Object.fromEntries(Object.entries(errorItems||{}).filter(([,item])=>item?.subject===subject&&item?.source==='answer_check'));
+   if(!Object.keys(items).length)continue;
+   const lastAt=Math.max(...Object.values(items).map(item=>Math.max(Number(item?.lastWrongAt)||0,Number(item?.resolvedAt)||0)));
+   profile[exercise]={lastAt,errorItems:items};
+  }
+  if(Object.keys(profile).length)shared[name]=profile;
+ }
+ merged.__sharedLearningReview=shared;
+ return merged;
+}
 function learningActivityPanel(activityData,names,subject){
  const activityPrefix=subject==='math'?'math_':'english_';
  const rows=[];
@@ -687,7 +702,7 @@ function showDashboard(){
  stopDashboard();stopSoloHeartbeat();
  app.innerHTML=card('<h2>📊 Live-Lernübersicht</h2><p>Online-Lernstände werden geladen …</p>')+card(btn('Zurück','home','alt'));
  if(!uid){msg('Bitte kurz warten, bis die Anmeldung abgeschlossen ist.',true);return;}
- let englishData={},mathData={},activityData={},seriesData={};const refresh=()=>{liveDashboardData={english:englishData,math:mathData,activity:activityData,series:seriesData};renderDashboard(englishData,mathData,activityData,seriesData);};const offEnglish=onValue(ref(db,'soloProgress'),snap=>{englishData=snap.val()||{};refresh();},e=>msg('Englisch konnte nicht geladen werden: '+e.message,true));const offMath=onValue(ref(db,'mathProgress'),snap=>{mathData=snap.val()||{};refresh();},e=>msg('Mathe konnte nicht geladen werden: '+e.message+'. Bitte Firebase-Regeln für mathProgress prüfen.',true));const offActivity=onValue(ref(db,'learningActivity'),snap=>{activityData=snap.val()||{};refresh();void removeLegacyEnglishGapActivities(activityData);},e=>msg('Häufigkeitsübersicht konnte nicht geladen werden. Bitte Firebase-Regeln für learningActivity prüfen.',true));const offSeries=onValue(ref(db,'englishSeriesResults'),snap=>{seriesData=snap.val()||{};refresh();},e=>msg('Vokabelarbeits- und Grammatik-Ergebnisse konnten nicht geladen werden. Bitte Firebase-Regeln für englishSeriesResults prüfen.',true));dashboardUnsubscribe=()=>{offEnglish();offMath();offActivity();offSeries();};
+ let englishData={},mathData={},activityData={},reviewData={},seriesData={};const refresh=()=>{const visibleActivity=activityWithSharedLearningReview(activityData,reviewData);liveDashboardData={english:englishData,math:mathData,activity:visibleActivity,series:seriesData};renderDashboard(englishData,mathData,visibleActivity,seriesData);};const offEnglish=onValue(ref(db,'soloProgress'),snap=>{englishData=snap.val()||{};refresh();},e=>msg('Englisch konnte nicht geladen werden: '+e.message,true));const offMath=onValue(ref(db,'mathProgress'),snap=>{mathData=snap.val()||{};refresh();},e=>msg('Mathe konnte nicht geladen werden: '+e.message+'. Bitte Firebase-Regeln für mathProgress prüfen.',true));const offActivity=onValue(ref(db,'learningActivity'),snap=>{activityData=snap.val()||{};refresh();void removeLegacyEnglishGapActivities(activityData);},e=>msg('Häufigkeitsübersicht konnte nicht geladen werden. Bitte Firebase-Regeln für learningActivity prüfen.',true));const offReview=SOLO_NAMES.map(name=>onValue(ref(db,`learningReview/${name}`),snap=>{reviewData[name]=snap.val()||{};refresh();},e=>msg(`Gemeinsame Fehler für ${name} konnten nicht geladen werden. Bitte learningReview-Regeln prüfen.`,true)));const offSeries=onValue(ref(db,'englishSeriesResults'),snap=>{seriesData=snap.val()||{};refresh();},e=>msg('Vokabelarbeits- und Grammatik-Ergebnisse konnten nicht geladen werden. Bitte Firebase-Regeln für englishSeriesResults prüfen.',true));dashboardUnsubscribe=()=>{offEnglish();offMath();offActivity();offReview.forEach(off=>off());offSeries();};
 }
 
 function battleOverviewActivities(subject){
