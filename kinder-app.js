@@ -128,13 +128,53 @@ async function restoreLearningActivityAt(name,exercise,timestamp){
 }
 function mathActivityId(b){if(b<3)return `math_rational_battle${b+1}`;if(b===3)return 'math_rational_cards';if(b===4)return 'math_exam';if(b===5)return 'math_rational_exam';if(b===6)return 'math_proportional_practice';if(b>=7&&b<=9)return `math_proportional_exam${b-6}`;if(b>=10&&b<=18)return `math_proportional_practice_${MATH_PROPORTIONAL_PRACTICE_BLOCKS[b-10]?.id||''}`;return '';}
 let errorEvalSubject='',errorEvalPeriod='',errorEvalTopics=[],errorEvalQueue=[],errorEvalCurrent=null,errorEvalName='';
+function learningErrorRecord(name,subject,topic,q,old,eventAt){
+ const {dayKey,weekKey}=activityPeriodKeys(eventAt);
+ return {attempted:true,source:'answer_check',subject,topic,prompt:String(q?.prompt||q?.q||q?.word||topic||''),type:String(q?.type||''),task:Number(q?.task)||0,instruction:String(q?.instruction||''),images:Array.isArray(q?.images)?q.images:null,options:Array.isArray(q?.options)?q.options.map(String):null,correctIndex:Number.isInteger(q?.correct)?q.correct:null,accepted:Array.isArray(q?.accepted)?q.accepted.map(String):Array.isArray(q?.required)?q.required.map(String):null,required:Array.isArray(q?.required)?q.required.map(String):null,explanation:String(q?.explanation||q?.explain||''),answer:String(q?.answer||q?.answerText||''),count:(Number(old?.count)||0)+1,lastWrongAt:eventAt,dayKey,weekKey,resolved:false,resolvedAt:null};
+}
+function reviewItemAt(item){return Math.max(Number(item?.lastWrongAt)||0,Number(item?.resolvedAt)||0);}
 async function recordLearningError(name,subject,exercise,index,topic,q,correct,occurredAt=Date.now()){
  if(!db||!uid||!SOLO_NAMES.includes(name)||!exercise)return false;
- const now=Date.now(),eventAt=Number(occurredAt)||now,{dayKey,weekKey}=activityPeriodKeys(eventAt),path=`learningActivity/${uid}/${name}/${exercise}`;
- try{await runTransaction(ref(db,path),current=>{const value=current&&typeof current==='object'?{...current}:{};if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}value.lastAt=Math.max(Number(value.lastAt)||0,eventAt);const errors={...(value.errorItems||{})},key=String(index),old=errors[key];if(correct){if(!old)return current;errors[key]={...old,resolved:true,resolvedAt:eventAt};}else{errors[key]={attempted:true,source:'answer_check',subject,topic,prompt:String(q?.prompt||q?.q||q?.word||topic||''),type:String(q?.type||''),task:Number(q?.task)||0,instruction:String(q?.instruction||''),images:Array.isArray(q?.images)?q.images:null,options:Array.isArray(q?.options)?q.options.map(String):null,correctIndex:Number.isInteger(q?.correct)?q.correct:null,accepted:Array.isArray(q?.accepted)?q.accepted.map(String):Array.isArray(q?.required)?q.required.map(String):null,required:Array.isArray(q?.required)?q.required.map(String):null,explanation:String(q?.explanation||q?.explain||''),answer:String(q?.answer||q?.answerText||''),count:(Number(old?.count)||0)+1,lastWrongAt:eventAt,dayKey,weekKey,resolved:false,resolvedAt:null};}value.errorItems=errors;return value;});return true;}catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg('Fehler konnten gerade nicht online gespeichert werden. Bitte Verbindung prüfen.',true);}return false;}
+ const eventAt=Number(occurredAt)||Date.now(),path=`learningActivity/${uid}/${name}/${exercise}`,sharedPath=`learningReview/${name}/${subject}/${exercise}/${index}`;
+ try{
+  let changedItem=null;
+  await runTransaction(ref(db,path),current=>{
+   const value=current&&typeof current==='object'?{...current}:{};
+   const {dayKey,weekKey}=activityPeriodKeys(eventAt);
+   if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}
+   if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}
+   value.lastAt=Math.max(Number(value.lastAt)||0,eventAt);
+   const errors={...(value.errorItems||{})},key=String(index),old=errors[key];
+   if(correct){if(!old){changedItem=null;return current;}changedItem={...old,resolved:true,resolvedAt:eventAt};errors[key]=changedItem;}
+   else{changedItem=learningErrorRecord(name,subject,topic,q,old,eventAt);errors[key]=changedItem;}
+   value.errorItems=errors;return value;
+  });
+  await runTransaction(ref(db,sharedPath),current=>{
+   if(correct){if(!current)return; if(eventAt<Number(current.lastWrongAt||0))return current;return {...current,resolved:true,resolvedAt:eventAt};}
+   const next=learningErrorRecord(name,subject,topic,q,current,eventAt);
+   return next;
+  });
+  activitySyncWarned=false;return true;
+ }catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg('Fehler konnten nicht geräteübergreifend gespeichert werden. Bitte Firebase-Regeln für learningReview veröffentlichen.',true);}return false;}
 }
 function childLearningExercises(subject){if(subject==='math')return ['math_rational_battle1','math_rational_battle2','math_rational_battle3','math_rational_cards','math_exam','math_rational_exam','math_proportional_practice','math_proportional_exam1','math_proportional_exam2','math_proportional_exam3',...MATH_PROPORTIONAL_PRACTICE_BLOCKS.map(b=>`math_proportional_practice_${b.id}`),'math_proportional_worksheet','math_proportional_flashcards',...FRACTION_MODULES.map(m=>`math_fraction_${m.id}`)];return ['english_vocab_battle1','english_vocab_battle2','english_vocab_battle3','english_vocab_work_page1','english_vocab_work_page2','english_vocab_work_station2_page1','english_vocab_work_station2_page2','english_listening','english_reading',...GRAMMAR.flatMap((station,s)=>station.tasks.map((_,i)=>`english_grammar_${s+1}_task${i+1}`)),...WRITING_TASKS.map((_,i)=>`english_writing_task${i+1}`)];}
-async function loadChildLearningActivity(name,subject){const ids=childLearningExercises(subject);const rows=await Promise.all(ids.map(async id=>[id,(await get(ref(db,`learningActivity/${uid}/${name}/${id}`))).val()]));return Object.fromEntries(rows.filter(([,value])=>value));}
+async function mergeSharedLearningReview(name,subject,exercise,index,item){
+ if(!item||item.subject!==subject||item.source==='live_battle'||item.source==='battle')return;
+ const path=`learningReview/${name}/${subject}/${exercise}/${index}`;
+ await runTransaction(ref(db,path),current=>!current||reviewItemAt(item)>=reviewItemAt(current)?item:current);
+}
+async function loadChildLearningActivity(name,subject){
+ const ids=childLearningExercises(subject),rows=await Promise.all(ids.map(async id=>[id,(await get(ref(db,`learningActivity/${uid}/${name}/${id}`))).val()])),data=Object.fromEntries(rows.filter(([,value])=>value));
+ try{
+  for(const exercise of ids)for(const [index,item] of Object.entries(data[exercise]?.errorItems||{}))await mergeSharedLearningReview(name,subject,exercise,index,item);
+  const shared=(await get(ref(db,`learningReview/${name}/${subject}`))).val()||{};
+  for(const [exercise,errorItems] of Object.entries(shared)){
+   if(!data[exercise])data[exercise]={};
+   data[exercise].errorItems={...(data[exercise].errorItems||{}),...errorItems};
+  }
+ }catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg('Fehler von anderen Geräten konnten nicht geladen werden. Bitte Firebase-Regeln für learningReview veröffentlichen.',true);}}
+ return data;
+}
 async function importLegacyLearningErrors(subject,name){
  if(!db||!uid||!SOLO_NAMES.includes(name))return;
  const rows=[];
