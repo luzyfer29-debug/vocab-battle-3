@@ -173,9 +173,9 @@ async function backfillTodayLearningProgress(subject,dayKey){
  for(const name of SOLO_NAMES)for(const exercise of exercises)reads.push((async()=>{
   try{
    const snapshot=await get(ref(db,`learningActivity/${uid}/${name}/${exercise}`)),row=snapshot.val();
-   if(row?.dayKey!==dayKey||!row?.live)return;
-   const at=Number(row.live.updatedAt)||Number(row.lastAt)||Date.now();
-   await updateDailyActivityProgress(name,subject,exercise,at,row.live);
+   if(row?.dayKey!==dayKey)return;
+   const at=Number(row.live?.updatedAt)||Number(row.lastAt)||Date.now(),state=row.live&&typeof row.live==='object'?row.live:{taskTitle:exercise,done:Math.max(1,Number(row.dayCount)||0),status:'Lernaktivität nachgetragen'};
+   await updateDailyActivityProgress(name,subject,exercise,at,state);
   }catch(error){console.warn('Lernaktivität konnte nicht nachgetragen werden:',name,exercise,error);}
  })());
  await Promise.all(reads);
@@ -222,7 +222,7 @@ async function showDailyLeaderboard(subject){
 async function recordLearningActivity(name,exercise,increment=true,liveState=null){
  if(!db||!uid||!SOLO_NAMES.includes(name)||!name||!exercise)return;
  const now=Date.now(),{dayKey,weekKey}=activityPeriodKeys(now),path=`learningActivity/${uid}/${name}/${exercise}`;
- try{await runTransaction(ref(db,path),current=>{const value=current&&typeof current==='object'?{...current}:{};if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}if(increment){value.dayCount=(Number(value.dayCount)||0)+1;value.weekCount=(Number(value.weekCount)||0)+1;}value.lastAt=now;if(liveState&&typeof liveState==='object')value.live={...liveState,updatedAt:now};const sessions=Array.isArray(value.sessions)?[...value.sessions]:[];if(increment||!sessions.length)sessions.push({startedAt:now,lastAt:now,live:liveState&&typeof liveState==='object'?{...liveState,updatedAt:now}:null});else sessions[sessions.length-1]={...sessions[sessions.length-1],lastAt:now,live:liveState&&typeof liveState==='object'?{...liveState,updatedAt:now}:sessions[sessions.length-1].live};value.sessions=sessions.slice(-100);return value;});activitySyncWarned=false;if(liveState&&typeof liveState==='object'){const subject=String(exercise).startsWith('math_')?'math':'english';await updateDailyActivityProgress(name,subject,exercise,now,liveState);}}catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg('Tages- und Wochenzählung wartet auf die Firebase-Regeln. Lernfortschritt bleibt davon unberührt.',true);}}
+ try{await runTransaction(ref(db,path),current=>{const value=current&&typeof current==='object'?{...current}:{};if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}if(increment){value.dayCount=(Number(value.dayCount)||0)+1;value.weekCount=(Number(value.weekCount)||0)+1;}value.lastAt=now;if(liveState&&typeof liveState==='object')value.live={...liveState,updatedAt:now};const sessions=Array.isArray(value.sessions)?[...value.sessions]:[];if(increment||!sessions.length)sessions.push({startedAt:now,lastAt:now,live:liveState&&typeof liveState==='object'?{...liveState,updatedAt:now}:null});else sessions[sessions.length-1]={...sessions[sessions.length-1],lastAt:now,live:liveState&&typeof liveState==='object'?{...liveState,updatedAt:now}:sessions[sessions.length-1].live};value.sessions=sessions.slice(-100);return value;});activitySyncWarned=false;const subject=String(exercise).startsWith('math_')?'math':'english';const dailyState=liveState&&typeof liveState==='object'?liveState:{taskTitle:exercise,done:Math.max(1,Number(increment)||0),status:'Lernaktivität erfasst'};await updateDailyActivityProgress(name,subject,exercise,now,dailyState);}catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg('Tages- und Wochenzählung wartet auf die Firebase-Regeln. Lernfortschritt bleibt davon unberührt.',true);}}
 }
 function touchLearningActivity(name,exercise,liveState=null){void recordLearningActivity(name,exercise,false,liveState);}
 async function restoreLearningActivityAt(name,exercise,timestamp){
