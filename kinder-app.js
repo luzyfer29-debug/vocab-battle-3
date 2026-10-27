@@ -129,27 +129,31 @@ function isoWeekDays(weekKey){const m=String(weekKey||'').match(/^(\d{4})-W(\d{2
 function previousIsoWeek(weekKey){const first=isoWeekDays(weekKey)[0];if(!first)return '';const d=new Date(`${first}T12:00:00Z`);d.setUTCDate(d.getUTCDate()-7);return activityPeriodKeys(d.getTime()).weekKey;}
 function weeklyDailyWins(days){const wins=Object.fromEntries(SOLO_NAMES.map(name=>[name,0]));for(const day of days||[])for(const subject of ['english','math']){const byName=day?.[subject]||{},rows=SOLO_NAMES.map(name=>{let attempts=0,mistakes=0;for(const row of Object.values(byName[name]||{})){attempts+=Number(row?.attempts)||0;mistakes+=Number(row?.mistakes)||0;}return {name,attempts,mistakes,rate:attempts?mistakes/attempts:Infinity};}).filter(x=>x.attempts>0);if(!rows.length)continue;rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate);const best=rows[0];for(const row of rows)if(row.attempts===best.attempts&&row.rate===best.rate)wins[row.name]++;}const all=SOLO_NAMES.map(name=>({name,wins:wins[name]})),rows=all.filter(row=>row.wins>0).sort((a,b)=>b.wins-a.wins||SOLO_NAMES.indexOf(a.name)-SOLO_NAMES.indexOf(b.name));let last=null,place=0;const ranked=rows.map((row,index)=>{if(index===0||row.wins!==last)place=index+1;last=row.wins;return {...row,place,tied:rows.filter(x=>x.wins===row.wins).length>1,points:[20,15,10][place-1]||0};});return [...ranked,...all.filter(row=>!row.wins).map(row=>({...row,place:0,tied:false,points:0}))];}
 async function weekLeaderboardHtml(){const {weekKey}=activityPeriodKeys(),prevWeek=previousIsoWeek(weekKey),weeks=[prevWeek,weekKey].filter(Boolean),daysByWeek=await Promise.all(weeks.map(async week=>({week,days:await Promise.all(isoWeekDays(week).map(async day=>(await get(ref(db,`learningDailyLeaderboard/${day}`))).val()||{}))}))),byWeek=Object.fromEntries(daysByWeek.map(x=>[x.week,x.days])),currentDays=isoWeekDays(weekKey),today=activityPeriodKeys().dayKey,throughToday=byWeek[weekKey].slice(0,Math.max(0,currentDays.indexOf(today)+1)),current=weeklyDailyWins(throughToday),previous=weeklyDailyWins(byWeek[prevWeek]||[]),currentHasData=current.some(x=>x.wins>0),previousHasData=previous.some(x=>x.wins>0),rows=(items,showPoints)=>items.map(x=>`<div class="solo-game"><div class="row"><h3>${x.place===1?'🥇':x.place===2?'🥈':x.place===3?'🥉':'👤'} ${esc(x.name)}${x.tied&&x.wins?' · Gleichstand':''}</h3><span class="small">${x.wins} Tageswertungen${showPoints&&x.points?` · +${x.points} Punkte`:''}</span></div></div>`).join('');return `<section class="solo-section"><h3>📅 Wochenauswertung · ${esc(weekKey)}</h3><p>Ein Tages-Sieg in Englisch oder Mathe zählt je einmal. Die drei Führenden dieser Woche erhalten in der Folgewoche einmalig 20, 15 oder 10 Battle-Punkte beim ersten Live-Battle, an dem sie teilnehmen.</p>${currentHasData?rows(current,false):'<p>Diese Woche noch keine Tageswertung.</p>'}<details><summary>Letzte Woche · ${esc(prevWeek)}${previousHasData?' · Wochenpunkte fürs erste Battle':''}</summary>${previousHasData?rows(previous,true):'<p>Für letzte Woche liegen noch keine Tageswertungen vor.</p>'}</details></section>`;}
-async function backfillTodayEnglishVocab(name,dayKey){
- if(!db||!uid||!SOLO_NAMES.includes(name)||!dayKey)return;
- const snap=await get(ref(db,`soloProgress/${uid}/${name}`)),progress=snap.val()||{};
- let attempts=0,mistakes=0,updatedAt=0;
- for(let battle=1;battle<=3;battle++){
-  const row=progress[`battle${battle}`],at=Number(row?.updatedAt)||0;
-  if(!at||activityPeriodKeys(at).dayKey!==dayKey)continue;
-  const done=Math.max(0,Math.min(30,Number(row.done)||0));
-  const wrong=Object.values(row.mistakes||{}).reduce((sum,count)=>sum+Math.max(0,Number(count)||0),0);
-  if(!done&&!wrong)continue;
-  attempts+=done+wrong;mistakes+=wrong;updatedAt=Math.max(updatedAt,at);
+async function backfillTodayEnglishVocab(dayKey){
+ if(!db||!uid||!dayKey)return;
+ // The daily comparison can be opened before a child is selected. Recover today's
+ // saved vocab progress for every child on this device, not only soloName.
+ for(const name of SOLO_NAMES){
+  const snap=await get(ref(db,`soloProgress/${uid}/${name}`)),progress=snap.val()||{};
+  let attempts=0,mistakes=0,updatedAt=0;
+  for(let battle=1;battle<=3;battle++){
+   const row=progress[`battle${battle}`],at=Number(row?.updatedAt)||0;
+   if(!at||activityPeriodKeys(at).dayKey!==dayKey)continue;
+   const done=Math.max(0,Math.min(30,Number(row.done)||0));
+   const wrong=Object.values(row.mistakes||{}).reduce((sum,count)=>sum+Math.max(0,Number(count)||0),0);
+   if(!done&&!wrong)continue;
+   attempts+=done+wrong;mistakes+=wrong;updatedAt=Math.max(updatedAt,at);
+  }
+  if(!attempts)continue;
+  const path=`learningDailyLeaderboard/${dayKey}/english/${name}/${uid}`;
+  await runTransaction(ref(db,path),current=>current||{name,attempts,mistakes,updatedAt});
  }
- if(!attempts)return;
- const path=`learningDailyLeaderboard/${dayKey}/english/${name}/${uid}`;
- await runTransaction(ref(db,path),current=>current||{name,attempts,mistakes,updatedAt});
 }
 async function showDailyLeaderboard(subject){
  const title=subject==='math'?'Mathe':'Englisch',back=subject==='math'?'mathChoose':'soloChangeName';
  app.innerHTML=card(`<h2>🏆 ${title} · Tagesvergleich</h2><p>Wer hat heute die meisten Antworten bearbeitet und wer hat die niedrigste Fehlerquote?</p><p class="muted">Fehlerquote = falsche Antworten geteilt durch alle geprüften Antworten.</p><p>Lade Tageswerte …</p>`)+card(btn('Zurück zum Lernen',back,'alt'));
  try{
-  const {dayKey}=activityPeriodKeys();if(subject==='english')await backfillTodayEnglishVocab(soloName,dayKey);let snapshot=await get(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}`)),raw=snapshot.val()||{};for(let retry=0;retry<3&&!Object.keys(raw).length;retry++){await new Promise(resolve=>setTimeout(resolve,300));snapshot=await get(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}`));raw=snapshot.val()||{};}const totals={};
+  const {dayKey}=activityPeriodKeys();if(subject==='english')await backfillTodayEnglishVocab(dayKey);let snapshot=await get(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}`)),raw=snapshot.val()||{};for(let retry=0;retry<3&&!Object.keys(raw).length;retry++){await new Promise(resolve=>setTimeout(resolve,300));snapshot=await get(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}`));raw=snapshot.val()||{};}const totals={};
   for(const byName of Object.values(raw))for(const [name,row] of Object.entries(byName||{})){if(!SOLO_NAMES.includes(name))continue;const t=totals[name]||(totals[name]={name,attempts:0,mistakes:0});t.attempts+=Number(row?.attempts)||0;t.mistakes+=Number(row?.mistakes)||0;}
   const rows=Object.values(totals).map(x=>({...x,rate:x.attempts?100*x.mistakes/x.attempts:null})),most=[...rows].filter(x=>x.attempts>0).sort((a,b)=>b.attempts-a.attempts||a.name.localeCompare(b.name)),fewest=[...rows].filter(x=>x.attempts>0).sort((a,b)=>a.rate-b.rate||b.attempts-a.attempts||a.name.localeCompare(b.name));
   const renderRow=(x,i,metric)=>`<div class="solo-game"><div class="row"><h3>${i===0?'🥇':i===1?'🥈':i===2?'🥉':'👤'} ${esc(x.name)}</h3><span class="small">${metric==='attempts'?`${x.attempts} Antworten`:`${x.rate.toFixed(1).replace('.',',')} % Fehler`}</span></div><p>${x.mistakes} falsch von ${x.attempts} geprüften Antworten</p></div>`;
