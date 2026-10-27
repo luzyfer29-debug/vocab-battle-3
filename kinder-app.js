@@ -119,7 +119,7 @@ let dailyLeaderboardSyncWarned=false;
 async function updateDailyLeaderboard(name,subject,eventAt,wrong){
  if(!db||!uid||!SOLO_NAMES.includes(name)||!['english','math'].includes(subject))return;
  const {dayKey}=activityPeriodKeys(eventAt),path=`learningDailyLeaderboard/${dayKey}/${subject}/${name}/${uid}`;
- try{await runTransaction(ref(db,path),current=>{const value=current&&typeof current==='object'?{...current}:{name,attempts:0,mistakes:0};value.name=name;value.attempts=(Number(value.attempts)||0)+1;if(wrong)value.mistakes=(Number(value.mistakes)||0)+1;value.updatedAt=eventAt;return value;});dailyLeaderboardSyncWarned=false;}catch(e){console.warn('Tagesvergleich konnte nicht gespeichert werden:',e);if(!dailyLeaderboardSyncWarned){dailyLeaderboardSyncWarned=true;msg('Tagesvergleich konnte nicht gespeichert werden. Bitte die Firebase-Regeln für learningDailyLeaderboard veröffentlichen.',true);}}
+ try{await runTransaction(ref(db,path),current=>{const value=current&&typeof current==='object'?{...current}:{name,attempts:0,mistakes:0,checkedAttempts:0};const checked=Number(value.checkedAttempts??value.attempts)||0;value.checkedAttempts=checked+1;if(wrong)value.mistakes=(Number(value.mistakes)||0)+1;const progress=Object.values(value.progressByExercise||{}).reduce((sum,item)=>sum+Math.max(0,Number(item?.count)||0),0);value.attempts=Math.max(1,value.checkedAttempts,progress);value.name=name;value.updatedAt=eventAt;return value;});dailyLeaderboardSyncWarned=false;}catch(e){console.warn('Tagesvergleich konnte nicht gespeichert werden:',e);if(!dailyLeaderboardSyncWarned){dailyLeaderboardSyncWarned=true;msg('Tagesvergleich konnte nicht gespeichert werden. Bitte die Firebase-Regeln für learningDailyLeaderboard prüfen.',true);}}
 }
 async function dailyCrownNames(subject){
  try{const {dayKey}=activityPeriodKeys(),snapshot=await get(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}`)),totals={};for(const byName of Object.values(snapshot.val()||{}))for(const [name,row] of Object.entries(byName||{})){if(!SOLO_NAMES.includes(name))continue;const t=dailyRowTotals(row),v=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0});v.attempts+=t.attempts;v.checkedAttempts+=t.checkedAttempts;v.mistakes+=t.mistakes;}const rows=Object.values(totals).filter(x=>x.attempts>0);if(!rows.length)return new Set();rows.forEach(x=>x.rate=x.checkedAttempts?x.mistakes/x.checkedAttempts:Infinity);rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate);const lead=rows[0];return new Set(rows.filter(x=>x.attempts===lead.attempts&&x.rate===lead.rate).map(x=>x.name));}catch{return new Set();}
@@ -128,9 +128,9 @@ function applyDailyCrowns(subject,actionPrefix){void dailyCrownNames(subject).th
 function isoWeekDays(weekKey){const m=String(weekKey||'').match(/^(\d{4})-W(\d{2})$/);if(!m)return [];const year=Number(m[1]),week=Number(m[2]),jan4=new Date(Date.UTC(year,0,4)),weekday=jan4.getUTCDay()||7,monday=new Date(Date.UTC(year,0,4-(weekday-1)+(week-1)*7));return Array.from({length:7},(_,i)=>{const d=new Date(monday);d.setUTCDate(d.getUTCDate()+i);return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;});}
 function previousIsoWeek(weekKey){const first=isoWeekDays(weekKey)[0];if(!first)return '';const d=new Date(`${first}T12:00:00Z`);d.setUTCDate(d.getUTCDate()-7);return activityPeriodKeys(d.getTime()).weekKey;}
 function dailyRowTotals(row){
- const checkedAttempts=Number(row?.attempts)||0,mistakes=Number(row?.mistakes)||0;
+ const checkedAttempts=Math.max(0,Number(row?.checkedAttempts??row?.attempts)||0),mistakes=Number(row?.mistakes)||0;
  const progressAttempts=Object.values(row?.progressByExercise||{}).reduce((sum,item)=>sum+Math.max(0,Number(item?.count)||0),0);
- return {attempts:Math.max(checkedAttempts,progressAttempts),checkedAttempts,mistakes};
+ return {attempts:Math.max(checkedAttempts,Number(row?.attempts)||0,progressAttempts),checkedAttempts,mistakes};
 }
 function weeklyDailyWins(days){const wins=Object.fromEntries(SOLO_NAMES.map(name=>[name,0]));for(const day of days||[])for(const subject of ['english','math']){const byName=day?.[subject]||{},rows=SOLO_NAMES.map(name=>{let attempts=0,checkedAttempts=0,mistakes=0;for(const row of Object.values(byName[name]||{})){const t=dailyRowTotals(row);attempts+=t.attempts;checkedAttempts+=t.checkedAttempts;mistakes+=t.mistakes;}return {name,attempts,checkedAttempts,mistakes,rate:checkedAttempts?mistakes/checkedAttempts:Infinity};}).filter(x=>x.attempts>0);if(!rows.length)continue;rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate);const best=rows[0];for(const row of rows)if(row.attempts===best.attempts&&row.rate===best.rate)wins[row.name]++;}const all=SOLO_NAMES.map(name=>({name,wins:wins[name]})),rows=all.filter(row=>row.wins>0).sort((a,b)=>b.wins-a.wins||SOLO_NAMES.indexOf(a.name)-SOLO_NAMES.indexOf(b.name));let last=null,place=0;const ranked=rows.map((row,index)=>{if(index===0||row.wins!==last)place=index+1;last=row.wins;return {...row,place,tied:rows.filter(x=>x.wins===row.wins).length>1,points:[20,15,10][place-1]||0};});return [...ranked,...all.filter(row=>!row.wins).map(row=>({...row,place:0,tied:false,points:0}))];}
 async function weekLeaderboardHtml(){const {weekKey}=activityPeriodKeys(),prevWeek=previousIsoWeek(weekKey),weeks=[prevWeek,weekKey].filter(Boolean),daysByWeek=await Promise.all(weeks.map(async week=>({week,days:await Promise.all(isoWeekDays(week).map(async day=>(await get(ref(db,`learningDailyLeaderboard/${day}`))).val()||{}))}))),byWeek=Object.fromEntries(daysByWeek.map(x=>[x.week,x.days])),currentDays=isoWeekDays(weekKey),today=activityPeriodKeys().dayKey,throughToday=byWeek[weekKey].slice(0,Math.max(0,currentDays.indexOf(today)+1)),current=weeklyDailyWins(throughToday),previous=weeklyDailyWins(byWeek[prevWeek]||[]),currentHasData=current.some(x=>x.wins>0),previousHasData=previous.some(x=>x.wins>0),rows=(items,showPoints)=>items.map(x=>`<div class="solo-game"><div class="row"><h3>${x.place===1?'🥇':x.place===2?'🥈':x.place===3?'🥉':'👤'} ${esc(x.name)}${x.tied&&x.wins?' · Gleichstand':''}</h3><span class="small">${x.wins} Tageswertungen${showPoints&&x.points?` · +${x.points} Punkte`:''}</span></div></div>`).join('');return `<section class="solo-section"><h3>📅 Wochenauswertung · ${esc(weekKey)}</h3><p>Ein Tages-Sieg in Englisch oder Mathe zählt je einmal. Die drei Führenden dieser Woche erhalten in der Folgewoche einmalig 20, 15 oder 10 Battle-Punkte beim ersten Live-Battle, an dem sie teilnehmen.</p>${currentHasData?rows(current,false):'<p>Diese Woche noch keine Tageswertung.</p>'}<details><summary>Letzte Woche · ${esc(prevWeek)}${previousHasData?' · Wochenpunkte fürs erste Battle':''}</summary>${previousHasData?rows(previous,true):'<p>Für letzte Woche liegen noch keine Tageswertungen vor.</p>'}</details></section>`;}
@@ -145,24 +145,40 @@ async function updateDailyActivityProgress(name,subject,exercise,eventAt,state){
  if(!count||!db||!uid||!SOLO_NAMES.includes(name)||!['english','math'].includes(subject)||!exercise)return;
  const {dayKey}=activityPeriodKeys(eventAt),path=`learningDailyLeaderboard/${dayKey}/${subject}/${name}/${uid}`;
  try{await runTransaction(ref(db,path),current=>{
-  const value=current&&typeof current==='object'?{...current}:{name,attempts:0,mistakes:0};
+  const value=current&&typeof current==='object'?{...current}:{name,attempts:0,mistakes:0,checkedAttempts:0};
+  value.checkedAttempts=Number(value.checkedAttempts??value.attempts)||0;
   const progressByExercise={...(value.progressByExercise||{})},old=progressByExercise[exercise]||{};
   progressByExercise[exercise]={...old,count:Math.max(Number(old.count)||0,count),updatedAt:Math.max(Number(old.updatedAt)||0,Number(eventAt)||Date.now()),title:String(state.taskTitle||state.status||exercise)};
-  value.name=name;value.progressByExercise=progressByExercise;value.updatedAt=Math.max(Number(value.updatedAt)||0,Number(eventAt)||Date.now());return value;
+  const progress=Object.values(progressByExercise).reduce((sum,item)=>sum+Math.max(0,Number(item?.count)||0),0);
+  value.name=name;value.progressByExercise=progressByExercise;value.attempts=Math.max(1,value.checkedAttempts,progress);value.updatedAt=Math.max(Number(value.updatedAt)||0,Number(eventAt)||Date.now());return value;
  });dailyLeaderboardSyncWarned=false;}catch(e){console.warn('Lernfortschritt konnte nicht in den Tagesvergleich übernommen werden:',e);if(!dailyLeaderboardSyncWarned){dailyLeaderboardSyncWarned=true;msg('Tagesvergleich konnte nicht synchronisiert werden. Bitte die Firebase-Regeln für learningDailyLeaderboard prüfen.',true);}}
+}
+function learningActivityIds(subject){
+ if(subject==='english')return [
+  ...[1,2,3].map(n=>`english_vocab_battle${n}`),'english_gap1','english_gap2',
+  ...[1,2].map(n=>`english_vocab_work_page${n}`),...[1,2].map(n=>`english_vocab_work_station2_page${n}`),
+  ...GRAMMAR.flatMap((station,index)=>station.tasks.map((_,task)=>`english_grammar_${index+1}_task${task+1}`)),
+  'english_listening','english_reading',...WRITING_TASKS.map((_,index)=>`english_writing_task${index+1}`)
+ ];
+ return [
+  ...[1,2,3,4].map(n=>`math_rational_battle${n}`),'math_rational_cards','math_exam','math_rational_exam',
+  'math_proportional_practice',...[1,2,3].map(n=>`math_proportional_exam${n}`),
+  ...MATH_PROPORTIONAL_PRACTICE_BLOCKS.map(block=>`math_proportional_practice_${block.id}`),
+  'math_proportional_worksheet','math_proportional_flashcards',...FRACTION_MODULES.map(module=>`math_fraction_${module.id}`)
+ ];
 }
 async function backfillTodayLearningProgress(subject,dayKey){
  if(!db||!uid||!dayKey||!['english','math'].includes(subject))return;
- for(const name of SOLO_NAMES){
-  const snapshot=await get(ref(db,`learningActivity/${uid}/${name}`)),activities=snapshot.val()||{};
-  for(const [exercise,row] of Object.entries(activities)){
-   if(row?.dayKey!==dayKey||!row?.live)continue;
-   const rowSubject=String(exercise).startsWith('math_')?'math':'english';
-   if(rowSubject!==subject)continue;
+ const exercises=learningActivityIds(subject),reads=[];
+ for(const name of SOLO_NAMES)for(const exercise of exercises)reads.push((async()=>{
+  try{
+   const snapshot=await get(ref(db,`learningActivity/${uid}/${name}/${exercise}`)),row=snapshot.val();
+   if(row?.dayKey!==dayKey||!row?.live)return;
    const at=Number(row.live.updatedAt)||Number(row.lastAt)||Date.now();
    await updateDailyActivityProgress(name,subject,exercise,at,row.live);
-  }
- }
+  }catch(error){console.warn('Lernaktivität konnte nicht nachgetragen werden:',name,exercise,error);}
+ })());
+ await Promise.all(reads);
 }
 async function backfillTodayEnglishVocab(dayKey){
  if(!db||!uid||!dayKey)return;
