@@ -137,9 +137,12 @@ async function backfillTodayEnglishVocab(dayKey){
   const snap=await get(ref(db,`soloProgress/${uid}/${name}`)),progress=snap.val()||{};
   let attempts=0,mistakes=0,updatedAt=0;
   for(let battle=1;battle<=3;battle++){
-   const row=progress[`battle${battle}`],at=Number(row?.updatedAt)||0;
-   if(!at||activityPeriodKeys(at).dayKey!==dayKey)continue;
-   const done=Math.max(0,Math.min(30,Number(row.done)||0));
+   let local=null;
+   try{local=JSON.parse(localStorage.getItem(`${key}_${name}_battle_${battle}`)||'null');}catch{}
+   const online=progress[`battle${battle}`],localAt=Number(local?.updatedAt)||0,onlineAt=Number(online?.updatedAt)||0;
+   const row=localAt>onlineAt?local:online,at=Math.max(localAt,onlineAt);
+   if(!row||!at||activityPeriodKeys(at).dayKey!==dayKey)continue;
+   const done=Math.max(0,Math.min(30,Number(row.done??row.index)||0));
    const wrong=Object.values(row.mistakes||{}).reduce((sum,count)=>sum+Math.max(0,Number(count)||0),0);
    if(!done&&!wrong)continue;
    attempts+=done+wrong;mistakes+=wrong;updatedAt=Math.max(updatedAt,at);
