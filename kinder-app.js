@@ -10,7 +10,7 @@ let initializeApp,getAuth,signInAnonymously,onAuthStateChanged;
 let getDatabase,ref,onValue,get,set,update,runTransaction,remove;
 const RATIONAL_MATH_TITLES=['Rationale Zahlen · Aufgabe 1','Rationale Zahlen · Aufgabe 2','Rationale Zahlen · Aufgabe 3','Rationale Zahlen · Aufgabe 4'];
 
-const app=document.querySelector('#app'),status=document.querySelector('#status');
+const app=document.querySelector('#app'),status=document.querySelector('#status');function disableChildTextAssist(){app.querySelectorAll('input,textarea').forEach(field=>{field.setAttribute('autocomplete','off');field.setAttribute('autocorrect','off');field.setAttribute('autocapitalize','off');field.setAttribute('spellcheck','false');});}new MutationObserver(disableChildTextAssist).observe(app,{childList:true,subtree:true});disableChildTextAssist();
 const names=['Luca','Semir','Talea','Nele'];
 const VOCAB_QUESTION_MS=8000,OTHER_QUESTION_MS=15000,REVEAL_MS=3000;
 const ADMIN_UID='M41x9WNoHAfqpSmyrztAgf2IZYC3';
