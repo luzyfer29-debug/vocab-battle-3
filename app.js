@@ -445,51 +445,7 @@ function errorDetailsForActivity(entry){
  }).join('');
  return `<details class="live-error-details"><summary>Fehler: ${rows.length} · ${open} offen · ${done} richtig wiederholt</summary>${details}</details>`;
 }
-function activityWithSharedLearningReview(activityData,reviewData){
- const merged={...(activityData||{})},shared={};
- for(const name of SOLO_NAMES){
-  const profile={};
-  for(const [subject,exercises] of Object.entries(reviewData?.[name]||{}))for(const [exercise,errorItems] of Object.entries(exercises||{})){
-   const items=Object.fromEntries(Object.entries(errorItems||{}).filter(([,item])=>item?.subject===subject&&item?.source==='answer_check'));
-   if(!Object.keys(items).length)continue;
-   const lastAt=Math.max(...Object.values(items).map(item=>Math.max(Number(item?.lastWrongAt)||0,Number(item?.resolvedAt)||0)));
-   profile[exercise]={lastAt,errorItems:items};
-  }
-  if(Object.keys(profile).length)shared[name]=profile;
- }
- merged.__sharedLearningReview=shared;
- return merged;
-}
-function learningActivityPanel(activityData,names,subject){
- const activityPrefix=subject==='math'?'math_':'english_';
- const rows=[];
- for(const name of names){
-  const latest=new Map();
-  for(const device of Object.values(activityData||{}))for(const [id,entry] of Object.entries(device?.[name]||{})){
-   if(!id.startsWith(activityPrefix)||(subject==='english'&&isLegacyEnglishGapActivity(id)))continue;
-   const at=Number(entry?.lastAt)||0;if(!at)continue;
-   const old=latest.get(id);
-   if(!old||at>old.at)latest.set(id,{entry:mergeLearningActivityEntries(old?.entry,entry),at});
-   else latest.set(id,{entry:mergeLearningActivityEntries(entry,old.entry),at:old.at});
-  }
-  for(const [id,row] of latest){
-   const entry=row.entry,live=entry.live||{},parts=[];
-   if(live.taskTitle)parts.push(String(live.taskTitle));
-   if(Number.isFinite(Number(live.done))&&Number.isFinite(Number(live.total))&&Number(live.total)>0)parts.push(`${Number(live.done)} von ${Number(live.total)} Aufgaben`);
-   if(live.status)parts.push(String(live.status));
-   if(live.finished)parts.push('abgeschlossen');
-   const answers=Array.isArray(live.draftAnswers)&&live.draftAnswers.some(value=>String(value||'').trim())?`<details class="live-answer-details"><summary>Antworten ansehen</summary>${live.draftAnswers.map((value,index)=>String(value||'').trim()?`<p><strong>${index+1}.</strong> ${esc(value)}</p>`:'').join('')}</details>`:'';
-   const sessions=Array.isArray(entry.sessions)?entry.sessions:[];
-   const history=sessions.length?`<details class="live-session-history"><summary>Bearbeitungsverlauf · Datum und Uhrzeit · ${sessions.length} Sitzung${sessions.length===1?'':'en'}</summary>${sessions.map((session,index)=>{const sessionLive=session?.live||{},description=[sessionLive.taskTitle,Number.isFinite(Number(sessionLive.done))&&Number.isFinite(Number(sessionLive.total))&&Number(sessionLive.total)>0?`${Number(sessionLive.done)} von ${Number(sessionLive.total)} Aufgaben`:null,sessionLive.status,sessionLive.finished?'abgeschlossen':null].filter(Boolean).map(esc).join(' · ');return `<p><strong>${index+1}. ${evaluationDate(session.startedAt||session.lastAt)}</strong>${Number(session.lastAt)>Number(session.startedAt)?` – zuletzt ${evaluationDate(session.lastAt)}`:''}${description?`<br><span class="muted small">${description}</span>`:''}</p>`;}).join('')}</details>`:'';
-   const state=[...parts].map(esc).join(' · ')||'Bearbeitung gespeichert';
-   rows.push({name,title:learningActivityTitle(id),when:row.at,state:state,details:history+answers+errorDetailsForActivity(entry)});
-  }
- }
- rows.sort((x,y)=>y.when-x.when);
- const body=rows.length?rows.map(row=>`<tr><th>${esc(row.name)}</th><td>${esc(row.title)}</td><td><strong>${evaluationDate(row.when)}</strong></td><td>${row.state}${row.details}</td></tr>`).join(''):names.map(name=>`<tr><th>${esc(name)}</th><td colspan="3" class="muted">Noch keine Online-Aktivität</td></tr>`).join('');
- const cards=rows.length?rows.map(row=>`<article style="padding:14px 12px;margin:10px 0;border:1px solid #40536e;border-radius:14px;background:#17263a;min-width:0"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap"><strong style="font-size:17px;color:#f2f5fa">${esc(row.name)}</strong><time style="font-size:14px;color:#d0d9e7">${evaluationDate(row.when)}</time></div><h4 style="font-size:17px;line-height:1.35;margin:8px 0;color:#fff;overflow-wrap:anywhere">${esc(row.title)}</h4><p style="margin:5px 0;color:#dce7f5;line-height:1.4">${row.state}</p>${row.details?`<div style="display:grid;gap:7px;margin-top:8px">${row.details}</div>`:''}</article>`).join(''):names.map(name=>`<article style="padding:14px 12px;margin:10px 0;border:1px solid #40536e;border-radius:14px;background:#17263a"><strong style="font-size:17px;color:#f2f5fa">${esc(name)}</strong><p class="muted">Noch keine Online-Aktivität</p></article>`).join('');
- return `<section class="card live-activity-card" data-live-key="all-live-activities-${subject}"><h3>${subject==='math'?'🔢 Mathe':'🇬🇧 Englisch'} · Bearbeitungen und Fehler</h3><p class="muted small">Nur Lernübungen. Datum, Aufgabenstand und Fehler je Übung; frühere Sitzungen und Antworten lassen sich aufklappen.</p><div style="display:grid;gap:8px;min-width:0">${cards}</div></section>`;
-}
+function activityWithSharedLearningReview(activityData){return activityData||{};}
 function livePanel(title,content,key,accent,open=false){return `<details class="card live-panel fraction-topic" ${open?'open':''} data-live-key="${key}" style="--live-accent:${accent};--fraction-accent:${accent}"><summary><span class="fraction-title">${title}</span></summary><div class="live-panel-content fraction-children">${content}</div></details>`;}
 function errorEvaluationPanel(subject,period,activityData,names){const {dayKey,weekKey}=activityDateKeys(),label=period==='day'?'Heute':'Diese Woche';const content=names.map(name=>{const found=new Map();for(const device of Object.values(activityData||{}))for(const [exercise,entry] of Object.entries(device?.[name]||{}))for(const [index,item] of Object.entries(entry?.errorItems||{})){if(item?.subject!==subject)continue;if((exercise==='english_vocab_work_battle1'||exercise==='english_vocab_work_battle2')||(subject==='english'&&isLegacyEnglishGapActivity(exercise)))continue;const matches=period==='day'?item.dayKey===dayKey:item.weekKey===weekKey;if(!matches&&!item.resolved){}else if(!matches)continue;const key=`${exercise}:${index}`,old=found.get(key);if(!old||Number(item.lastWrongAt||0)>Number(old.item.lastWrongAt||0))found.set(key,{exercise,index,item});}const topics=new Map();for(const row of found.values()){const title=String(row.item.topic||row.exercise);if(!topics.has(title))topics.set(title,[]);topics.get(title).push(row);}if(!topics.size)return `<div class="player"><strong>${esc(name)}</strong><p class="muted">${label}: noch keine Fehler erfasst. Neue Fehler erscheinen hier automatisch.</p></div>`;return `<div class="player"><h3>${esc(name)}</h3>${[...topics.entries()].map(([title,rows])=>{const open=rows.filter(x=>!x.item.resolved).length,done=rows.length-open;return `<details class="fraction-errors"><summary>${esc(title)} · ${open} offen · ${done} richtig bearbeitet</summary>${rows.map(({item})=>`<div class="fraction-error-item"><strong>${esc(item.prompt||'Aufgabe')}</strong><p>${item.answer?`Musterlösung: ${esc(item.answer)}`:item.options?`Richtige Antwort: ${esc(item.options[item.correctIndex]??'')}`:`Richtige Lösung: ${esc((item.accepted||[]).join(' / '))}`}</p>${subject==='math'&&item.explanation?`<p class="muted" style="white-space:pre-line">Rechenweg: ${esc(item.explanation)}</p>`:''}<p class="${item.resolved?'good':'error'}">${item.resolved?'✅ Richtig bearbeitet':'❌ Noch offen'} · ${Number(item.count)||1}× falsch</p></div>`).join('')}</details>`;}).join('')}</div>`;}).join('');return livePanel(`📊 ${subject==='math'?'Mathe':'Englisch'} · ${period==='day'?'Tägliche':'Wöchentliche'} Fehlerauswertung`,content,`live-errors-${subject}-${period}`,period==='day'?'#ffd166':'#c4b5fd');}
 const LEARNING_RESET_MODULES={
