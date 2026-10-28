@@ -240,7 +240,7 @@ function learningErrorRecord(name,subject,topic,q,old,eventAt){
 function reviewItemAt(item){const lastWrongAt=Number(item?.lastWrongAt)||0,resolvedAt=Number(item?.resolvedAt)||0;return item?.resolved===true?Math.max(lastWrongAt,resolvedAt)+1:lastWrongAt;}
 async function recordLearningError(name,subject,exercise,index,topic,q,correct,occurredAt=Date.now(),options={}){
  if(!db||!uid||!SOLO_NAMES.includes(name)||!exercise)return false;
- const eventAt=Number(occurredAt)||Date.now(),path=`learningActivity/${uid}/${name}/${exercise}`,sharedPath=`learningReview/${name}/${subject}/${exercise}/${index}`;
+ const eventAt=Number(occurredAt)||Date.now(),path=`learningActivity/${uid}/${name}/${exercise}`,sharedPath=`learningReview/${name}/${subject}/${exercise}/${index}/${uid}`;
  if(options.countDaily!==false)await updateDailyLeaderboard(name,subject,eventAt,!correct);
  try{
   let changedItem=null;
@@ -270,13 +270,13 @@ async function mergeSharedLearningReview(name,subject,exercise,index,item){
  const normalized={...item,attempted:true,source:'answer_check',subject,topic:String(item.topic||exercise),prompt:String(item.prompt||item.q||item.word||exercise),count:Math.max(1,Number(item.count)||1),lastWrongAt:at,dayKey:String(item.dayKey||period.dayKey),weekKey:String(item.weekKey||period.weekKey),resolved};
  delete normalized.resolvedAt;
  if(resolved)normalized.resolvedAt=Math.max(Number(item.resolvedAt)||0,at)+1;
- const path=`learningReview/${name}/${subject}/${exercise}/${index}`;
+ const path=`learningReview/${name}/${subject}/${exercise}/${index}/${uid}`;
  await runTransaction(ref(db,path),current=>!current||reviewItemAt(normalized)>=reviewItemAt(current)?normalized:current);
 }
 async function loadChildLearningActivity(name,subject){
  const ids=childLearningExercises(subject),[rows,sharedResult]=await Promise.all([
   Promise.all(ids.map(async id=>[id,(await get(ref(db,`learningActivity/${uid}/${name}/${id}`))).val()])),
-  get(ref(db,`learningReview/${name}/${subject}`)).then(snapshot=>({shared:snapshot.val()||{}})).catch(error=>({error}))
+  Promise.resolve({shared:{}})
  ]),data=Object.fromEntries(rows.filter(([,value])=>value));
  const shared=sharedResult.shared||{};
  if(sharedResult.error&&!activitySyncWarned){activitySyncWarned=true;msg(`Fehler von anderen Geräten konnten nicht geladen werden (${sharedResult.error.code||sharedResult.error.message||'Firebase-Zugriff verweigert'}).`,true);}
