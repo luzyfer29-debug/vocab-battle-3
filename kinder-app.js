@@ -180,7 +180,7 @@ async function backfillTodayLearningProgress(subject,dayKey){
  })());
  await Promise.all(reads);
 }
-async function backfillTodayEnglishVocab(dayKey){
+async function repairCorruptDailyEnglishSummary(dayKey){if(!db||!uid||!dayKey)return;const path=`learningDailyLeaderboard/${dayKey}/english/Luca/${uid}`;await runTransaction(ref(db,path),current=>{if(!current||current.dailyRepairVersion===1)return current;const attempts=Math.max(Number(current.checkedAttempts)||0,Number(current.attempts)||0);if(attempts<200)return current;return {name:'Luca',attempts:0,mistakes:0,checkedAttempts:0,progressByExercise:{},dailyRepairVersion:1,updatedAt:Date.now()};});}async function backfillTodayEnglishVocab(dayKey){
  if(!db||!uid||!dayKey)return;
  // The daily comparison can be opened before a child is selected. Recover today's
  // saved vocab progress for every child on this device, not only soloName.
@@ -208,8 +208,8 @@ async function waitForLearningDataReady(timeoutMs=12000){const started=Date.now(
  app.innerHTML=card(`<h2>🏆 ${title} · Tagesvergleich</h2><p>Wer hat heute die meisten Antworten bearbeitet und wer hat die niedrigste Fehlerquote?</p><p class="muted">Es zählen bearbeitete Lernaufgaben. Fehlerquote = falsche Antworten geteilt durch geprüfte Antworten.</p><p>Lade Tageswerte …</p>`)+card(btn('Zurück zum Lernen',back,'alt'));
  try{
   await waitForLearningDataReady();if(status.textContent.includes('Lernstände werden abgeglichen'))status.innerHTML='';const {dayKey}=activityPeriodKeys();
-  try{await backfillTodayLearningProgress(subject,dayKey);}catch(error){console.warn('Lernaktivitäten konnten nicht nachgetragen werden:',error);}
-  if(subject==='english')try{await backfillTodayEnglishVocab(dayKey);}catch(error){console.warn('Vokabel-Fortschritt konnte nicht nachgetragen werden:',error);}
+  if(subject==='english')try{await repairCorruptDailyEnglishSummary(dayKey);}catch(error){console.warn('Tageswerte konnten nicht bereinigt werden:',error);}try{await backfillTodayLearningProgress(subject,dayKey);}catch(error){console.warn('Lernaktivitäten konnten nicht nachgetragen werden:',error);}
+  
   let snapshot=await get(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}`)),raw=snapshot.val()||{};for(let retry=0;retry<3&&!Object.keys(raw).length;retry++){await new Promise(resolve=>setTimeout(resolve,300));snapshot=await get(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}`));raw=snapshot.val()||{};}const totals={};
   for(const [name,byUid] of Object.entries(raw)){if(!SOLO_NAMES.includes(name))continue;for(const row of Object.values(byUid||{})){const t=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0});const values=dailyRowTotals(row);t.attempts+=values.attempts;t.checkedAttempts+=values.checkedAttempts;t.mistakes+=values.mistakes;}}
   const rows=Object.values(totals).map(x=>({...x,rate:x.checkedAttempts?100*x.mistakes/x.checkedAttempts:null})),most=[...rows].filter(x=>x.attempts>0).sort((a,b)=>b.attempts-a.attempts||a.name.localeCompare(b.name)),fewest=[...rows].filter(x=>x.checkedAttempts>0).sort((a,b)=>a.rate-b.rate||b.attempts-a.attempts||a.name.localeCompare(b.name));
