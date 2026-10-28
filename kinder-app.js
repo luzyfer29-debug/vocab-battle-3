@@ -206,7 +206,7 @@ async function repairCorruptDailyEnglishSummary(dayKey){if(!db||!uid||!dayKey)re
 }
 async function waitForLearningDataReady(timeoutMs=12000){const started=Date.now();while(!db||!uid||!resetReady){if(Date.now()-started>=timeoutMs)throw new Error('Anmeldung oder Lernstand-Abgleich ist noch nicht abgeschlossen. Bitte Verbindung prüfen und den Tagesvergleich erneut öffnen.');await new Promise(resolve=>setTimeout(resolve,100));}}async function showDailyLeaderboard(subject){
  const title=subject==='math'?'Mathe':'Englisch',back=subject==='math'?'mathChoose':'soloChangeName';
- app.innerHTML=card(`<h2>🏆 ${title} · Tagesvergleich</h2><p>Wer hat heute die meisten geprüfte Antworten und wer hat die niedrigste Fehlerquote?</p><p class="muted">Es zählen heute geprüfte Antworten. Fehlerquote = falsche Antworten geteilt durch geprüfte Antworten.</p><p>Lade Tageswerte …</p>`)+card(btn('Zurück zum Lernen',back,'alt'));
+ app.innerHTML=card(`<h2>🏆 ${title} · Tagesvergleich</h2><p>Wer hat heute die meisten geprüften Antworten und wer hat die niedrigste Fehlerquote?</p><p class="muted">Es zählen heute geprüfte Antworten. Fehlerquote = falsche Antworten geteilt durch geprüfte Antworten.</p><p>Lade Tageswerte …</p>`)+card(btn('Zurück zum Lernen',back,'alt'));
  try{
   await waitForLearningDataReady();if(status.textContent.includes('Lernstände werden abgeglichen'))status.innerHTML='';const {dayKey}=activityPeriodKeys();
   if(subject==='english')try{await repairCorruptDailyEnglishSummary(dayKey);}catch(error){console.warn('Tageswerte konnten nicht bereinigt werden:',error);}try{await backfillTodayLearningProgress(subject,dayKey);}catch(error){console.warn('Lernaktivitäten konnten nicht nachgetragen werden:',error);}
