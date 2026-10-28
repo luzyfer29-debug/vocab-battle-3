@@ -129,8 +129,10 @@ function isoWeekDays(weekKey){const m=String(weekKey||'').match(/^(\d{4})-W(\d{2
 function previousIsoWeek(weekKey){const first=isoWeekDays(weekKey)[0];if(!first)return '';const d=new Date(`${first}T12:00:00Z`);d.setUTCDate(d.getUTCDate()-7);return activityPeriodKeys(d.getTime()).weekKey;}
 function dailyRowTotals(row){
  const hasProgress=Object.keys(row?.progressByExercise||{}).length>0,verified=Number(row?.answerCounterVersion)===2;
- const checkedAttempts=Math.max(0,Number(verified?row?.checkedAttempts:(hasProgress?0:(row?.checkedAttempts??row?.attempts)))||0);
- const mistakes=verified||!hasProgress?Math.max(0,Number(row?.mistakes)||0):0;
+ const hasChecked=Object.prototype.hasOwnProperty.call(row||{},'checkedAttempts')&&Number.isFinite(Number(row.checkedAttempts))&&Number(row.checkedAttempts)>=0;
+ const trusted=verified||hasChecked;
+ const checkedAttempts=Math.max(0,Number(trusted?row?.checkedAttempts:(hasProgress?0:row?.attempts))||0);
+ const mistakes=trusted||!hasProgress?Math.max(0,Number(row?.mistakes)||0):0;
  return {attempts:checkedAttempts,checkedAttempts,mistakes};
 }
 function weeklyDailyWins(days){const wins=Object.fromEntries(SOLO_NAMES.map(name=>[name,0]));for(const day of days||[])for(const subject of ['english','math']){const byName=day?.[subject]||{},rows=SOLO_NAMES.map(name=>{let attempts=0,checkedAttempts=0,mistakes=0;for(const row of Object.values(byName[name]||{})){const t=dailyRowTotals(row);attempts+=t.attempts;checkedAttempts+=t.checkedAttempts;mistakes+=t.mistakes;}return {name,attempts,checkedAttempts,mistakes,rate:checkedAttempts?mistakes/checkedAttempts:Infinity};}).filter(x=>x.attempts>0);if(!rows.length)continue;rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate);const best=rows[0];for(const row of rows)if(row.attempts===best.attempts&&row.rate===best.rate)wins[row.name]++;}const all=SOLO_NAMES.map(name=>({name,wins:wins[name]})),rows=all.filter(row=>row.wins>0).sort((a,b)=>b.wins-a.wins||SOLO_NAMES.indexOf(a.name)-SOLO_NAMES.indexOf(b.name));let last=null,place=0;const ranked=rows.map((row,index)=>{if(index===0||row.wins!==last)place=index+1;last=row.wins;return {...row,place,tied:rows.filter(x=>x.wins===row.wins).length>1,points:[20,15,10][place-1]||0};});return [...ranked,...all.filter(row=>!row.wins).map(row=>({...row,place:0,tied:false,points:0}))];}
