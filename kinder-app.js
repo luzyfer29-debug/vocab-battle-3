@@ -238,13 +238,13 @@ function learningErrorRecord(name,subject,topic,q,old,eventAt){
  return {attempted:true,source:'answer_check',subject,topic,prompt:String(q?.prompt||q?.q||q?.word||topic||''),type:String(q?.type||''),task:Number(q?.task)||0,instruction:String(q?.instruction||''),images:Array.isArray(q?.images)?q.images:null,options:Array.isArray(q?.options)?q.options.map(String):null,correctIndex:Number.isInteger(q?.correct)?q.correct:null,accepted:Array.isArray(q?.accepted)?q.accepted.map(String):Array.isArray(q?.required)?q.required.map(String):null,required:Array.isArray(q?.required)?q.required.map(String):null,explanation:String(q?.explanation||q?.explain||''),answer:String(q?.answer||q?.answerText||''),count:(Number(old?.count)||0)+1,lastWrongAt:eventAt,dayKey,weekKey,resolved:false,resolvedAt:null};
 }
 function reviewItemAt(item){const lastWrongAt=Number(item?.lastWrongAt)||0,resolvedAt=Number(item?.resolvedAt)||0;return item?.resolved===true?Math.max(lastWrongAt,resolvedAt)+1:lastWrongAt;}
-async function recordLearningError(name,subject,exercise,index,topic,q,correct,occurredAt=Date.now()){
+async function recordLearningError(name,subject,exercise,index,topic,q,correct,occurredAt=Date.now(),options={}){
  if(!db||!uid||!SOLO_NAMES.includes(name)||!exercise)return false;
  const eventAt=Number(occurredAt)||Date.now(),path=`learningActivity/${uid}/${name}/${exercise}`,sharedPath=`learningReview/${name}/${subject}/${exercise}/${index}`;
- await updateDailyLeaderboard(name,subject,eventAt,!correct);
+ if(options.countDaily!==false)await updateDailyLeaderboard(name,subject,eventAt,!correct);
  try{
   let changedItem=null;
-  await runTransaction(ref(db,path),current=>{
+  if(options.trackActivity!==false)await runTransaction(ref(db,path),current=>{
    const value=current&&typeof current==='object'?{...current}:{};
    const {dayKey,weekKey}=activityPeriodKeys(eventAt);
    if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}
@@ -320,8 +320,8 @@ async function importLegacyLearningErrors(subject,name){
  }
  if(!rows.length)return [];
  const existing=await loadChildLearningActivity(name,subject),latestByExercise=new Map();for(const row of rows){const old=latestByExercise.get(row.exercise)||0;latestByExercise.set(row.exercise,Math.max(old,Number(row.at)||0));}
- await Promise.all([...latestByExercise].map(([exercise,at])=>restoreLearningActivityAt(name,exercise,at)));
- await Promise.all(rows.filter(row=>!existing[row.exercise]?.errorItems?.[String(row.index)]).map(row=>recordLearningError(name,subject,row.exercise,row.index,row.topic,row.q,false,row.at||Date.now())));
+ await Promise.all([...latestByExercise].filter(([,at])=>at>0).map(([exercise,at])=>restoreLearningActivityAt(name,exercise,at)));
+ await Promise.all(rows.filter(row=>!existing[row.exercise]?.errorItems?.[String(row.index)]).map(row=>recordLearningError(name,subject,row.exercise,row.index,row.topic,row.q,false,row.at||1,{countDaily:false,trackActivity:false})));
   return rows;
 }
 function errorPeriodChoice(subject){errorEvalSubject=subject;errorEvalMode='analytics';errorEvalPeriod='';errorEvalTopics=[];errorEvalQueue=[];errorEvalCurrent=null;const names=SOLO_NAMES.map((n,i)=>btn(esc(n),`errorName${subject}_${i}`));app.innerHTML=card(`<h2>📊 ${subject==='math'?'Mathe':'Englisch'}-Auswertung</h2><p>Wähle dein Kind.</p><div class="name-actions">${names.join('')}</div>`)+card(btn('Zurück','home','alt'));}
