@@ -240,7 +240,7 @@ function learningErrorRecord(name,subject,topic,q,old,eventAt){
 function reviewItemAt(item){const lastWrongAt=Number(item?.lastWrongAt)||0,resolvedAt=Number(item?.resolvedAt)||0;return item?.resolved===true?Math.max(lastWrongAt,resolvedAt)+1:lastWrongAt;}
 async function recordLearningError(name,subject,exercise,index,topic,q,correct,occurredAt=Date.now(),options={}){
  if(!db||!uid||!SOLO_NAMES.includes(name)||!exercise)return false;
- const eventAt=Number(occurredAt)||Date.now(),path=`learningActivity/${uid}/${name}/${exercise}`,sharedPath=`learningReview/${name}/${subject}/${exercise}/${index}/${uid}`;
+ const eventAt=Number(occurredAt)||Date.now(),path=`learningActivity/${uid}/${name}/${exercise}`;
  if(options.countDaily!==false)await updateDailyLeaderboard(name,subject,eventAt,!correct);
  try{
   let changedItem=null;
@@ -255,11 +255,7 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
    else{changedItem=learningErrorRecord(name,subject,topic,q,old,eventAt);errors[key]=changedItem;}
    value.errorItems=errors;return value;
   });
-  await runTransaction(ref(db,sharedPath),current=>{
-   if(correct){const base=current||learningErrorRecord(name,subject,topic,q,null,eventAt);return {...base,resolved:true,resolvedAt:Math.max(eventAt,Number(base.lastWrongAt)||0)+1};}
-   const next=learningErrorRecord(name,subject,topic,q,current,eventAt);
-   return next;
-  });
+  
   activitySyncWarned=false;return true;
  }catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg(`Fehler konnten nicht geräteübergreifend gespeichert werden (${e.code||e.message||'Firebase-Zugriff verweigert'}).`,true);}return false;}
 }
