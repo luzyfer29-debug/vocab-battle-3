@@ -46,6 +46,23 @@
             ".validate": "newData.hasChildren(['done','score','updatedAt','finished']) && newData.child('done').isNumber() && newData.child('done').val() >= 0 && newData.child('done').val() <= 30 && newData.child('score').isNumber() && newData.child('score').val() >= 0 && newData.child('score').val() <= newData.child('done').val() * 10 && newData.child('updatedAt').isNumber() && newData.child('finished').isBoolean() && (!newData.child('mistakes').exists() || newData.child('mistakes').hasChildren())"
           }
         }
+      }    },
+    "learningDailyLeaderboard": {
+      ".read": "auth != null",
+      "$dayKey": {
+        "$subject": {
+          "$name": {
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && $dayKey.matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) && ($subject === 'english' || $subject === 'math') && ($name === 'Luca' || $name === 'Semir' || $name === 'Talea' || $name === 'Nele')",
+              ".validate": "newData.hasChildren(['name','attempts','mistakes','updatedAt']) && newData.child('name').val() === $name && newData.child('attempts').isNumber() && newData.child('attempts').val() >= 0 && newData.child('attempts').val() <= 100000 && newData.child('mistakes').isNumber() && newData.child('mistakes').val() >= 0 && newData.child('mistakes').val() <= newData.child('attempts').val() && newData.child('updatedAt').isNumber() && newData.child('updatedAt').val() <= now + 60000 && (!newData.child('checkedAttempts').exists() || (newData.child('checkedAttempts').isNumber() && newData.child('checkedAttempts').val() >= 0 && newData.child('checkedAttempts').val() <= newData.child('attempts').val()))",
+              "progressByExercise": {
+                "$exercise": {
+                  ".validate": "newData.hasChildren(['count','updatedAt']) && newData.child('count').isNumber() && newData.child('count').val() >= 0 && newData.child('count').val() <= 100000 && newData.child('updatedAt').isNumber() && newData.child('updatedAt').val() <= now + 60000 && (!newData.child('title').exists() || (newData.child('title').isString() && newData.child('title').val().length <= 200))"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "learningActivity": {
