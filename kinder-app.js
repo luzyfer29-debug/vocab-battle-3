@@ -277,7 +277,7 @@ async function loadChildLearningActivity(name,subject){
  const shared=sharedResult.shared||{};
  if(sharedResult.error&&!activitySyncWarned){activitySyncWarned=true;msg(`Fehler von anderen Geräten konnten nicht geladen werden (${sharedResult.error.code||sharedResult.error.message||'Firebase-Zugriff verweigert'}).`,true);}
  const migrations=[];
- if(!sharedResult.error)for(const [exercise,entry] of Object.entries(data))for(const [index,item] of Object.entries(entry?.errorItems||{})){
+ if(false)for(const [exercise,entry] of Object.entries(data))for(const [index,item] of Object.entries(entry?.errorItems||{})){
   const current=shared[exercise]?.[index];
   if(!current||reviewItemAt(item)>reviewItemAt(current))migrations.push(mergeSharedLearningReview(name,subject,exercise,index,item));
  }
