@@ -283,7 +283,7 @@ async function vocabWorkCreateRoom(kind,title,chooseAction){
   gbRender();
   gbListen();
   window.scrollTo({top:0,behavior:'instant'});
-  void set(ref(db,'grammarRooms/'+roomCode+'/meta'),meta).catch(e=>{
+  void set(ref(db,'grammarRooms/'+roomCode+'/meta'),meta).then(()=>{if(gbCode===roomCode&&gbRole==='host')gbListen();}).catch(e=>{
    console.error('Vokabelarbeit-Raum konnte nicht gestartet werden:',e);
    if(gbCode===roomCode&&gbRole==='host')vocabWorkStartError(e,chooseAction);
   });
@@ -816,12 +816,32 @@ function mathAction(v){if(v==='mathChoose')mathChoose();else if(v==='mathHome')m
 
 // Grammatik-Battle: Originalaufgaben, Texteingaben und Bewertung durch den Schiedsrichter.
 const GB_TIME=45000;
-let gbCode='',gbRoom=null,gbOff=null,gbRole='',gbSlot='',gbBusy=false,gbTimer=null,gbChooseAction='',gbRoomReady=false,gbRoomListenError=false;
+let gbCode='',gbRoom=null,gbOff=null,gbRole='',gbSlot='',gbBusy=false,gbTimer=null,gbRetryTimer=null,gbReadRetries=0,gbChooseAction='',gbRoomReady=false,gbRoomListenError=false;
 const gbNorm=s=>String(s||'').trim().toLowerCase().replace(/[’‘]/g,"'").replace(/\s+/g,' ');
 const gbQuestions=st=>GRAMMAR[st].tasks.flatMap((t,ti)=> (t.items||t.open||[]).map((item,i)=>({task:ti,number:i+1,title:t.title,intro:t.intro||'',prompt:t.items?item[0]+' _____ '+item[1]:(t.prompts?.[i]||'Schreibe einen vollständigen englischen Satz.'),accepted:t.items?item[2]:null,example:t.open?.[i]||null})));
-function gbStop(){if(gbOff){gbOff();gbOff=null;}if(gbTimer){clearInterval(gbTimer);gbTimer=null;}gbRoom=null;gbCode='';gbRole='';gbSlot='';gbChooseAction='';gbRoomReady=false;gbRoomListenError=false;}
-function gbListen(){if(gbOff)gbOff();gbOff=onValue(ref(db,'grammarRooms/'+gbCode),s=>{const liveRoom=s.val();if(!liveRoom){if(gbRole==='player')msg('Grammatik-Raum nicht gefunden.',true);return;}gbRoom=liveRoom;gbRoomReady=true;gbRender();},e=>{if(gbRole==='host'){gbRoomListenError=true;const title=gbRoom?.meta?.kind==='vocab-work'||gbRoom?.meta?.kind==='vocab-work-station2'?'Vokabelarbeit-Warteraum':'Grammatik-Warteraum';app.innerHTML=card('<h2>⚠️ '+title+' nicht erreichbar</h2><p>Raumcode: <strong>'+esc(gbCode)+'</strong></p><p class="error">Firebase-Lesefehler: '+esc(e.code||e.message||e)+'</p>')+card(btn('Zurück zu Battle starten','home','alt'));window.scrollTo({top:0,behavior:'instant'});}else msg('Grammatik-Battle: '+e.message,true);});}
-
+function gbStop(){if(gbOff){gbOff();gbOff=null;}if(gbTimer){clearInterval(gbTimer);gbTimer=null;}if(gbRetryTimer){clearTimeout(gbRetryTimer);gbRetryTimer=null;}gbReadRetries=0;gbRoom=null;gbCode='';gbRole='';gbSlot='';gbChooseAction='';gbRoomReady=false;gbRoomListenError=false;}
+function gbListen(){
+ if(gbOff){gbOff();gbOff=null;}
+ if(gbRetryTimer){clearTimeout(gbRetryTimer);gbRetryTimer=null;}
+ const listeningCode=gbCode;
+ gbOff=onValue(ref(db,'grammarRooms/'+listeningCode),s=>{
+  if(gbCode!==listeningCode)return;
+  if(gbRetryTimer){clearTimeout(gbRetryTimer);gbRetryTimer=null;}
+  gbReadRetries=0;
+  const liveRoom=s.val();if(!liveRoom){if(gbRole==='player')msg('Grammatik-Raum nicht gefunden.',true);return;}
+  gbRoom=liveRoom;gbRoomReady=true;gbRender();
+ },e=>{
+  if(gbCode!==listeningCode)return;
+  const age=Date.now()-Number(gbRoom?.meta?.createdAt||Date.now());
+  if(gbRole==='host'&&e.code==='PERMISSION_DENIED'&&age<30000&&gbReadRetries<20){
+   gbReadRetries++;
+   gbRetryTimer=setTimeout(()=>{gbRetryTimer=null;if(gbCode===listeningCode&&gbRole==='host')gbListen();},Math.min(1500,300+gbReadRetries*100));
+   return;
+  }
+  if(gbRole==='host'){gbRoomListenError=true;const title=gbRoom?.meta?.kind==='vocab-work'||gbRoom?.meta?.kind==='vocab-work-station2'?'Vokabelarbeit-Warteraum':'Grammatik-Warteraum';app.innerHTML=card('<h2>⚠️ '+title+' nicht erreichbar</h2><p>Raumcode: <strong>'+esc(gbCode)+'</strong></p><p class="error">Firebase-Lesefehler: '+esc(e.code||e.message||e)+'</p>')+card(btn('Zurück zu Battle starten','home','alt'));window.scrollTo({top:0,behavior:'instant'});}
+  else msg('Grammatik-Battle: '+e.message,true);
+ });
+}
 function gbPlayers(){return Object.entries(gbRoom?.slots||{}).map(([id,v])=>({id,...v})).sort((a,b)=>(b.score||0)-(a.score||0));}
 function gbRanking(){return rankByScore(gbPlayers()).map(({row:p,place,tied})=>{const weekly=Number(gbRoom?.meta?.weeklyAwards?.[p.name])||0;return `<div class="player row"><span>${place}. ${esc(p.name)}</span><strong>${p.score||0} P${gbRoom?.meta?.stage==='finished'?` · ${Math.floor((Number(p.score)||0)/10)} richtig · +${battleBonusPoints(place)} Battle-Punkte${weekly?` · +${weekly} Wochenbonus`:''}${tied?' (Gleichstand)':''}`:''}</strong></div>`;}).join('')||'<p>Warte auf Spieler.</p>';}
 function gbClock(){if(!gbRoom||gbRoom.meta?.stage!=='question')return;const el=document.querySelector('#gb-clock');if(el)el.textContent='⏱️ '+Math.max(0,Math.ceil((Number(gbRoom.meta.deadline||0)-Date.now())/1000))+' Sekunden';}
@@ -839,7 +859,7 @@ async function gbCreate(stationChoice=null){
  gbListen();
  window.scrollTo({top:0,behavior:'instant'});
  try{
-  void set(ref(db,'grammarRooms/'+roomCode+'/meta'),meta).catch(e=>{
+  void set(ref(db,'grammarRooms/'+roomCode+'/meta'),meta).then(()=>{if(gbCode===roomCode&&gbRole==='host')gbListen();}).catch(e=>{
    if(gbCode===roomCode&&gbRole==='host'){
     app.innerHTML=card('<h2>⚠️ Grammatikraum konnte nicht erstellt werden</h2><p>Raumcode: '+esc(roomCode)+'</p><p class="error">Firebase-Fehler: '+esc(e.code||e.message||'Unbekannter Fehler')+'</p>')+card(btn('Zurück zu Battle starten','home','alt'));
     window.scrollTo({top:0,behavior:'instant'});
