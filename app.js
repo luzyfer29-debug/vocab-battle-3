@@ -273,21 +273,25 @@ function vocabWorkStartError(error,chooseAction){const detail=String(error?.code
 async function vocabWorkCreateRoom(kind,title,chooseAction){
  if(!adminLoggedIn||uid!==ADMIN_UID){loginForm();return;}
  if(!uid){msg('Anmeldung läuft noch. Bitte gleich erneut tippen.',true);return;}
- let roomCode='';
+ let roomCode='',pendingTimer=null;
  try{
   gbStop();
   roomCode=String(Math.floor(100000+Math.random()*900000));
   const meta={hostUid:uid,kind,index:0,stage:'lobby',deadline:0,createdAt:Date.now()};
   gbChooseAction=chooseAction;gbCode=roomCode;gbRole='host';gbRoom={meta,slots:{}};gbRoomReady=false;gbRoomListenError=false;
   status.textContent='';
-  gbRender();
-  await set(ref(db,`grammarRooms/${roomCode}/meta`),meta);
-  if(gbCode===roomCode&&gbRole==='host')gbListen();
+  app.innerHTML=card('<h2>⏳ '+esc(title)+'</h2><p>Vorläufiger Raumcode</p><div class="big">'+esc(roomCode)+'</div><p>Warteraum wird mit Firebase verbunden …</p>');
+  window.scrollTo({top:0,behavior:'instant'});
+  await Promise.race([set(ref(db,'grammarRooms/'+roomCode+'/meta'),meta),new Promise((_,reject)=>{pendingTimer=setTimeout(()=>reject(Object.assign(new Error('Firebase hat den Warteraum nach 15 Sekunden nicht bestätigt.'),{code:'TIMEOUT'})),15000);})]);
+  clearTimeout(pendingTimer);
+  if(gbCode===roomCode&&gbRole==='host'){gbRoomReady=true;gbRender();gbListen();}
  }catch(e){
+  clearTimeout(pendingTimer);
   console.error('Vokabelarbeit-Raum konnte nicht gestartet werden:',e);
   if(!roomCode||gbCode===roomCode&&gbRole==='host')vocabWorkStartError(e,chooseAction);
  }
 }
+
 function vocabWorkHomeStart(){if(!authStateReady){waitForBattleAuth('vocab-work');return;}if(!adminLoggedIn||uid!==ADMIN_UID){pendingBattleStart='vocab-work';loginForm();return;}pendingBattleStart='';void vocabWorkBattleCreate();}
 function vocabWorkStation2HomeStart(){if(!authStateReady){waitForBattleAuth('vocab-work-station2');return;}if(!adminLoggedIn||uid!==ADMIN_UID){pendingBattleStart='vocab-work-station2';loginForm();return;}pendingBattleStart='';void vocabWorkStation2BattleCreate();}
 function grammarBattleHomeStart(station){const action=station===0?'grammar-station-1':'grammar-station-2';if(!authStateReady){waitForBattleAuth(action);return;}if(!adminLoggedIn||uid!==ADMIN_UID){pendingBattleStart=action;loginForm();return;}pendingBattleStart='';void gbCreate(station);}
@@ -816,13 +820,34 @@ let gbCode='',gbRoom=null,gbOff=null,gbRole='',gbSlot='',gbBusy=false,gbTimer=nu
 const gbNorm=s=>String(s||'').trim().toLowerCase().replace(/[’‘]/g,"'").replace(/\s+/g,' ');
 const gbQuestions=st=>GRAMMAR[st].tasks.flatMap((t,ti)=> (t.items||t.open||[]).map((item,i)=>({task:ti,number:i+1,title:t.title,intro:t.intro||'',prompt:t.items?item[0]+' _____ '+item[1]:(t.prompts?.[i]||'Schreibe einen vollständigen englischen Satz.'),accepted:t.items?item[2]:null,example:t.open?.[i]||null})));
 function gbStop(){if(gbOff){gbOff();gbOff=null;}if(gbTimer){clearInterval(gbTimer);gbTimer=null;}gbRoom=null;gbCode='';gbRole='';gbSlot='';gbChooseAction='';gbRoomReady=false;gbRoomListenError=false;}
-function gbListen(){if(gbOff)gbOff();gbOff=onValue(ref(db,`grammarRooms/${gbCode}`),s=>{const liveRoom=s.val();if(!liveRoom){if(gbRole==='player')msg('Grammatik-Raum nicht gefunden.',true);return;}gbRoom=liveRoom;gbRoomReady=true;gbRender();},e=>{if(gbRole==='host'&&gbChooseAction){gbRoomListenError=true;vocabWorkStartError(e,gbChooseAction);}else msg('Grammatik-Battle: '+e.message,true);});}
+function gbListen(){if(gbOff)gbOff();gbOff=onValue(ref(db,'grammarRooms/'+gbCode),s=>{const liveRoom=s.val();if(!liveRoom){if(gbRole==='player')msg('Grammatik-Raum nicht gefunden.',true);return;}gbRoom=liveRoom;gbRoomReady=true;gbRender();},e=>{if(gbRole==='host'){gbRoomListenError=true;const title=gbRoom?.meta?.kind==='vocab-work'||gbRoom?.meta?.kind==='vocab-work-station2'?'Vokabelarbeit-Warteraum':'Grammatik-Warteraum';app.innerHTML=card('<h2>⚠️ '+title+' nicht erreichbar</h2><p>Raumcode: <strong>'+esc(gbCode)+'</strong></p><p class="error">Firebase-Lesefehler: '+esc(e.code||e.message||e)+'</p>')+card(btn('Zurück zu Battle starten','home','alt'));window.scrollTo({top:0,behavior:'instant'});}else msg('Grammatik-Battle: '+e.message,true);});}
+
 function gbPlayers(){return Object.entries(gbRoom?.slots||{}).map(([id,v])=>({id,...v})).sort((a,b)=>(b.score||0)-(a.score||0));}
 function gbRanking(){return rankByScore(gbPlayers()).map(({row:p,place,tied})=>{const weekly=Number(gbRoom?.meta?.weeklyAwards?.[p.name])||0;return `<div class="player row"><span>${place}. ${esc(p.name)}</span><strong>${p.score||0} P${gbRoom?.meta?.stage==='finished'?` · ${Math.floor((Number(p.score)||0)/10)} richtig · +${battleBonusPoints(place)} Battle-Punkte${weekly?` · +${weekly} Wochenbonus`:''}${tied?' (Gleichstand)':''}`:''}</strong></div>`;}).join('')||'<p>Warte auf Spieler.</p>';}
 function gbClock(){if(!gbRoom||gbRoom.meta?.stage!=='question')return;const el=document.querySelector('#gb-clock');if(el)el.textContent='⏱️ '+Math.max(0,Math.ceil((Number(gbRoom.meta.deadline||0)-Date.now())/1000))+' Sekunden';}
 
 function gbChoose(){if(!adminLoggedIn||uid!==ADMIN_UID){loginForm();return;}app.innerHTML=card('<h2>🏆 Grammatik-Battle</h2><p>Die Kinder tippen die Originalantworten selbst ein. Du bewertest jede Antwort und startest die nächste Frage.</p><label>Station<select id="gb-station"><option value="0">Station 1</option><option value="1">Station 2</option></select></label>'+btn('Raum erstellen','gbCreate'))+card(btn('Zurück','home','alt'));}
-async function gbCreate(stationChoice=null){if(!authStateReady){waitForBattleAuth(Number.isInteger(stationChoice)?(stationChoice===0?'grammar-station-1':'grammar-station-2'):'grammar-station-1');return;}if(!adminLoggedIn||uid!==ADMIN_UID){const action=Number.isInteger(stationChoice)?(stationChoice===0?'grammar-station-1':'grammar-station-2'):'grammar-station-1';pendingBattleStart=action;loginForm();return;}const station=Number.isInteger(stationChoice)?stationChoice:Number(document.querySelector('#gb-station')?.value||0);gbStop();gbCode=String(Math.floor(100000+Math.random()*900000));gbRole='host';const roomCode=gbCode,meta={hostUid:uid,station,index:0,stage:'lobby',deadline:0,createdAt:Date.now()};status.textContent='';app.innerHTML=card(`<h2>⏳ Grammatik · Station ${station+1}</h2><p>Warteraum und Raumcode werden angelegt …</p>`);try{await set(ref(db,`grammarRooms/${roomCode}/meta`),meta);if(gbCode===roomCode&&gbRole==='host')gbListen();}catch(e){app.innerHTML=card(`<h2>⚠️ Grammatikraum konnte nicht erstellt werden</h2><p class="error">${esc(e.code||e.message||'Unbekannter Fehler')}</p>`)+card(btn('Erneut versuchen',station===0?'gbHomeStation1':'gbHomeStation2','alt'));}}
+async function gbCreate(stationChoice=null){
+ if(!authStateReady){waitForBattleAuth(Number.isInteger(stationChoice)?(stationChoice===0?'grammar-station-1':'grammar-station-2'):'grammar-station-1');return;}
+ const action=Number.isInteger(stationChoice)?(stationChoice===0?'grammar-station-1':'grammar-station-2'):'grammar-station-1';
+ if(!adminLoggedIn||uid!==ADMIN_UID){pendingBattleStart=action;loginForm();return;}
+ const station=Number.isInteger(stationChoice)?stationChoice:Number(document.querySelector('#gb-station')?.value||0);
+ gbStop();gbCode=String(Math.floor(100000+Math.random()*900000));gbRole='host';
+ const roomCode=gbCode,meta={hostUid:uid,station,index:0,stage:'lobby',deadline:0,createdAt:Date.now()};
+ gbChooseAction=action;gbRoom={meta,slots:{}};gbRoomReady=false;gbRoomListenError=false;status.textContent='';
+ app.innerHTML=card('<h2>⏳ Grammatik · Station '+(station+1)+'</h2><p>Vorläufiger Raumcode</p><div class="big">'+esc(roomCode)+'</div><p>Warteraum wird mit Firebase verbunden …</p>');
+ window.scrollTo({top:0,behavior:'instant'});
+ let pendingTimer=null;
+ try{
+  await Promise.race([set(ref(db,'grammarRooms/'+roomCode+'/meta'),meta),new Promise((_,reject)=>{pendingTimer=setTimeout(()=>reject(Object.assign(new Error('Firebase hat den Warteraum nach 15 Sekunden nicht bestätigt.'),{code:'TIMEOUT'})),15000);})]);
+  clearTimeout(pendingTimer);
+  if(gbCode===roomCode&&gbRole==='host'){gbRoomReady=true;gbRender();gbListen();}
+ }catch(e){
+  clearTimeout(pendingTimer);
+  if(gbCode===roomCode&&gbRole==='host'){app.innerHTML=card('<h2>⚠️ Grammatikraum konnte nicht erstellt werden</h2><p>Raumcode: '+esc(roomCode)+'</p><p class="error">Firebase-Fehler: '+esc(e.code||e.message||'Unbekannter Fehler')+'</p>')+card(btn('Zurück zu Battle starten','home','alt'));window.scrollTo({top:0,behavior:'instant'});}
+ }
+}
+
 function gbRender(){const m=gbRoom.meta||{};if(m.stage==='finished'&&gbRole==='host')void saveCompetitionResults(m,gbPlayers(),competitionActivity(m),gbCode,m.runId);const isVocabWork=m.kind==='vocab-work'||m.kind==='vocab-work-station2',isVocabWork2=m.kind==='vocab-work-station2',qs=isVocabWork2?VOCAB_WORK_STATION2_BATTLE_QUESTIONS:isVocabWork?VOCAB_WORK_BATTLE_QUESTIONS:gbQuestions(Number(m.station||0)),q=qs[Number(m.index||0)],image=q?.image?`<img src="${esc(q.image)}" alt="Bild zu ${esc(q.title)}" style="display:block;width:min(100%,340px);height:190px;object-fit:contain;background:#fff;border-radius:14px;border:2px solid #a9bad0;padding:8px;margin:12px auto">`:'',stage=m.stage,title=isVocabWork2?'Vokabelarbeit · Station 2 · Seiten 1 + 2':isVocabWork?'Vokabelarbeit · Station 1 · Seiten 1 + 2':`Grammatik · Station ${Number(m.station)+1}`;if(gbRole==='player'){const answer=gbRoom.submissions?.[m.index]?.[uid],review=gbRoom.reviews?.[m.index]?.[uid],body=stage==='lobby'?'<h3>Warteraum</h3><p>Warte, bis der Schiedsrichter startet.</p>':stage==='finished'?`<h3>${isVocabWork?'Vokabelarbeit':'Grammatik'}-Battle beendet</h3><p>Deine Punkte stehen in der Rangliste.</p>`:q?`<h3>${esc(q.title)}</h3>${image}<p>${esc(q.prompt)}</p><p id="gb-clock"></p>${review?`<p class="${review.correct?'good':'error'}">${review.correct?'✅ Als richtig gewertet':'❌ Als falsch gewertet'}</p>`:answer?'<p>Antwort abgegeben. Warte auf den Schiedsrichter.</p>':`<label>Deine Antwort<input data-gbtext maxlength="500" autocomplete="off" style="background:#fff;color:#172033;border:2px solid #a9bad0;border-radius:12px;padding:14px;font-size:1.1rem;width:100%;box-sizing:border-box"></label>${btn('Antwort abgeben','gbSubmit')}`}<p class="muted">Schreibe die vollständige englische Lösung.</p>`:'<p>Aufgabe wird geladen …</p>';app.innerHTML=card(`<h2>📝 ${esc(title)}</h2><p>Raumcode <strong>${esc(gbCode)}</strong> · Aufgabe ${Math.min(qs.length,Number(m.index)+1)} von ${qs.length}</p>${body}`)+card(btn('Zur Startseite','home','alt'));if(gbTimer)clearInterval(gbTimer);if(stage==='question'){gbTimer=setInterval(gbClock,1000);gbClock();}return;}let out=card(`<h2>${isVocabWork?'📝':'🏆'} ${esc(title)}</h2><p>Raumcode</p><div class="big">${esc(gbCode)}</div><p>${stage==='finished'?'Beendet':`Aufgabe ${Math.min(qs.length,Number(m.index)+1)} von ${qs.length}`}</p>${gbRanking()}`);
 if(stage==='lobby')out+=card('<h3>Warteraum</h3><p>Die Kinder treten mit dem Raumcode bei.</p>'+(gbRoomReady?btn('▶️ Battle starten','gbStart'):'<p class="muted">Warteraum wird bestätigt …</p><button type="button" disabled>⏳ Warteraum wird angelegt</button>'));
 if(stage==='question'&&q){const submissions=gbRoom.submissions?.[m.index]||{},reviews=gbRoom.reviews?.[m.index]||{};out+=card(`<h3>${esc(q.title)}</h3>${image}<p>${esc(q.prompt)}</p><p id="gb-clock"></p><p><strong>Musterlösung:</strong> ${esc(q.accepted?.join(' / ')||q.example||'')}</p><p class="muted">Jede Antwort einzeln bewerten. Bei freien Sätzen sind andere richtige Formulierungen möglich.</p>`+gbPlayers().map(p=>{const ans=submissions[p.uid];const r=reviews[p.uid];return `<div class="player"><strong>${esc(p.name)}</strong><p>${ans?esc(ans.text):'Noch keine Antwort'}</p>${r?`<p>${r.correct?'✅ Richtig':'❌ Falsch'} – bewertet</p>`:ans?`${btn('✅ Richtig',`gbYes_${p.uid}`)} ${btn('❌ Falsch',`gbNo_${p.uid}`,'alt')}`:''}</div>`;}).join('')+btn('Nächste Aufgabe ➜','gbNext'));
