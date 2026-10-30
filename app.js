@@ -885,7 +885,7 @@ const GB_TIME=20000;
 let gbCode='',gbRoom=null,gbOff=null,gbRole='',gbSlot='',gbBusy=false,gbTimer=null,gbRetryTimer=null,gbReadRetries=0,gbChooseAction='',gbRoomReady=false,gbRoomListenError=false;
 const gbNorm=s=>String(s||'').trim().toLowerCase().replace(/[’‘]/g,"'").replace(/\s+/g,' ');
 const emergencyServiceInitials=['P','F','A','C'];
-const gbQuestions=st=>GRAMMAR[st].tasks.flatMap((t,ti)=> (t.items||t.open||[]).map((item,i)=>({task:ti,number:i+1,title:t.title,intro:st===1&&ti===0?'Setze immer has oder have UND die passende 3. Verbform ein. Beide Wörter müssen eingegeben werden.':(t.intro||''),prompt:t.items?item[0]+' _____ '+item[1]:(t.prompts?.[i]||'Schreibe einen vollständigen englischen Satz.'),accepted:t.items?item[2]:null,example:t.open?.[i]||null,image:st===1&&ti===1?'./grammar2-task2.png?v=20261027-1':null})));
+const gbQuestions=st=>GRAMMAR[st].tasks.flatMap((t,ti)=> (t.items||t.open||[]).map((item,i)=>({task:ti,number:i+1,title:t.title,intro:st===1&&ti===0?'Setze immer has oder have UND die passende 3. Verbform ein. Beide Wörter müssen eingegeben werden.':(t.intro||''),prompt:t.items?item[0]+' _____ '+(st===1&&ti===0?' (has/have + '+String(item[1]).replace(/^\s*\(|\)\s*$/g,'')+')':item[1]):(t.prompts?.[i]||'Schreibe einen vollständigen englischen Satz.'),accepted:t.items?item[2]:null,example:t.open?.[i]||null,image:st===1&&ti===1?'./grammar2-task2.png?v=20261027-1':null})));
 function gbStop(){if(gbOff){gbOff();gbOff=null;}if(gbTimer){clearInterval(gbTimer);gbTimer=null;}if(gbRetryTimer){clearTimeout(gbRetryTimer);gbRetryTimer=null;}gbReadRetries=0;gbRoom=null;gbCode='';gbRole='';gbSlot='';gbChooseAction='';gbRoomReady=false;gbRoomListenError=false;}
 function gbListen(){
  if(gbOff){gbOff();gbOff=null;}
