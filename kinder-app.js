@@ -290,9 +290,12 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
    const next=learningErrorRecord(name,subject,topic,q,current,eventAt);
    return next;
   });
-  await updateDailyLeaderboard(name,subject,eventAt,!correct);
-  activitySyncWarned=false;return true;
- }catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg(`Fehler konnten nicht geräteübergreifend gespeichert werden (${e.code||e.message||'Firebase-Zugriff verweigert'}).`,true);}return false;}
+  activitySyncWarned=false;
+ }catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg(`Fehler konnten nicht geräteübergreifend gespeichert werden (${e.code||e.message||'Firebase-Zugriff verweigert'}).`,true);}}
+ // Die Tageswertung unabhängig vom Fehler-/Wiederholungsspeicher aktualisieren.
+ // Sonst gehen geprüfte Lernantworten bei einem Fehler in learningReview verloren.
+ await updateDailyLeaderboard(name,subject,eventAt,!correct);
+ return true;
 }
 function childLearningExercises(subject){if(subject==='math')return ['math_rational_battle1','math_rational_battle2','math_rational_battle3','math_rational_cards','math_exam','math_rational_exam','math_proportional_practice','math_proportional_exam1','math_proportional_exam2','math_proportional_exam3',...MATH_PROPORTIONAL_PRACTICE_BLOCKS.map(b=>`math_proportional_practice_${b.id}`),'math_proportional_worksheet','math_proportional_flashcards',...FRACTION_MODULES.map(m=>`math_fraction_${m.id}`)];return ['english_vocab_battle1','english_vocab_battle2','english_vocab_battle3','english_vocab_work_page1','english_vocab_work_page2','english_vocab_work_station2_page1','english_vocab_work_station2_page2','english_listening','english_reading',...GRAMMAR.flatMap((station,s)=>station.tasks.map((_,i)=>`english_grammar_${s+1}_task${i+1}`)),...WRITING_TASKS.map((_,i)=>`english_writing_task${i+1}`)];}
 async function mergeSharedLearningReview(name,subject,exercise,index,item){
