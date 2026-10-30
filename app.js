@@ -293,7 +293,7 @@ async function vocabWorkCreateRoom(kind,title,chooseAction,station=0){
   status.textContent='';
   // Keep the confirmed room code visible even if the rich lobby renderer fails.
   app.innerHTML=card('<h2>✅ Warteraum erstellt</h2><p>Raumcode</p><div class="big">'+esc(gbCode)+'</div><p>Die Kinder können mit diesem Code beitreten.</p>')+card(btn('Zur Startseite','home','alt'));
-  try{gbRender();}catch(renderError){console.error('Warteraum-Anzeige fehlgeschlagen',renderError);status.innerHTML='<p class="error">Anzeigeproblem: '+esc(renderError?.message||String(renderError))+' – Raumcode bleibt gültig.</p>';}
+  try{gbRender();}catch(renderError){console.error('Warteraum-Anzeige fehlgeschlagen',renderError);app.innerHTML=card('<h2>Warteraum</h2><p>Raumcode</p><div class="big">'+esc(gbCode)+'</div><p>Spieler: warten auf Beitritt</p>'+btn('▶️ Battle starten','gbStart'))+card(btn('Zur Startseite','home','alt'));status.innerHTML='<p class="error">Anzeigeproblem: '+esc(renderError?.message||String(renderError))+'</p>';}
   try{gbListen();}catch(listenError){console.error('Warteraum-Liveverbindung fehlgeschlagen',listenError);status.innerHTML='<p class="error">Liveverbindung: '+esc(listenError?.message||String(listenError))+'</p>';}
 
  }catch(e){console.error('Raumerstellung fehlgeschlagen',e);vocabWorkStartError(e,chooseAction||'home');}
