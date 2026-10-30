@@ -282,10 +282,9 @@ async function vocabWorkCreateRoom(kind,title,chooseAction,station=0){
  const meta={hostUid:uid,index:0,stage:'lobby',deadline:0,createdAt:Date.now(),...(kind==='grammar'?{station}:{kind})};
  try{
   if(!db)throw new Error('Firebase-Datenbank nicht verbunden');
-  await refreshRefereeSession();
+  await Promise.race([refreshRefereeSession(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Schiedsrichter-Anmeldung konnte innerhalb von 8 Sekunden nicht bestätigt werden.')),8000))]);
   await Promise.race([set(ref(db,`grammarRooms/${roomCode}/meta`),meta),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Firebase antwortet seit 12 Sekunden nicht.')),12000))]);
-   const savedMeta=await get(ref(db,`grammarRooms/${roomCode}/meta`));
-   if(!savedMeta.exists()||savedMeta.val()?.hostUid!==uid)throw new Error('Raum wurde nicht korrekt gespeichert.');
+   // The successful Firebase write confirms creation; a second read may hang under restrictive rules.
   gbStop();gbCode=roomCode;gbRole='host';gbSlot='';gbChooseAction=chooseAction||pendingKey;
   gbRoom={meta,slots:{}};gbRoomReady=true;gbRoomListenError=false;
   status.textContent='';gbRender();gbListen();
