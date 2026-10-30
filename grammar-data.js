@@ -36,12 +36,12 @@ export const GRAMMAR=[
  ]},
  {title:'Station 2 · Grammar',tasks:[
   {title:'1 · Put in the right verb forms',example:'An old man has cut (cut) his finger.',items:[
-   ['A little boy has ',' (burn) his hand.',['burnt','burned']],
-   ['A young girl has ',' (break) her leg.',['broken']],
-   ['Linda has ',' (give) a woman some tablets.',['given']],
-   ['Four people have ',' (have) an accident.',['had']],
-   ['Two women have ',' (sprain) their ankles.',['sprained']],
-   ['Three men have ',' (hurt) their heads.',['hurt']]
+   ['A little boy ',' (burn) his hand.',['has burnt','has burned']],
+   ['A young girl ',' (break) her leg.',['has broken']],
+   ['Linda ',' (give) a woman some tablets.',['has given']],
+   ['Four people ',' (have) an accident.',['have had']],
+   ['Two women ',' (sprain) their ankles.',['have sprained']],
+   ['Three men ',' (hurt) their heads.',['have hurt']]
   ]},
   {title:'2 · Megan works for the emergency services. Make sentences',intro:'Use the present perfect. Vorgaben in Arbeitsblatt-Reihenfolge: work on the computer · open the window · hang up her uniform · drink tea · make a phone call · write a message.',open:[
    'Megan has already worked on the computer.',
