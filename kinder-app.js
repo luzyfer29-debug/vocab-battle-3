@@ -134,6 +134,9 @@ function applyDailyCrowns(subject,actionPrefix){void dailyCrownNames(subject).th
 function isoWeekDays(weekKey){const m=String(weekKey||'').match(/^(\d{4})-W(\d{2})$/);if(!m)return [];const year=Number(m[1]),week=Number(m[2]),jan4=new Date(Date.UTC(year,0,4)),weekday=jan4.getUTCDay()||7,monday=new Date(Date.UTC(year,0,4-(weekday-1)+(week-1)*7));return Array.from({length:7},(_,i)=>{const d=new Date(monday);d.setUTCDate(d.getUTCDate()+i);return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;});}
 function previousIsoWeek(weekKey){const first=isoWeekDays(weekKey)[0];if(!first)return '';const d=new Date(`${first}T12:00:00Z`);d.setUTCDate(d.getUTCDate()-7);return activityPeriodKeys(d.getTime()).weekKey;}
 function dailyRowTotals(row){
+ // Quarantine corrupted historical counters in every ranking, even if Firebase repair is denied.
+ const storedTotal=Math.max(Number(row?.attempts)||0,(Number(row?.checkedAttempts)||0)+(Number(row?.submittedAttempts)||0));
+ if(storedTotal>=1000)return {attempts:0,checkedAttempts:0,mistakes:0};
  const hasProgress=Object.keys(row?.progressByExercise||{}).length>0,verified=Number(row?.answerCounterVersion)===2;
  const hasChecked=Object.prototype.hasOwnProperty.call(row||{},'checkedAttempts')&&Number.isFinite(Number(row.checkedAttempts))&&Number(row.checkedAttempts)>=0;
  const trusted=verified||hasChecked;
