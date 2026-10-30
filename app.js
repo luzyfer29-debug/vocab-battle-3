@@ -57,10 +57,10 @@ const VOCAB_WORK_STATION2_BATTLE_QUESTIONS=[
  {title:"Seite 2 · Aufgabe 3 · Satz 4",prompt:"Put in the right verb: You ___ (speak / say) where you are.",accepted:["say"]},
  {title:"Seite 2 · Aufgabe 3 · Satz 5",prompt:"Put in the right verb: You ___ (stay with / wait for) the hurt person.",accepted:["stay with"]},
  {title:"Seite 2 · Aufgabe 3 · Satz 6",prompt:"Put in the right verb: You ___ (take / bring) a person to hospital.",accepted:["take"]},
- {title:"Seite 2 · Aufgabe 4 · Emergency services 1",prompt:"Name the four emergency services in the UK · 1.",accepted:["police"]},
- {title:"Seite 2 · Aufgabe 4 · Emergency services 2",prompt:"Name the four emergency services in the UK · 2.",accepted:["fire brigade"]},
- {title:"Seite 2 · Aufgabe 4 · Emergency services 3",prompt:"Name the four emergency services in the UK · 3.",accepted:["ambulance"]},
- {title:"Seite 2 · Aufgabe 4 · Emergency services 4",prompt:"Name the four emergency services in the UK · 4.",accepted:["coastguard", "coast guard"]}
+ {title:"Seite 2 · Aufgabe 4 · Emergency services 1",prompt:"Name the four emergency services in the UK · 1. P…",accepted:["police"]},
+ {title:"Seite 2 · Aufgabe 4 · Emergency services 2",prompt:"Name the four emergency services in the UK · 2. F…",accepted:["fire brigade"]},
+ {title:"Seite 2 · Aufgabe 4 · Emergency services 3",prompt:"Name the four emergency services in the UK · 3. A…",accepted:["ambulance"]},
+ {title:"Seite 2 · Aufgabe 4 · Emergency services 4",prompt:"Name the four emergency services in the UK · 4. C…",accepted:["coastguard", "coast guard"]}
 ];
 const RATIONAL_MATH_TITLES=['Rationale Zahlen · Aufgabe 1','Rationale Zahlen · Aufgabe 2','Rationale Zahlen · Aufgabe 3','Rationale Zahlen · Aufgabe 4'];
 import {FRACTION_MODULES} from './fractions-data.js?v=20261014-probetest';
@@ -884,6 +884,7 @@ function mathAction(v){if(v==='mathChoose')mathChoose();else if(v==='mathHome')m
 const GB_TIME=20000;
 let gbCode='',gbRoom=null,gbOff=null,gbRole='',gbSlot='',gbBusy=false,gbTimer=null,gbRetryTimer=null,gbReadRetries=0,gbChooseAction='',gbRoomReady=false,gbRoomListenError=false;
 const gbNorm=s=>String(s||'').trim().toLowerCase().replace(/[’‘]/g,"'").replace(/\s+/g,' ');
+const emergencyServiceInitials=['P','F','A','C'];
 const gbQuestions=st=>GRAMMAR[st].tasks.flatMap((t,ti)=> (t.items||t.open||[]).map((item,i)=>({task:ti,number:i+1,title:t.title,intro:t.intro||'',prompt:t.items?item[0]+' _____ '+item[1]:(t.prompts?.[i]||'Schreibe einen vollständigen englischen Satz.'),accepted:t.items?item[2]:null,example:t.open?.[i]||null,image:st===1&&ti===1?'./grammar2-task2.png?v=20261027-1':null})));
 function gbStop(){if(gbOff){gbOff();gbOff=null;}if(gbTimer){clearInterval(gbTimer);gbTimer=null;}if(gbRetryTimer){clearTimeout(gbRetryTimer);gbRetryTimer=null;}gbReadRetries=0;gbRoom=null;gbCode='';gbRole='';gbSlot='';gbChooseAction='';gbRoomReady=false;gbRoomListenError=false;}
 function gbListen(){
