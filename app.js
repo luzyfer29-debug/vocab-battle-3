@@ -269,7 +269,7 @@ async function saveCompetitionResults(m,playersList,activity,roomCode,runId){
   for(const {row:p,place,tied} of ranked){
    if(!p.uid||!SOLO_NAMES.includes(p.name))continue;
    const weeklyBonusPoints=await claimWeeklyAward(m,p,activity,roomCode,runId);
-   const publicResult={name:p.name,activity:activity.id,label:activity.label,correct:Math.min(activity.max,Math.max(0,Math.floor((Number(p.score)||0)/10))),maxCorrect:activity.max,bonusPoints:battleBonusPoints(place),weeklyBonusPoints,weeklyAwardWeek:String(m.weeklyAwardWeek||''),runId:String(runId||''),roomCode:String(roomCode||''),place,tied:!!tied,finished:true,updatedAt};
+   const publicResult={name:p.name,activity:weekActivity,originalActivity:activity.id,label:activity.label,correct:Math.min(activity.max,Math.max(0,Math.floor((Number(p.score)||0)/10))),maxCorrect:activity.max,bonusPoints:battleBonusPoints(place),weeklyBonusPoints,weeklyAwardWeek:String(m.weeklyAwardWeek||''),runId:String(runId||''),roomCode:String(roomCode||''),place,tied:!!tied,finished:true,updatedAt};
    // Store every completed run separately; legacy last-result records remain untouched.
    await runTransaction(ref(db,`battleRankings/${activity.subject}/${weekActivity}/${p.name}`),current=>current?.finished?current:publicResult);
   }
