@@ -1324,6 +1324,24 @@ document.addEventListener('focusin',event=>disableStudentTypingAids(event.target
 new MutationObserver(records=>{for(const record of records)for(const node of record.addedNodes){if(node.nodeType!==1)continue;disableStudentTypingAids(node);node.querySelectorAll?.('input,textarea').forEach(disableStudentTypingAids);}}).observe(document.body,{childList:true,subtree:true});
 document.querySelectorAll('input,textarea').forEach(disableStudentTypingAids);
 // Contextual learning help: never attach to timed multiplayer Battle screens.
+let lastStudentHelpField=null;
+app.addEventListener('focusin',event=>{if(event.target.matches?.('input,textarea,select'))lastStudentHelpField=event.target;});
+function specificStudentHint(){
+ const f=lastStudentHelpField;
+ if(!f||!app.contains(f))return '';
+ const box=f.closest('.solo-game,label,[data-question],.player')||f.parentElement;
+ const prompt=(box?.textContent||'').replace(/\\s+/g,' ').trim().slice(0,260);
+ if(!prompt)return '';
+ const p=prompt.toLowerCase();let tip='Lies die Frage noch einmal und unterstreiche die entscheidenden Wörter.';
+ if(/already|yet|ever|has |have /.test(p))tip='Prüfe, ob du das Present Perfect brauchst: have/has + dritte Verbform. Bei „yet“ wird oft die Verneinung gebraucht.';
+ else if(/adverb|adjective|quick|slow|careful/.test(p))tip='Beschreibt das Wort ein Nomen? Dann Adjektiv. Beschreibt es ein Verb? Dann meist Adverb (oft mit -ly).';
+ else if(/percent|prozent|%/.test(p))tip='Bestimme zuerst den Grundwert (100 %). Dann rechne den gesuchten Prozentanteil aus.';
+ else if(/bruch|fraction|nenner|zähler/.test(p))tip='Beim Addieren und Subtrahieren erst auf denselben Nenner bringen. Beim Multiplizieren Zähler mal Zähler und Nenner mal Nenner.';
+ else if(/proportional|dreisatz/.test(p))tip='Prüfe: Verdoppelt sich die eine Größe, verdoppelt sich die andere (proportional) oder halbiert sie sich (antiproportional)?';
+ else if(/true|false|paragraph|cardiff/.test(p))tip='Finde die entsprechende Textstelle und vergleiche die Aussage Wort für Wort. Achte besonders auf Verneinungen.';
+ else if(/accident|sprain|burn|hurt|bleed/.test(p))tip='Überlege, ob die Aufgabe nach einer Verletzung, einem Körperteil oder einer Handlung fragt.';
+ return '<p><strong>Zuletzt ausgewählte Frage:</strong> '+esc(prompt)+'</p><p><strong>Tipp:</strong> '+esc(tip)+'</p>';
+}
 function studentHelpText(){
  const heading=(app.querySelector('h2,h3')?.textContent||'').toLowerCase();
  if(grammarStation!==null&&grammarTask!==null&&app.querySelector('[data-action="grammarReveal"]')){
@@ -1345,7 +1363,7 @@ function attachStudentHelp(){
  const panel=document.createElement('div');panel.setAttribute('data-student-help','');panel.style.cssText='margin:12px 0;padding:12px;border:1px solid #83b9ad;border-radius:12px;background:#f1fff7;color:#18392f';
  const button=document.createElement('button');button.type='button';button.textContent='💡 Hilfe zur Aufgabe';button.style.cssText='width:100%;background:#c9f7d7!important;color:#173a27!important';
  const detail=document.createElement('div');detail.hidden=true;detail.style.cssText='padding:10px 4px 2px;line-height:1.55';
- button.addEventListener('click',()=>{detail.hidden=!detail.hidden;if(!detail.hidden)detail.innerHTML=studentHelpText();});
+ button.addEventListener('click',()=>{detail.hidden=!detail.hidden;if(!detail.hidden)detail.innerHTML=specificStudentHint()+studentHelpText();});
  panel.append(button,detail);app.querySelector('.card,section')?.append(panel);
 }
 new MutationObserver(()=>{if(!app.querySelector('[data-student-help]'))attachStudentHelp();}).observe(app,{childList:true});
