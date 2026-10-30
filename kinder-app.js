@@ -312,8 +312,8 @@ async function loadChildLearningActivity(name,subject){
   Promise.all(ids.map(async id=>[id,(await get(ref(db,`learningActivity/${uid}/${name}/${id}`))).val()])),
   get(ref(db,`learningReview/${name}/${subject}`)).then(snapshot=>({shared:snapshot.val()||{}})).catch(error=>({error}))
  ]),data=Object.fromEntries(rows.filter(([,value])=>value));
+ if(sharedResult.error)throw new Error('Fehlerliste nicht vollständig geladen: '+(sharedResult.error.code||sharedResult.error.message||'Firebase-Zugriff verweigert'));
  const shared=sharedResult.shared||{};
- if(sharedResult.error&&!activitySyncWarned){activitySyncWarned=true;msg(`Fehler von anderen Geräten konnten nicht geladen werden (${sharedResult.error.code||sharedResult.error.message||'Firebase-Zugriff verweigert'}).`,true);}
  const migrations=[];
  if(!sharedResult.error)for(const [exercise,entry] of Object.entries(data))for(const [index,item] of Object.entries(entry?.errorItems||{})){
   const current=shared[exercise]?.[index];
@@ -574,9 +574,10 @@ function watchResets(){
  resetReady=false;
  const resetData={base:{},english:{},math:{}},loaded={base:false,english:false,math:false};
  const apply=()=>{applyResetState({...resetData.base,...resetData.english,...resetData.math});resetReady=Object.values(loaded).every(Boolean);};
- const offBase=onValue(ref(db,'learningResets'),snap=>{resetData.base=snap.val()||{};loaded.base=true;apply();},e=>msg('Reset-Abgleich fehlgeschlagen: '+e.message,true));
- const offEnglish=onValue(ref(db,'learningResetsEnglish'),snap=>{resetData.english=snap.val()||{};loaded.english=true;apply();},e=>msg('Englisch-Reset konnte nicht geladen werden: '+e.message,true));
- const offMath=onValue(ref(db,'learningResetsMath'),snap=>{resetData.math=snap.val()||{};loaded.math=true;apply();},e=>msg('Mathe-Reset konnte nicht geladen werden: '+e.message,true));
+ const resetError=(key,label)=>(e)=>{loaded[key]=true;apply();msg(label+': '+e.message+'. Bitte Firebase-Verbindung prüfen; vorhandene Lernstände werden nicht gelöscht.',true);};
+ const offBase=onValue(ref(db,'learningResets'),snap=>{resetData.base=snap.val()||{};loaded.base=true;apply();},resetError('base','Reset-Abgleich fehlgeschlagen'));
+ const offEnglish=onValue(ref(db,'learningResetsEnglish'),snap=>{resetData.english=snap.val()||{};loaded.english=true;apply();},resetError('english','Englisch-Reset konnte nicht geladen werden'));
+ const offMath=onValue(ref(db,'learningResetsMath'),snap=>{resetData.math=snap.val()||{};loaded.math=true;apply();},resetError('math','Mathe-Reset konnte nicht geladen werden'));
  resetUnsubscribe=()=>{offBase();offEnglish();offMath();};
 }
 
