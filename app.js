@@ -82,6 +82,7 @@ const key='vb2solo';
 let resetState={};
 const ADMIN_UID='M41x9WNoHAfqpSmyrztAgf2IZYC3';
 let authClient=null,adminLoggedIn=false,authStateReady=false,manualAuthSubmit=false,pendingBattleStart='';
+async function refreshRefereeSession(){const user=authClient?.currentUser;if(!user||user.uid!==ADMIN_UID)throw Object.assign(new Error('Die gespeicherte Schiedsrichter-Anmeldung ist nicht verfügbar.'),{code:'AUTH_REQUIRED'});await user.getIdToken(true);uid=user.uid;adminLoggedIn=true;authStateReady=true;}
 function loginForm(){app.innerHTML=card(`<h2>🔐 Schiedsrichter-Anmeldung</h2><p>Nur das berechtigte Schiedsrichterkonto kann Spiele starten und die Lernübersicht öffnen.</p><label>E-Mail<input id="admin-email" type="email" autocomplete="username" placeholder="E-Mail-Adresse"></label><label>Passwort<input id="admin-password" type="password" autocomplete="current-password" placeholder="Passwort"></label>${btn('Anmelden','adminLogin')}`)+card(btn('Zurück','home','alt'));}
 function launchPendingBattleStart(action){if(action==='vocab-work'){void vocabWorkBattleCreate();return true;}if(action==='vocab-work-station2'){void vocabWorkStation2BattleCreate();return true;}if(action==='grammar-station-1'){void gbCreate(0);return true;}if(action==='grammar-station-2'){void gbCreate(1);return true;}return false;}
 function waitForBattleAuth(action){pendingBattleStart=action;status.textContent='';app.innerHTML=card('<h2>⏳ Anmeldung wird geprüft …</h2><p>Der ausgewählte Warteraum öffnet sich automatisch.</p>');}
@@ -282,6 +283,7 @@ async function vocabWorkCreateRoom(kind,title,chooseAction){
   status.textContent='';
   gbRender();
   window.scrollTo({top:0,behavior:'instant'});
+  await refreshRefereeSession();
   await set(ref(db,'grammarRooms/'+roomCode+'/meta'),meta);
   if(gbCode===roomCode&&gbRole==='host'){gbRoomReady=true;gbListen();}
  }catch(e){
@@ -855,6 +857,7 @@ async function gbCreate(stationChoice=null){
  gbRender();
  window.scrollTo({top:0,behavior:'instant'});
  try{
+  await refreshRefereeSession();
   await set(ref(db,'grammarRooms/'+roomCode+'/meta'),meta);
   if(gbCode===roomCode&&gbRole==='host'){gbRoomReady=true;gbListen();}
  }catch(e){
