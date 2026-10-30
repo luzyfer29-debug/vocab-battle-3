@@ -247,7 +247,7 @@ let errorEvalSubject='',errorEvalPeriod='',errorEvalTopics=[],errorEvalQueue=[],
 const legacyLearningImportPending=new Set();
 function learningErrorRecord(name,subject,topic,q,old,eventAt){
  const {dayKey,weekKey}=activityPeriodKeys(eventAt);
- return {attempted:true,source:'answer_check',subject,topic,prompt:String(q?.prompt||q?.q||q?.word||topic||''),type:String(q?.type||''),task:Number(q?.task)||0,instruction:String(q?.instruction||''),images:Array.isArray(q?.images)?q.images:null,options:Array.isArray(q?.options)?q.options.map(String):null,correctIndex:Number.isInteger(q?.correct)?q.correct:null,accepted:Array.isArray(q?.accepted)?q.accepted.map(String):Array.isArray(q?.required)?q.required.map(String):null,required:Array.isArray(q?.required)?q.required.map(String):null,explanation:String(q?.explanation||q?.explain||''),answer:String(q?.answer||q?.answerText||''),count:(Number(old?.count)||0)+1,lastWrongAt:eventAt,dayKey,weekKey,resolved:false,resolvedAt:null};
+ return {attempted:true,source:'answer_check',subject,topic,prompt:String(q?.prompt||q?.q||q?.word||topic||''),type:String(q?.type||''),task:Number(q?.task)||0,instruction:String(q?.instruction||''),images:Array.isArray(q?.images)?q.images:null,image:String(q?.image||''),options:Array.isArray(q?.options)?q.options.map(String):null,correctIndex:Number.isInteger(q?.correct)?q.correct:null,accepted:Array.isArray(q?.accepted)?q.accepted.map(String):Array.isArray(q?.required)?q.required.map(String):null,required:Array.isArray(q?.required)?q.required.map(String):null,explanation:String(q?.explanation||q?.explain||''),answer:String(q?.answer||q?.answerText||''),count:(Number(old?.count)||0)+1,lastWrongAt:eventAt,dayKey,weekKey,resolved:false,resolvedAt:null};
 }
 function reviewItemAt(item){const lastWrongAt=Number(item?.lastWrongAt)||0,resolvedAt=Number(item?.resolvedAt)||0;return item?.resolved===true?Math.max(lastWrongAt,resolvedAt)+1:lastWrongAt;}
 async function recordLearningError(name,subject,exercise,index,topic,q,correct,occurredAt=Date.now()){
@@ -371,6 +371,7 @@ async function learningReview(name,subject=''){
    const hasAttemptEvidence=item?.attempted===true||Number(index)<Math.max(0,Number(entry?.live?.done)||0);
    if(itemSubject!==subject||item?.resolved===true||item?.source==='live_battle'||item?.source==='battle'||!hasAttemptEvidence)continue;
    const reviewItem={...item,subject};
+   if(!reviewItem.image&&Array.isArray(reviewItem.images)&&reviewItem.images.length===1)reviewItem.image=String(reviewItem.images[0]||'');
    const station2Picture=String(exercise).match(/^english_vocab_work_station2_page1$/);
    if(station2Picture&&Number(index)<6)reviewItem.image=VOCAB_WORK_STATION2_BATTLE_QUESTIONS[Number(index)]?.image||'';
    const vocabWorkReview=vocabWorkReviewData(String(exercise),Number(index));
@@ -1283,7 +1284,7 @@ const VOCAB_WORK_STATION2_BATTLE_QUESTIONS=[
  {title:"Seite 2 · Aufgabe 4 · Emergency services 3",prompt:"Name the four emergency services in the UK · 3.",accepted:["ambulance"]},
  {title:"Seite 2 · Aufgabe 4 · Emergency services 4",prompt:"Name the four emergency services in the UK · 4.",accepted:["coastguard", "coast guard"]}
 ];
-const kidGbQuestions=station=>GRAMMAR[station].tasks.flatMap(task=>(task.items||task.open||[]).map((item,i)=>({title:task.title,prompt:task.items?item[0]+' _____ '+item[1]:(task.prompts?.[i]||'Schreibe einen vollständigen englischen Satz.')})));
+const kidGbQuestions=station=>GRAMMAR[station].tasks.flatMap(task=>(task.items||task.open||[]).map((item,i)=>({title:task.title,prompt:task.items?item[0]+' _____ '+item[1]:(task.prompts?.[i]||'Schreibe einen vollständigen englischen Satz.'),image:String(task.images?.[i]||task.image||'')})));
 function gbListen(){if(gbOff)gbOff();if(gbTimer){clearInterval(gbTimer);gbTimer=null;}gbOff=onValue(ref(db,'grammarRooms/'+gbCode),snap=>{gbRoom=snap.val();if(!gbRoom){msg('Grammatik-Raum nicht gefunden.',true);return;}gbRender();},e=>msg('Grammatik-Battle: '+e.message,true));}
 function gbClock(){const m=gbRoom?.meta||{},el=document.querySelector('#kid-gb-clock');if(!el||m.stage!=='question')return;el.textContent='⏱️ Noch '+Math.max(0,Math.ceil((Number(m.deadline||0)-Date.now())/1000))+' Sekunden';}
 
