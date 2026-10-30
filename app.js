@@ -851,7 +851,30 @@ function gbListen(){
 }
 function gbPlayers(){return Object.entries(gbRoom?.slots||{}).map(([id,v])=>({id,...v})).sort((a,b)=>(b.score||0)-(a.score||0));}
 function gbRanking(){return rankByScore(gbPlayers()).map(({row:p,place,tied})=>{const weekly=Number(gbRoom?.meta?.weeklyAwards?.[p.name])||0;return `<div class="player row"><span>${place}. ${esc(p.name)}</span><strong>${p.score||0} P${gbRoom?.meta?.stage==='finished'?` · ${Math.floor((Number(p.score)||0)/10)} richtig · +${battleBonusPoints(place)} Battle-Punkte${weekly?` · +${weekly} Wochenbonus`:''}${tied?' (Gleichstand)':''}`:''}</strong></div>`;}).join('')||'<p>Warte auf Spieler.</p>';}
-function gbClock(){if(!gbRoom||gbRoom.meta?.stage!=='question')return;const el=document.querySelector('#gb-clock');if(el)el.textContent='⏱️ '+Math.max(0,Math.ceil((Number(gbRoom.meta.deadline||0)-Date.now())/1000))+' Sekunden';}
+let gbAutoBusy=false;
+async function gbAutoAdvance(){
+ if(gbAutoBusy||gbRole!=='host'||!gbRoom||gbRoom.meta?.stage!=='question'||Date.now()<Number(gbRoom.meta.deadline||0))return;
+ gbAutoBusy=true;
+ try{
+  const m=gbRoom.meta,idx=Number(m.index||0),isWork=m.kind==='vocab-work'||m.kind==='vocab-work-station2';
+  const questions=m.kind==='vocab-work-station2'?VOCAB_WORK_STATION2_BATTLE_QUESTIONS:isWork?VOCAB_WORK_BATTLE_QUESTIONS:gbQuestions(Number(m.station||0));
+  const q=questions[idx];if(!q)return;
+  const accepted=[...(Array.isArray(q.accepted)?q.accepted:q.accepted?[q.accepted]:[]),...(q.example?[q.example]:[])].map(gbNorm);
+  const submissions=gbRoom.submissions?.[idx]||{};
+  for(const p of gbPlayers()){
+   const answer=submissions[p.uid];
+   const correct=!!answer&&accepted.includes(gbNorm(answer.text));
+   await set(ref(db,'grammarRooms/'+gbCode+'/reviews/'+idx+'/'+p.uid),{correct,at:Date.now(),automatic:true});
+   if(correct)await awardRoomPointsOnce('grammarRooms/'+gbCode,p.id,(m.runId||m.createdAt)+':'+idx,10);
+   if(!isWork)await saveGrammarProgress(p,Number(m.station)||0,idx,correct,m.runId||gbCode,questions.length);
+  }
+  const latest=await get(ref(db,'grammarRooms/'+gbCode+'/meta'));
+  if(latest.val()?.stage!=='question'||Number(latest.val()?.index)!==idx)return;
+  await update(ref(db,'grammarRooms/'+gbCode+'/meta'),idx+1>=questions.length?{stage:'finished',deadline:0}:{stage:'question',index:idx+1,deadline:Date.now()+GB_TIME});
+ }catch(e){console.error('Automatische Battle-Auswertung fehlgeschlagen',e);status.textContent='Automatische Auswertung: '+(e.message||e);}
+ finally{gbAutoBusy=false;}
+}
+function gbClock(){if(!gbRoom||gbRoom.meta?.stage!=='question')return;if(gbRole==='host')void gbAutoAdvance();const el=document.querySelector('#gb-clock');if(el)el.textContent='⏱️ '+Math.max(0,Math.ceil((Number(gbRoom.meta.deadline||0)-Date.now())/1000))+' Sekunden';}
 
 function gbChoose(){if(!adminLoggedIn||uid!==ADMIN_UID){loginForm();return;}app.innerHTML=card('<h2>🏆 Grammatik-Battle</h2><p>Die Kinder tippen die Originalantworten selbst ein. Du bewertest jede Antwort und startest die nächste Frage.</p><label>Station<select id="gb-station"><option value="0">Station 1</option><option value="1">Station 2</option></select></label>'+btn('Raum erstellen','gbCreate'))+card(btn('Zurück','home','alt'));}
 async function gbCreate(stationChoice=null){const station=Number.isInteger(stationChoice)?stationChoice:Number(document.querySelector('#gb-station')?.value||0);return vocabWorkCreateRoom('grammar','Grammatik · Station '+(station+1),station===0?'grammar-station-1':'grammar-station-2',station);/*
