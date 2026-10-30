@@ -847,7 +847,19 @@ async function showBattleSeries(subject){
    const history=records.length?`<details><summary>Einzelne Battle-Ergebnisse (${records.length})</summary><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Datum</th><th>Kind</th><th>Battle</th><th>Punkte</th></tr></thead><tbody>${records.map(r=>`<tr><td>${r.at?esc(new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(r.at))):'–'}</td><td>${esc(r.name)}</td><td>${esc(r.label)}</td><td>+${r.points+r.bonus}</td></tr>`).join('')}</tbody></table></div></details>`:'<p class="muted">Noch keine neuen Battle-Durchläufe für diese Woche gespeichert.</p>';
    return `<details ${week===weekKey?'open':''}><summary><strong>${week===weekKey?'Aktuelle Woche':'Archiv'} · ${esc(week)}</strong> · ${esc(period)}</summary>${table}${history}</details>`;
   }).join('');
-  app.innerHTML=card(`<h2>🏆 ${title} · Battle-Wochenwertung</h2><p>Montag bis Sonntag, getrennt nach Fach. Jeder abgeschlossene Battle-Durchlauf wird einmal gezählt. Bereits gespeicherte Battle-Ergebnisse werden anhand ihres Zeitstempels ihrer Woche zugeordnet. Bei älteren Battles ist nur der zuletzt gespeicherte Stand je Spielart vorhanden.</p>${weeklyTables}`)+card(btn('↻ Aktualisieren',subject==='math'?'battleSeriesMath':'battleSeriesEnglish','alt')+btn('Zurück zur Übersicht','home','alt'));
+  const legacy=[];
+  for(const [key,byName] of Object.entries(data)){
+   if(key.startsWith('week_'))continue;
+   for(const name of SOLO_NAMES){
+    const r=byName?.[name];if(!r?.finished)continue;
+    const stamp=Number(r.updatedAt)||0;
+    const day=stamp?new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',dateStyle:'short',timeStyle:'short'}).format(new Date(stamp)):'Datum unbekannt';
+    legacy.push({name,label:String(r.label||key),stamp,day,points:Math.max(0,Number(r.bonusPoints)||0)+Math.max(0,Number(r.weeklyBonusPoints)||0)});
+   }
+  }
+  legacy.sort((a,b)=>b.stamp-a.stamp);
+  const legacyTable=legacy.length?`<details><summary>Vorhandene ältere Battle-Ergebnisse prüfen (${legacy.length})</summary><p>Diese Datensätze sind weiterhin gespeichert. Das angezeigte Datum entscheidet, zu welcher Woche sie gehören.</p><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Datum</th><th>Kind</th><th>Battle</th><th>Punkte</th></tr></thead><tbody>${legacy.map(r=>`<tr><td>${esc(r.day)}</td><td>${esc(r.name)}</td><td>${esc(r.label)}</td><td>${r.points}</td></tr>`).join('')}</tbody></table></div></details>`:'';
+  app.innerHTML=card(`<h2>🏆 ${title} · Battle-Wochenwertung</h2><p>Montag bis Sonntag, getrennt nach Fach. Jeder abgeschlossene Battle-Durchlauf wird einmal gezählt. Bereits gespeicherte Battle-Ergebnisse werden anhand ihres Zeitstempels ihrer Woche zugeordnet. Bei älteren Battles ist nur der zuletzt gespeicherte Stand je Spielart vorhanden.</p>${weeklyTables}${legacyTable}`)+card(btn('↻ Aktualisieren',subject==='math'?'battleSeriesMath':'battleSeriesEnglish','alt')+btn('Zurück zur Übersicht','home','alt'));
  }catch(e){app.innerHTML=card(`<h2>🏆 ${title} · Battle-Wochenwertung</h2><p class="error">Auswertung konnte nicht geladen werden: ${esc(e.message)}</p>`)+card(btn('Zurück zur Übersicht','home','alt'));}
 }
 function showEnglishSeries(){return showBattleSeries('english');}
