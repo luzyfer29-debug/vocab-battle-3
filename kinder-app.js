@@ -86,12 +86,12 @@ function grammarRender(st,task,checked=false,reveal=false){
  if(!soloName){soloChooseName();return;}grammarStation=st;grammarTask=task;
  if(!checked&&!reveal&&!grammarRead(st,task).length)grammarWrite(st,task,[]);
   const t=GRAMMAR[st].tasks[task],values=grammarRead(st,task),isOpen=!!t.open;
- const inputStyle='box-sizing:border-box;display:inline-block;vertical-align:middle;max-width:190px;width:43vw;min-width:100px;min-height:38px;margin:3px 4px;padding:6px 8px;border-radius:8px;background:#fff;color:#17152b;font-size:16px;line-height:1.3';
+ const inputStyle='box-sizing:border-box;display:block;width:100%;max-width:100%;min-height:42px;margin:6px 0 8px;padding:8px 10px;border-radius:8px;background:#fff;color:#17152b;font-size:16px;line-height:1.3';
  let content='';
  if(t.items){
   content=t.items.map(([before,after,answers],i)=>{
    const val=String(values[i]||''),ok=answers.some(a=>grammarNormalize(a)===grammarNormalize(val));
-   return `<div style="margin:12px 0;line-height:1.85;overflow-wrap:break-word"><strong>${i+1}.</strong> ${esc(before)}<input data-grammar="${i}" aria-label="Aufgabe ${i+1}" autocomplete="off" autocapitalize="none" spellcheck="false" value="${esc(val)}" style="${inputStyle};border:2px solid ${checked?(ok?'#6ee7a8':'#ff8d8d'):'#8c86bd'}">${esc(after)}${reveal?`<div style="margin:5px 0 10px;padding:9px 11px;background:#e7f9e9;color:#173c26;border-radius:9px;font-weight:750">💡 Richtige Lösung: ${esc(answers.join(' / '))}</div>`:''}</div>`;
+   return `<div style="margin:12px 0;line-height:1.5;overflow-wrap:break-word"><strong>${i+1}.</strong> ${esc(before)}<input data-grammar="${i}" aria-label="Aufgabe ${i+1}" autocomplete="off" autocapitalize="none" spellcheck="false" value="${esc(val)}" style="${inputStyle};border:2px solid ${checked?(ok?'#6ee7a8':'#ff8d8d'):'#8c86bd'}">${esc(after)}${reveal?`<div style="margin:5px 0 10px;padding:9px 11px;background:#e7f9e9;color:#173c26;border-radius:9px;font-weight:750">💡 Richtige Lösung: ${esc(answers.join(' / '))}</div>`:''}</div>`;
   }).join('');
  }else{
   content=t.open.map((example,i)=>`<div style="margin:14px 0"><label style="display:block;margin-bottom:5px"><strong>${i+1}.</strong> ${esc(t.prompts?.[i]||'Schreibe einen vollständigen englischen Satz.')}</label><textarea data-grammar="${i}" rows="2" spellcheck="false" style="box-sizing:border-box;width:100%;max-width:100%;padding:9px;border-radius:8px;font-size:16px;background:white;color:#17152b">${esc(values[i]||'')}</textarea>${reveal?`<p class="muted">Musterlösung: <strong>${esc(example)}</strong></p>`:''}</div>`).join('');
