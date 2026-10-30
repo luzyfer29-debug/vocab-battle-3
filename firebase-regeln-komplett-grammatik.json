@@ -119,7 +119,7 @@
     },
     "grammarRooms": {
       "$code": {
-        
+                ".read": "auth != null",
         "meta": {
           ".write": "auth != null && auth.uid === 'M41x9WNoHAfqpSmyrztAgf2IZYC3' && ((!data.exists() && newData.child('hostUid').val() === auth.uid && newData.child('stage').val() === 'lobby') || (data.child('hostUid').val() === auth.uid && newData.child('hostUid').val() === auth.uid))"
         },
