@@ -836,7 +836,7 @@ function gbListen(){
   if(gbRetryTimer){clearTimeout(gbRetryTimer);gbRetryTimer=null;}
   gbReadRetries=0;
   const liveRoom=s.val();if(!liveRoom){if(gbRole==='player')msg('Grammatik-Raum nicht gefunden.',true);return;}
-  gbRoom=liveRoom;gbRoomReady=true;gbRender();
+  gbRoom=liveRoom;gbRoomReady=true;try{gbRender();}catch(e){console.error('Lobby render failed',e);if(gbRole==='host'){app.innerHTML=card('<h2>Warteraum</h2><p>Raumcode: '+esc(gbCode)+'</p><p>Spieler: '+Object.values(liveRoom.slots||{}).map(p=>esc(p.name)).join(', ')+'</p>'+btn('Battle starten','gbStart'));}else msg('Anzeige fehlgeschlagen: '+e.message,true);}
  },e=>{
   if(gbCode!==listeningCode)return;
   const age=Date.now()-Number(gbRoom?.meta?.createdAt||Date.now());
