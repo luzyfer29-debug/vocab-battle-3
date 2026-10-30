@@ -260,9 +260,20 @@ const savedCompetitionRuns=new Set();
 async function saveCompetitionResults(m,playersList,activity,roomCode,runId){
  if(!adminLoggedIn||uid!==ADMIN_UID||!db||!activity||m.stage!=='finished')return;
  const runKey=`${roomCode}:${runId||m.createdAt||'run'}`;if(savedCompetitionRuns.has(runKey))return;savedCompetitionRuns.add(runKey);
- const root=activity.subject==='math'?'mathProgress':'soloProgress',ranked=rankByScore(playersList,p=>Number(p.score)||0),updatedAt=Number(m.finishedAt)||Date.now();
- try{for(const {row:p,place,tied} of ranked){if(!p.uid||!SOLO_NAMES.includes(p.name))continue;const weeklyBonusPoints=await claimWeeklyAward(m,p,activity,roomCode,runId),publicResult={name:p.name,activity:activity.id,label:activity.label,correct:Math.min(activity.max,Math.max(0,Math.floor((Number(p.score)||0)/10))),maxCorrect:activity.max,bonusPoints:battleBonusPoints(place),weeklyBonusPoints,weeklyAwardWeek:String(m.weeklyAwardWeek||''),runId:String(runId||''),roomCode:String(roomCode||''),place,tied:!!tied,finished:true,updatedAt};await runTransaction(ref(db,`battleRankings/${activity.subject}/${activity.id}/${p.name}`),current=>Number(current?.updatedAt)>=updatedAt?current:publicResult);}}
- catch(e){savedCompetitionRuns.delete(runKey);msg('Battle-Ergebnis konnte nicht vollständig gespeichert werden: '+e.message,true);}
+ const ranked=rankByScore(playersList,p=>Number(p.score)||0),updatedAt=Number(m.finishedAt)||Date.now();
+ const weekKey=activityDateKeys(updatedAt).weekKey;
+ const safeRun=String(runId||m.createdAt||updatedAt).replace(/[^A-Za-z0-9_-]/g,'_').slice(0,80);
+ const safeRoom=String(roomCode||'room').replace(/[^A-Za-z0-9_-]/g,'_').slice(0,30);
+ const weekActivity=`week_${weekKey}_${activity.id}_${safeRoom}_${safeRun}`;
+ try{
+  for(const {row:p,place,tied} of ranked){
+   if(!p.uid||!SOLO_NAMES.includes(p.name))continue;
+   const weeklyBonusPoints=await claimWeeklyAward(m,p,activity,roomCode,runId);
+   const publicResult={name:p.name,activity:activity.id,label:activity.label,correct:Math.min(activity.max,Math.max(0,Math.floor((Number(p.score)||0)/10))),maxCorrect:activity.max,bonusPoints:battleBonusPoints(place),weeklyBonusPoints,weeklyAwardWeek:String(m.weeklyAwardWeek||''),runId:String(runId||''),roomCode:String(roomCode||''),place,tied:!!tied,finished:true,updatedAt};
+   // Store every completed run separately; legacy last-result records remain untouched.
+   await runTransaction(ref(db,`battleRankings/${activity.subject}/${weekActivity}/${p.name}`),current=>current?.finished?current:publicResult);
+  }
+ }catch(e){savedCompetitionRuns.delete(runKey);msg('Battle-Ergebnis konnte nicht vollständig gespeichert werden: '+e.message,true);}
 }
 let savedEnglishSeriesRoom='';
 async function saveEnglishSeriesResult(m=room?.meta||{}){
@@ -810,19 +821,34 @@ async function resetBattleScores(subject){
  }catch(e){msg('Spielstände konnten nicht vollständig zurückgesetzt werden: '+e.message,true);}finally{resetBusy=false;}
 }
 async function showBattleSeries(subject){
- stopSoloHeartbeat();const isMath=subject==='math',title=isMath?'Mathe':'Englisch';
- app.innerHTML=card(`<h2>🏆 ${title} · Battle-Auswertung</h2><p>Battle-Ergebnisse werden geladen …</p>`)+card(btn('Zurück','home','alt'));
+ stopSoloHeartbeat();const title=subject==='math'?'Mathe':'Englisch';
+ app.innerHTML=card(`<h2>🏆 ${title} · Battle-Wochenwertung</h2><p>Ergebnisse werden geladen …</p>`)+card(btn('Zurück','home','alt'));
  try{
-  const snap=await get(ref(db,`battleRankings/${subject}`)),data=snap.val()||{},activities=battleOverviewActivities(subject),rows=SOLO_NAMES.map(name=>({name,results:{},total:0,played:0}));
-  for(const activity of activities)for(const row of rows){const record=data?.[activity.id]?.[row.name];if(!record?.finished||!Number.isFinite(Number(record.correct))||Number(record.maxCorrect)<=0)continue;row.results[activity.id]={correct:Math.min(Number(record.maxCorrect),Math.max(0,Number(record.correct)||0)),maxCorrect:Number(record.maxCorrect),weeklyBonusPoints:Math.max(0,Number(record.weeklyBonusPoints)||0),updatedAt:Number(record.updatedAt)||0};}
-  for(const activity of activities){const ranked=competitionRank(rows.filter(row=>row.results[activity.id]).map(row=>({...row,...row.results[activity.id]})));for(const entry of ranked){const result=rows.find(row=>row.name===entry.row.name).results[activity.id];result.place=entry.place;result.tied=entry.tied;result.bonus=entry.bonus;}}
-  for(const row of rows){row.played=activities.filter(a=>row.results[a.id]).length;row.weekly=activities.reduce((sum,a)=>sum+(row.results[a.id]?.weeklyBonusPoints||0),0);row.total=activities.reduce((sum,a)=>sum+(row.results[a.id]?.bonus||0)+(row.results[a.id]?.weeklyBonusPoints||0),0);}
-  const overall=competitionRank(rows.filter(row=>row.played).map(row=>({...row,correct:row.total})));for(const entry of overall){const row=rows.find(item=>item.name===entry.row.name);row.totalPlace=entry.place;row.totalTied=entry.tied;}
-  const summaryHead=activities.map(a=>`<th>${esc(a.label)}</th>`).join('');
-  const summaryRows=rows.map(row=>`<tr><td>${row.totalPlace?`${row.totalPlace}.${row.totalTied?' · Gleichstand':''}`:'–'}</td><td><strong>${esc(row.name)}</strong></td>${activities.map(a=>{const r=row.results[a.id];return `<td>${r?`+${r.bonus}${r.weeklyBonusPoints?`<br><small>+${r.weeklyBonusPoints} Woche</small>`:''}`:'–'}</td>`;}).join('')}<td>${row.played?`+${row.weekly}`:'–'}</td><td><strong>${row.played?row.total:'–'}</strong></td></tr>`).join('');
-  const details=activities.map(activity=>{const ranked=competitionRank(rows.filter(row=>row.results[activity.id]).map(row=>({...row,...row.results[activity.id]}))),byName=new Map(ranked.map(e=>[e.row.name,e]));return `<details class="player"><summary><strong>${esc(activity.label)}</strong></summary><div style="overflow-x:auto"><table style="width:100%;min-width:0;table-layout:fixed;border-collapse:collapse;text-align:center;font-size:clamp(13px,3.6vw,16px)"><thead><tr><th style="width:12%">Platz</th><th style="width:24%">Name</th><th style="width:22%">Richtig</th><th style="width:22%">Battle-Punkte</th><th style="width:20%">Wochenbonus</th></tr></thead><tbody>${rows.map(row=>{const e=byName.get(row.name);return `<tr><td>${e?`${e.place}.`:'–'}</td><td>${esc(row.name)}</td><td>${e?`${e.row.correct}/${e.row.maxCorrect}`:'–'}</td><td>${e?`+${e.bonus}${e.tied?' · Gleichstand':''}`:'–'}</td><td>${e&&e.row.weeklyBonusPoints?`+${e.row.weeklyBonusPoints}`:'–'}</td></tr>`;}).join('')}</tbody></table></div>${ranked.length?'':'<p class="muted">Dieses Battle wurde noch nicht gewertet.</p>'}</details>`;}).join('');
-  app.innerHTML=card(`<h2>🏆 ${title} · Battle-Auswertung</h2><p>Die Wochenpunkte aus der Vorwoche werden beim ersten Live-Battle einmalig dazugerechnet. Danach startet die Wochenwertung neu.</p><h3>Einzelwertung je Battle</h3>${details}<h3>Gesamtübersicht · nur ${title}</h3><div style="overflow-x:auto"><table style="width:100%;min-width:900px;border-collapse:collapse;text-align:center"><thead><tr><th>Platz</th><th>Name</th>${summaryHead}<th>Wochenbonus</th><th>Gesamtpunkte</th></tr></thead><tbody>${summaryRows}</tbody></table></div>${rows.every(row=>!row.played)?'<p class="muted">Noch keine abgeschlossenen Battles gespeichert.</p>':''}`)+card(btn('Zurück zur Übersicht','home','alt'));
- }catch(e){app.innerHTML=card(`<h2>🏆 ${title} · Battle-Auswertung</h2><p class="error">Auswertung konnte nicht geladen werden: ${esc(e.message)}</p>`)+card(btn('Zurück zur Übersicht','home','alt'));}
+  const snap=await get(ref(db,`battleRankings/${subject}`)),data=snap.val()||{},weekKey=activityDateKeys().weekKey;
+  const weeks=new Set([weekKey]);
+  for(const key of Object.keys(data)){const m=key.match(/^week_(\\d{4}-W\\d{2})_/);if(m)weeks.add(m[1]);}
+  const selected=Array.from(weeks).sort().reverse();
+  const weeklyTables=selected.map(week=>{
+   const rows=SOLO_NAMES.map(name=>({name,points:0,played:0,correct:0,bonus:0}));
+   const records=[];
+   for(const [key,byName] of Object.entries(data)){
+    if(!key.startsWith(`week_${week}_`))continue;
+    for(const row of rows){
+     const r=byName?.[row.name];if(!r?.finished)continue;
+     const points=Math.max(0,Number(r.bonusPoints)||0),bonus=Math.max(0,Number(r.weeklyBonusPoints)||0);
+     row.points+=points+bonus;row.bonus+=bonus;row.correct+=Math.max(0,Number(r.correct)||0);row.played++;
+     records.push({name:row.name,label:String(r.label||r.activity||'Battle'),points,bonus,at:Number(r.updatedAt)||0});
+    }
+   }
+   rows.sort((a,b)=>b.points-a.points||b.correct-a.correct||a.name.localeCompare(b.name));
+   const dateRange=isoWeekDays(week),period=`${dateRange[0]||''} bis ${dateRange[6]||''}`;
+   const table=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;text-align:center"><thead><tr><th>Platz</th><th>Kind</th><th>Battles</th><th>Punkte</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${r.played?i+1+'.':'–'}</td><td>${esc(r.name)}</td><td>${r.played}</td><td><strong>${r.points}</strong></td></tr>`).join('')}</tbody></table></div>`;
+   records.sort((a,b)=>b.at-a.at);
+   const history=records.length?`<details><summary>Einzelne Battle-Ergebnisse (${records.length})</summary><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Datum</th><th>Kind</th><th>Battle</th><th>Punkte</th></tr></thead><tbody>${records.map(r=>`<tr><td>${r.at?esc(new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(r.at))):'–'}</td><td>${esc(r.name)}</td><td>${esc(r.label)}</td><td>+${r.points+r.bonus}</td></tr>`).join('')}</tbody></table></div></details>`:'<p class="muted">Noch keine neuen Battle-Durchläufe für diese Woche gespeichert.</p>';
+   return `<details ${week===weekKey?'open':''}><summary><strong>${week===weekKey?'Aktuelle Woche':'Archiv'} · ${esc(week)}</strong> · ${esc(period)}</summary>${table}${history}</details>`;
+  }).join('');
+  app.innerHTML=card(`<h2>🏆 ${title} · Battle-Wochenwertung</h2><p>Montag bis Sonntag, getrennt nach Fach. Jeder abgeschlossene Battle-Durchlauf wird einmal gezählt. Ältere Einzelstände ohne Durchlaufhistorie werden nicht rückwirkend einer Woche zugerechnet.</p>${weeklyTables}`)+card(btn('↻ Aktualisieren',subject==='math'?'mathBattleSeries':'englishBattleSeries','alt')+btn('Zurück zur Übersicht','home','alt'));
+ }catch(e){app.innerHTML=card(`<h2>🏆 ${title} · Battle-Wochenwertung</h2><p class="error">Auswertung konnte nicht geladen werden: ${esc(e.message)}</p>`)+card(btn('Zurück zur Übersicht','home','alt'));}
 }
 function showEnglishSeries(){return showBattleSeries('english');}
 function showGrammarSeries(){return showBattleSeries('english');}
