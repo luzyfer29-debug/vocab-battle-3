@@ -43,7 +43,7 @@ export const GRAMMAR=[
    ['Two women ',' (sprain) their ankles.',['have sprained']],
    ['Three men ',' (hurt) their heads.',['have hurt']]
   ]},
-  {title:'2 · Megan works for the emergency services. Make sentences',intro:'Use the present perfect. Vorgaben in Arbeitsblatt-Reihenfolge: work on the computer · open the window · hang up her uniform · drink tea · make a phone call · write a message.',open:[
+  {title:'2 · Megan works for the emergency services. Make sentences',intro:'What has she already done today? Make six complete sentences. Use each phrase once: work on the computer · open the window · hang up her uniform · drink tea · make a phone call · write a message. Write has already and the correct past participle yourself.',prompts:['work on the computer','open the window','hang up her uniform','drink tea','make a phone call','write a message'],open:[
    'Megan has already worked on the computer.',
    'She has already opened the window.',
    'She has already hung up her uniform.',
