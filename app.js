@@ -89,7 +89,7 @@ function waitForBattleAuth(action){pendingBattleStart=action;status.textContent=
 async function adminLogin(){const email=document.querySelector('#admin-email')?.value.trim(),password=document.querySelector('#admin-password')?.value;if(!email||!password){msg('Bitte E-Mail und Passwort eingeben.',true);return;}manualAuthSubmit=true;try{await setPersistence(authClient,browserLocalPersistence);const cred=await signInWithEmailAndPassword(authClient,email,password);if(cred.user.uid!==ADMIN_UID){await signOut(authClient);adminLoggedIn=false;manualAuthSubmit=false;msg('Dieses Konto ist nicht als Schiedsrichter berechtigt.',true);return;}uid=cred.user.uid;adminLoggedIn=true;authStateReady=true;const pending=pendingBattleStart;pendingBattleStart='';if(!launchPendingBattleStart(pending)){home();msg('Schiedsrichter erfolgreich angemeldet.');}manualAuthSubmit=false;}catch(e){manualAuthSubmit=false;msg('Anmeldung fehlgeschlagen. Bitte E-Mail und Passwort prüfen. '+e.code,true);}}
 async function adminLogout(){try{await signOut(authClient);adminLoggedIn=false;uid='';home();}catch(e){msg('Abmeldung fehlgeschlagen: '+e.message,true);}}
 
-const SOLO_NAMES=['Luca','Semir','Talea','Nele'];
+const SOLO_NAMES=['Luca','Semir','Talea','Nele','Frauke'];
 let activitySyncWarned=false;
 function activityPeriodKeys(timestamp=Date.now()){
  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(timestamp)).map(x=>[x.type,x.value]));
