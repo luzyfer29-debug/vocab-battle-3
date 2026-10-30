@@ -105,7 +105,7 @@ function grammarReveal(){if(grammarStation===null||grammarTask===null)return;gra
 function grammarClear(){if(grammarStation===null||grammarTask===null)return;grammarWrite(grammarStation,grammarTask,[]);grammarRender(grammarStation,grammarTask);}
 
 const key='vb2solo';
-const SOLO_NAMES=['Luca','Semir','Talea','Nele'];
+const SOLO_NAMES=['Luca','Semir','Talea','Nele','Frauke'];
 let activitySyncWarned=false;
 function activityPeriodKeys(timestamp=Date.now()){
 
