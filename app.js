@@ -223,6 +223,9 @@ async function showRefereeDailyWeekly(){
  try{
   const [todaySnap,weekDays]=await Promise.all([get(ref(db,`learningDailyLeaderboard/${dayKey}`)),loadWeekDailyRows(weekKey)]);
   const today=todaySnap.val()||{};
+  const lucaRows=Object.values(today?.english?.Luca||{});
+  const lucaDiagnostics=lucaRows.map(row=>({raw:Number(row?.attempts)||0,checked:Number(row?.checkedAttempts)||0,exerciseCount:Object.values(row?.progressByExercise||{}).reduce((n,v)=>n+(Number(v?.count)||0),0),calculated:dailyRowTotals(row).attempts}));
+  const lucaDiagnosticHtml='<p class="muted" style="font-size:12px">Prüfung Luca · Datum '+esc(dayKey)+' · Datensätze '+lucaRows.length+' · Werte '+esc(JSON.stringify(lucaDiagnostics))+'</p>';
   const dailyHtml=subject=>{
    const data=today[subject]||{};
    const rows=names.map(name=>{let attempts=0,checkedAttempts=0,mistakes=0;for(const row of Object.values(data[name]||{})){const totals=dailyRowTotals(row);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;}return {name,attempts,checkedAttempts,mistakes,rate:checkedAttempts?mistakes/checkedAttempts:null};}).sort((a,b)=>b.attempts-a.attempts||(a.rate??Infinity)-(b.rate??Infinity)||names.indexOf(a.name)-names.indexOf(b.name));
@@ -230,7 +233,7 @@ async function showRefereeDailyWeekly(){
   };
   const weekRows=rankDailyWins(weekDays,weekKey);
   const weekHtml='<section class="solo-section"><h3>📅 Woche · '+esc(weekKey)+'</h3><p>Gezählt werden gewonnene Tagesvergleiche in Englisch und Mathe.</p>'+weekRows.map(row=>'<div class="solo-game"><div class="row"><h3>'+(row.place===1?'🥇':row.place===2?'🥈':row.place===3?'🥉':'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.wins+' '+(row.wins===1?'gewonnener Tag':'gewonnene Tage')+'</span></div></div>').join('')+'</section>';
-  app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p>'+esc(dateLabel)+'</p>'+dailyHtml('english')+dailyHtml('math')+weekHtml)+card(btn('↻ Aktualisieren','refereeDailyWeekly','alt'))+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));
+  app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p>'+esc(dateLabel)+'</p>'+lucaDiagnosticHtml+dailyHtml('english')+dailyHtml('math')+weekHtml)+card(btn('↻ Aktualisieren','refereeDailyWeekly','alt'))+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));
  }catch(e){app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p class="error">Wertungen konnten nicht geladen werden: '+esc(e.message||e)+'</p>')+card(btn('Erneut laden','refereeDailyWeekly','alt'))+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));}
 }
 async function weeklyAwardStartFields(){const weekKey=activityDateKeys().weekKey;try{const plan=await weeklyPrizePlan(weekKey);return {weeklyAwardWeek:weekKey,weeklyAwards:plan.points};}catch(e){console.warn('Wochenbonus konnte nicht vorbereitet werden:',e);return {weeklyAwardWeek:weekKey,weeklyAwards:{}};}}
