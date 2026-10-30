@@ -137,7 +137,8 @@ function dailyRowTotals(row){
  const entries=Object.values(row?.progressByExercise||{});
  const progress=entries.reduce((sum,item)=>sum+Math.max(0,Math.floor(Number(item?.count)||0)),0);
  const stored=Math.max(Number(row?.attempts)||0,(Number(row?.checkedAttempts)||0)+(Number(row?.submittedAttempts)||0));
- if(stored>=1000)return {attempts:progress,checkedAttempts:progress,mistakes:Math.min(progress,Math.max(0,Number(row?.mistakes)||0))};
+ if(stored>=1000 && entries.length)return {attempts:progress,checkedAttempts:progress,mistakes:Math.min(progress,Math.max(0,Number(row?.mistakes)||0))};
+ if(stored>=1000)return {attempts:0,checkedAttempts:0,mistakes:0};
  const hasProgress=entries.length>0,verified=Number(row?.answerCounterVersion)===2;
  const hasChecked=Object.prototype.hasOwnProperty.call(row||{},'checkedAttempts')&&Number.isFinite(Number(row.checkedAttempts))&&Number(row.checkedAttempts)>=0;
  const trusted=verified||hasChecked;
