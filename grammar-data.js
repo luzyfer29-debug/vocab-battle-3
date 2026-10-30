@@ -11,14 +11,14 @@ export const GRAMMAR=[
   {title:'2 · Adjective or adverb? Put in the right form',intro:'Last week Mark’s class went on a school trip. They tried outdoor rock climbing.',items:[
    ['Everyone was ',' (excited).',['excited']],
    ['Their instructor told them that climbing is a ',' (dangerous) sport if you aren’t careful.',['dangerous']],
-   ['Their instructor told them that climbing is a dangerous sport if you aren’t ',' (careful).',['careful']],
+   ['... if you aren’t ',' (careful).',['careful']],
    ['So the students borrowed helmets and other equipment to keep them ',' (safe).',['safe']],
    ['Then they started to climb ',' (slow).',['slowly']],
    ['After some time they were all ',' (hungry).',['hungry']],
    ['“Oh, look at the weather,” the instructor said. “It’s going to rain ',' (heavy) soon. Let’s go back!”',['heavily']],
    ['The students ate their sandwiches ',' (quick) and climbed down again.',['quickly']],
    ['Everything went ',' (good) and they got back home safely.',['well']],
-   ['Everything went well and they got back home ',' (safe).',['safely']]
+   ['... and they got back home ',' (safe).',['safely']]
   ]},
   {title:'3 · Put in the right form',intro:'Wörter: myself · yourself · himself · herself · ourselves · themselves · each other',items:[
    ['Beth enjoyed ',' at the activity centre.',['herself']],
