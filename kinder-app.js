@@ -237,7 +237,7 @@ async function showDailyLeaderboard(subject){
  app.innerHTML=card(`<h2>🏆 ${title} · Tagesvergleich</h2><p>Wer hat heute die meisten Antworten bearbeitet und wer hat die niedrigste Fehlerquote?</p><p class="muted">Es zählen geprüfte und ausdrücklich ausgewertete freie Antworten. Live-Eingaben zählen erst nach der Auswertung.</p><p>Lade Tageswerte …</p>`)+card(btn('Zurück zum Lernen',back,'alt'));
  try{
   const {dayKey}=activityPeriodKeys();
-  if(subject==='english')try{await repairCorruptDailyEnglishSummary(dayKey);}catch(error){console.warn('Tageswerte konnten nicht bereinigt werden:',error);}
+  // Keine automatischen Änderungen an historischen Tagesdaten beim bloßen Anzeigen.
   // Do not turn exercise sessions or progress snapshots into answer counts.
   // Historical vocabulary progress is not an auditable per-answer log.
   let snapshot=await get(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}`)),raw=snapshot.val()||{};for(let retry=0;retry<3&&!Object.keys(raw).length;retry++){await new Promise(resolve=>setTimeout(resolve,300));snapshot=await get(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}`));raw=snapshot.val()||{};}const totals={};
