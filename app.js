@@ -277,12 +277,13 @@ async function vocabWorkCreateRoom(kind,title,chooseAction,station=0){
  if(!adminLoggedIn||uid!==ADMIN_UID){pendingBattleStart=pendingKey;loginForm();return;}
  if(refereeRoomCreating){msg('Warteraum wird bereits erstellt. Bitte kurz warten.');return;}
  refereeRoomCreating=true;
+ vocabWorkStartPending(title);
  const roomCode=String(Math.floor(100000+Math.random()*900000));
  const meta={hostUid:uid,index:0,stage:'lobby',deadline:0,createdAt:Date.now(),...(kind==='grammar'?{station}:{kind})};
  try{
   if(!db)throw new Error('Firebase-Datenbank nicht verbunden');
   await refreshRefereeSession();
-  await set(ref(db,`grammarRooms/${roomCode}/meta`),meta);
+  await Promise.race([set(ref(db,`grammarRooms/${roomCode}/meta`),meta),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Firebase antwortet seit 12 Sekunden nicht.')),12000))]);
    const savedMeta=await get(ref(db,`grammarRooms/${roomCode}/meta`));
    if(!savedMeta.exists()||savedMeta.val()?.hostUid!==uid)throw new Error('Raum wurde nicht korrekt gespeichert.');
   gbStop();gbCode=roomCode;gbRole='host';gbSlot='';gbChooseAction=chooseAction||pendingKey;
