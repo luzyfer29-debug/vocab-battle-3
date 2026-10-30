@@ -967,7 +967,7 @@ function vocabWorkStation2Page(page,checked=false,resultText=''){
    `5. You ${vocabWorkStation2Input(2,4,'Aufgabe 3 · Satz 5','clamp(120px,30vw,220px)')} (stay with / wait for) the hurt person.`,
    `6. You ${vocabWorkStation2Input(2,5,'Aufgabe 3 · Satz 6','clamp(120px,30vw,220px)')} (take / bring) a person to hospital.`
   ].map(x=>`<p style="line-height:1.8;margin:14px 0">${x}</p>`).join('');
-  const services=['1.','2.','3.','4.'].map((n,i)=>`<label style="display:flex;align-items:center;gap:8px;margin:12px 0;font-weight:700"><span>${n}</span>${vocabWorkStation2Input(2,6+i,`Aufgabe 4 · Emergency service ${n}`)}</label>`).join('');
+  const services=['P','F','A','C'].map((letter,i)=>`<label style="display:flex;align-items:center;gap:8px;margin:12px 0;font-weight:700"><span>${i+1}.</span><strong style="font-size:1.25rem;color:#fff">${letter}</strong>${vocabWorkStation2Input(2,6+i,`Aufgabe 4 · Emergency service ${i+1}`)}</label>`).join('');
    app.innerHTML=card(`<h2>🩹 Vokabelarbeit · Station 2 · Seite 2</h2><p class="muted">${esc(soloName)} · Vocabulary</p><section class="solo-section"><h3>3. Put in the right verb.</h3>${verbs}</section><section class="solo-section"><h3>4. Name the four emergency services in the UK.</h3>${services}</section>${result}<p class="small muted">Jede Eingabe wird sofort online angezeigt. „Prüfen“ ist nur für die Punkteauswertung nötig.</p><div class="buttons">${btn('✅ Antworten auswerten','vocabWorkStation2Check')}</div>`)+back;
  }
  void scheduleVocabWorkDraftSync(2,page);window.scrollTo(0,0);
