@@ -826,15 +826,15 @@ async function showBattleSeries(subject){
  try{
   const snap=await get(ref(db,`battleRankings/${subject}`)),data=snap.val()||{},weekKey=activityDateKeys().weekKey;
   const weeks=new Set([weekKey]);
-  for(const key of Object.keys(data)){const m=key.match(/^week_(\\d{4}-W\\d{2})_/);if(m)weeks.add(m[1]);}
+  for(const [key,entries] of Object.entries(data)){const m=key.match(/^week_(\\d{4}-W\\d{2})_/);if(m)weeks.add(m[1]);else for(const rec of Object.values(entries||{})){if(rec?.finished&&Number(rec.updatedAt)>0)weeks.add(activityDateKeys(Number(rec.updatedAt)).weekKey);}}
   const selected=Array.from(weeks).sort().reverse();
   const weeklyTables=selected.map(week=>{
    const rows=SOLO_NAMES.map(name=>({name,points:0,played:0,correct:0,bonus:0}));
    const records=[];
    for(const [key,byName] of Object.entries(data)){
-    if(!key.startsWith(`week_${week}_`))continue;
+    if(!key.startsWith(`week_${week}_`)){if(key.startsWith('week_'))continue;}
     for(const row of rows){
-     const r=byName?.[row.name];if(!r?.finished)continue;
+     const r=byName?.[row.name];if(!r?.finished)continue;if(!key.startsWith('week_')&&activityDateKeys(Number(r.updatedAt)||0).weekKey!==week)continue;
      const points=Math.max(0,Number(r.bonusPoints)||0),bonus=Math.max(0,Number(r.weeklyBonusPoints)||0);
      row.points+=points+bonus;row.bonus+=bonus;row.correct+=Math.max(0,Number(r.correct)||0);row.played++;
      records.push({name:row.name,label:String(r.label||r.activity||'Battle'),points,bonus,at:Number(r.updatedAt)||0});
@@ -847,7 +847,7 @@ async function showBattleSeries(subject){
    const history=records.length?`<details><summary>Einzelne Battle-Ergebnisse (${records.length})</summary><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Datum</th><th>Kind</th><th>Battle</th><th>Punkte</th></tr></thead><tbody>${records.map(r=>`<tr><td>${r.at?esc(new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(r.at))):'–'}</td><td>${esc(r.name)}</td><td>${esc(r.label)}</td><td>+${r.points+r.bonus}</td></tr>`).join('')}</tbody></table></div></details>`:'<p class="muted">Noch keine neuen Battle-Durchläufe für diese Woche gespeichert.</p>';
    return `<details ${week===weekKey?'open':''}><summary><strong>${week===weekKey?'Aktuelle Woche':'Archiv'} · ${esc(week)}</strong> · ${esc(period)}</summary>${table}${history}</details>`;
   }).join('');
-  app.innerHTML=card(`<h2>🏆 ${title} · Battle-Wochenwertung</h2><p>Montag bis Sonntag, getrennt nach Fach. Jeder abgeschlossene Battle-Durchlauf wird einmal gezählt. Ältere Einzelstände ohne Durchlaufhistorie werden nicht rückwirkend einer Woche zugerechnet.</p>${weeklyTables}`)+card(btn('↻ Aktualisieren',subject==='math'?'battleSeriesMath':'battleSeriesEnglish','alt')+btn('Zurück zur Übersicht','home','alt'));
+  app.innerHTML=card(`<h2>🏆 ${title} · Battle-Wochenwertung</h2><p>Montag bis Sonntag, getrennt nach Fach. Jeder abgeschlossene Battle-Durchlauf wird einmal gezählt. Bereits gespeicherte Battle-Ergebnisse werden anhand ihres Zeitstempels ihrer Woche zugeordnet. Bei älteren Battles ist nur der zuletzt gespeicherte Stand je Spielart vorhanden.</p>${weeklyTables}`)+card(btn('↻ Aktualisieren',subject==='math'?'battleSeriesMath':'battleSeriesEnglish','alt')+btn('Zurück zur Übersicht','home','alt'));
  }catch(e){app.innerHTML=card(`<h2>🏆 ${title} · Battle-Wochenwertung</h2><p class="error">Auswertung konnte nicht geladen werden: ${esc(e.message)}</p>`)+card(btn('Zurück zur Übersicht','home','alt'));}
 }
 function showEnglishSeries(){return showBattleSeries('english');}
