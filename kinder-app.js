@@ -253,7 +253,7 @@ function reviewItemAt(item){const lastWrongAt=Number(item?.lastWrongAt)||0,resol
 async function recordLearningError(name,subject,exercise,index,topic,q,correct,occurredAt=Date.now()){
  if(!db||!uid||!SOLO_NAMES.includes(name)||!exercise)return false;
  const eventAt=Number(occurredAt)||Date.now(),path=`learningActivity/${uid}/${name}/${exercise}`,sharedPath=`learningReview/${name}/${subject}/${exercise}/${index}`;
- await updateDailyLeaderboard(name,subject,eventAt,!correct);
+ // Tages- und Wochenwertung nur für bestätigte Lernantworten, niemals für Live-Battles.
  try{
   let changedItem=null;
   await runTransaction(ref(db,path),current=>{
@@ -272,6 +272,7 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
    const next=learningErrorRecord(name,subject,topic,q,current,eventAt);
    return next;
   });
+  await updateDailyLeaderboard(name,subject,eventAt,!correct);
   activitySyncWarned=false;return true;
  }catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg(`Fehler konnten nicht geräteübergreifend gespeichert werden (${e.code||e.message||'Firebase-Zugriff verweigert'}).`,true);}return false;}
 }
