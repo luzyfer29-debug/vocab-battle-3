@@ -275,7 +275,7 @@ async function vocabWorkCreateRoom(kind,title,chooseAction,station=0){
  const pendingKey=kind==='grammar'?(station===0?'grammar-station-1':'grammar-station-2'):kind;
  if(!authStateReady){pendingBattleStart=pendingKey;loginForm();return;}
  if(!adminLoggedIn||uid!==ADMIN_UID){pendingBattleStart=pendingKey;loginForm();return;}
- if(refereeRoomCreating)return;
+ if(refereeRoomCreating){msg('Warteraum wird bereits erstellt. Bitte kurz warten.');return;}
  refereeRoomCreating=true;
  const roomCode=String(Math.floor(100000+Math.random()*900000));
  const meta={hostUid:uid,index:0,stage:'lobby',deadline:0,createdAt:Date.now(),...(kind==='grammar'?{station}:{kind})};
