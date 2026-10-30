@@ -46,7 +46,8 @@
             ".validate": "newData.hasChildren(['done','score','updatedAt','finished']) && newData.child('done').isNumber() && newData.child('done').val() >= 0 && newData.child('done').val() <= 30 && newData.child('score').isNumber() && newData.child('score').val() >= 0 && newData.child('score').val() <= newData.child('done').val() * 10 && newData.child('updatedAt').isNumber() && newData.child('finished').isBoolean() && (!newData.child('mistakes').exists() || newData.child('mistakes').hasChildren())"
           }
         }
-      }    },
+      }
+    },
     "learningDailyLeaderboard": {
       ".read": "auth != null",
       "$dayKey": {
@@ -119,7 +120,7 @@
     },
     "grammarRooms": {
       "$code": {
-                ".read": "auth != null",
+        ".read": "auth != null",
         "meta": {
           ".write": "auth != null && auth.uid === 'M41x9WNoHAfqpSmyrztAgf2IZYC3' && ((!data.exists() && newData.child('hostUid').val() === auth.uid && newData.child('stage').val() === 'lobby') || (data.child('hostUid').val() === auth.uid && newData.child('hostUid').val() === auth.uid))"
         },
