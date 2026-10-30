@@ -154,17 +154,9 @@ function learningProgressCount(state){
  return Math.max(0,done+writingDone,started,finished);
 }
 async function updateDailyActivityProgress(name,subject,exercise,eventAt,state){
- const count=learningProgressCount(state);
- if(!count||!db||!uid||!SOLO_NAMES.includes(name)||!['english','math'].includes(subject)||!exercise)return;
- const {dayKey}=activityPeriodKeys(eventAt),path=`learningDailyLeaderboard/${dayKey}/${subject}/${name}/${uid}`;
- try{await runTransaction(ref(db,path),current=>{
-  const value=current&&typeof current==='object'?{...current}:{name,attempts:0,mistakes:0,checkedAttempts:0};
-  
-  const progressByExercise={...(value.progressByExercise||{})},old=progressByExercise[exercise]||{};
-  progressByExercise[exercise]={...old,count:Math.max(Number(old.count)||0,count),updatedAt:Math.max(Number(old.updatedAt)||0,Number(eventAt)||Date.now()),title:String(state.taskTitle||state.status||exercise)};
-  const progress=Object.values(progressByExercise).reduce((sum,item)=>sum+Math.max(0,Number(item?.count)||0),0);
-  value.name=name;value.progressByExercise=progressByExercise;value.attempts=Math.max(1,value.checkedAttempts,progress);value.updatedAt=Math.max(Number(value.updatedAt)||0,Number(eventAt)||Date.now());return value;
- });dailyLeaderboardSyncWarned=false;}catch(e){console.warn('Lernfortschritt konnte nicht in den Tagesvergleich übernommen werden:',e);if(!dailyLeaderboardSyncWarned){dailyLeaderboardSyncWarned=true;msg('Tagesvergleich konnte nicht synchronisiert werden. Bitte die Firebase-Regeln für learningDailyLeaderboard prüfen.',true);}}
+ // Progress is for the live activity display only. Never add a started/completed
+ // exercise or its cumulative progress to the number of submitted answers.
+ return;
 }
 function learningActivityIds(subject){
  if(subject==='english')return [
@@ -244,8 +236,8 @@ async function showDailyLeaderboard(subject){
  try{
   const {dayKey}=activityPeriodKeys();
   if(subject==='english')try{await repairCorruptDailyEnglishSummary(dayKey);}catch(error){console.warn('Tageswerte konnten nicht bereinigt werden:',error);}
-  try{await backfillTodayLearningProgress(subject,dayKey);}catch(error){console.warn('Lernaktivitäten konnten nicht nachgetragen werden:',error);}
-  if(subject==='english')try{await backfillTodayEnglishVocab(dayKey);}catch(error){console.warn('Vokabel-Fortschritt konnte nicht nachgetragen werden:',error);}
+  // Do not turn exercise sessions or progress snapshots into answer counts.
+  // Historical vocabulary progress is not an auditable per-answer log.
   let snapshot=await get(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}`)),raw=snapshot.val()||{};for(let retry=0;retry<3&&!Object.keys(raw).length;retry++){await new Promise(resolve=>setTimeout(resolve,300));snapshot=await get(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}`));raw=snapshot.val()||{};}const totals={};
   for(const [name,byUid] of Object.entries(raw)){if(!SOLO_NAMES.includes(name))continue;for(const row of Object.values(byUid||{})){const t=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0});const values=dailyRowTotals(row);t.attempts+=values.attempts;t.checkedAttempts+=values.checkedAttempts;t.mistakes+=values.mistakes;}}
   const rows=Object.values(totals).map(x=>({...x,rate:x.checkedAttempts?100*x.mistakes/x.checkedAttempts:null})),most=[...rows].filter(x=>x.attempts>0).sort((a,b)=>b.attempts-a.attempts||a.name.localeCompare(b.name)),fewest=[...rows].filter(x=>x.checkedAttempts>0).sort((a,b)=>a.rate-b.rate||b.attempts-a.attempts||a.name.localeCompare(b.name));
