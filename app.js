@@ -822,7 +822,7 @@ function mathAction(v){if(v==='mathChoose')mathChoose();else if(v==='mathHome')m
 
 
 // Grammatik-Battle: Originalaufgaben, Texteingaben und Bewertung durch den Schiedsrichter.
-const GB_TIME=45000;
+const GB_TIME=15000;
 let gbCode='',gbRoom=null,gbOff=null,gbRole='',gbSlot='',gbBusy=false,gbTimer=null,gbRetryTimer=null,gbReadRetries=0,gbChooseAction='',gbRoomReady=false,gbRoomListenError=false;
 const gbNorm=s=>String(s||'').trim().toLowerCase().replace(/[’‘]/g,"'").replace(/\s+/g,' ');
 const gbQuestions=st=>GRAMMAR[st].tasks.flatMap((t,ti)=> (t.items||t.open||[]).map((item,i)=>({task:ti,number:i+1,title:t.title,intro:t.intro||'',prompt:t.items?item[0]+' _____ '+item[1]:(t.prompts?.[i]||'Schreibe einen vollständigen englischen Satz.'),accepted:t.items?item[2]:null,example:t.open?.[i]||null})));
