@@ -231,7 +231,7 @@ function rankDailyWins(days,weekKey=''){
   if(!rows.length)continue;
   rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate);
   const leader=rows[0];
-  wins[leader.name]++;
+  for(const row of rows)if(row.attempts===leader.attempts&&row.rate===leader.rate)wins[row.name]++;
  }
  if(weekKey==='2026-W44')wins.Luca=Math.max(wins.Luca||0,5);
  const all=names.map(name=>({name,wins:wins[name]}));
@@ -259,7 +259,7 @@ async function showRefereeDailyWeekly(){
    return '<section class="solo-section"><h3>'+(subject==='english'?'🇬🇧 Englisch':'🔢 Mathe')+' · Heute</h3>'+rows.map((row,index)=>'<div class="solo-game"><div class="row"><h3>'+(row.attempts?(index===0?'🥇':index===1?'🥈':index===2?'🥉':'👤'):'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.attempts+' Antworten</span></div><p>'+(row.rate===null?'Noch keine geprüften Antworten':(row.rate*100).toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1})+' % Fehler · '+row.mistakes+' falsch von '+row.checkedAttempts+' geprüften Antworten')+'</p></div>').join('')+'</section>';
   };
   const weekRows=rankDailyWins(weekDays,weekKey);
-  const weekHtml='<section class="solo-section"><h3>📅 Woche · '+esc(weekKey)+'</h3><p>Sieben Tageswertungen (Montag bis Sonntag) ergeben eine Wochenwertung. Pro Tag gewinnt genau ein Kind.</p>'+weekRows.map(row=>'<div class="solo-game"><div class="row"><h3>'+(row.place===1?'🥇':row.place===2?'🥈':row.place===3?'🥉':'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.wins+' '+(row.wins===1?'gewonnener Tag':'gewonnene Tage')+'</span></div></div>').join('')+'</section>';
+  const weekHtml='<section class="solo-section"><h3>📅 Woche · '+esc(weekKey)+'</h3><p>Sieben Tageswertungen (Montag bis Sonntag) ergeben eine Wochenwertung. Bei exakt gleicher Tagesleistung gewinnen beide Kinder.</p>'+weekRows.map(row=>'<div class="solo-game"><div class="row"><h3>'+(row.place===1?'🥇':row.place===2?'🥈':row.place===3?'🥉':'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.wins+' '+(row.wins===1?'gewonnener Tag':'gewonnene Tage')+'</span></div></div>').join('')+'</section>';
   app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p>'+esc(dateLabel)+'</p>'+lucaDiagnosticHtml+dailyHtml('english')+dailyHtml('math')+weekHtml)+card(btn('↻ Aktualisieren','refereeDailyWeekly','alt'))+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));
  }catch(e){app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p class="error">Wertungen konnten nicht geladen werden: '+esc(e.message||e)+'</p>')+card(btn('Erneut laden','refereeDailyWeekly','alt'))+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));}
 }
