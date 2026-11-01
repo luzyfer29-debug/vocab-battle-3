@@ -415,7 +415,7 @@ async function learningReview(name,subject=''){
   for(const [exercise,entry] of Object.entries(data))for(const [index,item] of Object.entries(entry?.errorItems||{})){
    const itemSubject=item?.subject|| (exercise.startsWith('math_')?'math':'english');
    const hasAttemptEvidence=item?.attempted===true||Number(index)<Math.max(0,Number(entry?.live?.done)||0);
-   if(itemSubject!==subject||(subject==='math'&&(/(?:^math_rational|^math_exam$)/i.test(String(exercise))||/rationale zahlen/i.test(String(item?.topic||''))))||item?.resolved===true||item?.source==='live_battle'||item?.source==='battle'||!hasAttemptEvidence)continue;
+   if(itemSubject!==subject||(subject==='math'&&(/(?:^math_rational|^math_exam$|^rational_)/i.test(String(exercise))||/rational(?:e|en)?\s+zahlen|rational_/i.test(String(item?.topic||''))||/rational(?:e|en)?\s+zahlen/i.test(learningActivityLabel(exercise)) ))||item?.resolved===true||item?.source==='live_battle'||item?.source==='battle'||!hasAttemptEvidence)continue;
    const reviewItem={...item,subject};
    if(!reviewItem.image&&Array.isArray(reviewItem.images)&&reviewItem.images.length===1)reviewItem.image=String(reviewItem.images[0]||'');
    const station2Picture=String(exercise).match(/^english_vocab_work_station2_page1$/);
