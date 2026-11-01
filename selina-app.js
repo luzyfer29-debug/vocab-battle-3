@@ -99,10 +99,12 @@ function renderHost(){
 state=JSON.parse(localStorage.getItem(key)||'{"records":{},"errors":{}}');
 const records=state.records||{};
 const total=Object.values(records).reduce((n,entries)=>n+Object.keys(entries||{}).length,0);
+const resetPanel='<section class="card"><details class="reset-panel"><summary>↺ Tagesaufgaben zurücksetzen</summary><p>Ein Thema und einen Wochentag auswählen. Nur diese Tagesaufgaben werden gelöscht; Mathe-Arbeiten bleiben erhalten.</p><label for="resetTopicSelect">Mathethema</label><select id="resetTopicSelect">'+topics.map(([id,name])=>'<option value="'+id+'">'+esc(name)+'</option>').join('')+'</select><label for="resetDaySelect">Wochentag</label><select id="resetDaySelect">'+days.map((name,d)=>'<option value="'+d+'">'+name+'</option>').join('')+'</select><button id="resetSelectedDay">Nur diesen Tag zurücksetzen</button></details></section>';
 
 app.innerHTML='<section class="card"><h2>📋 Selinas Lernübersicht</h2><div class="stat">Bearbeitete Tagesaufgaben: <strong>'+total+'</strong></div>'+status()+'</section>'
 +'<section class="card"><h2>💗 Noch zu wiederholen ('+Object.keys(state.errors||{}).length+')</h2>'+(Object.values(state.errors||{}).map(x=>'<p>'+esc(x.display)+' · '+esc(topics.find(t=>t[0]===x.topic)?.[1]||x.topic)+'</p>').join('')||'<p>Keine offenen Aufgaben.</p>')+'</section>'
-+workSummary()+dailyCompletionTable();
++workSummary()+dailyCompletionTable()+resetPanel;
+app.querySelector("#resetSelectedDay").onclick=()=>resetDay(app.querySelector("#resetTopicSelect").value,Number(app.querySelector("#resetDaySelect").value));
 
 }
 export function start(r){role=r;state.records??={};state.errors??={};if(role==="host")renderHost();else home();connect()}
