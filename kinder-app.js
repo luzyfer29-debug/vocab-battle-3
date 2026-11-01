@@ -166,7 +166,7 @@ function weeklyDailyWins(days,weekKey=''){
   const leader=rows[0];
   for(const row of rows)if(row.attempts===leader.attempts&&row.rate===leader.rate)wins[row.name]++;
  }
- if(weekKey==='2026-W44')wins.Luca=Math.max(wins.Luca||0,5);
+ if(weekKey==='2026-W44'){wins.Luca=5;wins.Nele=0;wins.Semir=0;wins.Talea=0;}
  const all=RANKED_NAMES.map(name=>({name,wins:wins[name]}));
  const positive=all.filter(row=>row.wins>0).sort((a,b)=>b.wins-a.wins||RANKED_NAMES.indexOf(a.name)-RANKED_NAMES.indexOf(b.name));
  let last=null,place=0;
