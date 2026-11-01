@@ -21,7 +21,7 @@ mul:["🐴 Gleich große Gruppen!","4 × 3","Stell dir 4 Gruppen mit je 3 Äpfel
 div:["🐴 Wir verteilen gerecht!","24 : 6","24 Äpfel auf 6 Pferde verteilen.","Jedes Pferd bekommt 4 Äpfel.","Probe: 6 × 4 = 24 🌟"],
 rem:["🐴 Manchmal bleibt etwas übrig!","23 : 5","5 Pferde bekommen je 4 Äpfel.","5 × 4 = 20, es bleiben 3 übrig.","Also: 23 : 5 = 4 Rest 3 🌟"]
 };
-function explanation(x){const nums=x.display.match(/[0-9]+/g)||[];const [a,b]=nums.map(Number);let steps=[];
+function explanation(x){const parts=String(x.display).match(/\\d+/g)||[];const a=Number(parts[0]),b=Number(parts[1]);let steps=[];
 switch(x.topic){
 case"add":{let az=Math.floor(a/10)*10,bz=Math.floor(b/10)*10;steps=["Zerlege beide Zahlen in Zehner und Einer.",a+" = "+az+" + "+(a-az)+" und "+b+" = "+bz+" + "+(b-bz),"Zehner: "+az+" + "+bz+" = "+(az+bz),"Einer: "+(a-az)+" + "+(b-bz)+" = "+((a-az)+(b-bz)),"Alles zusammen: "+(az+bz)+" + "+((a-az)+(b-bz))+" = "+(a+b)];break}
 case"sub":{let tens=Math.floor(b/10)*10,ones=b-tens;steps=["Ziehe zuerst die Zehner ab.",a+" − "+tens+" = "+(a-tens),"Dann die Einer: "+(a-tens)+" − "+ones+" = "+(a-b),"Probe: "+(a-b)+" + "+b+" = "+a];break}
