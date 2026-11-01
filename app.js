@@ -215,8 +215,31 @@ function dailyRowTotals(row){
  const mistakes=Math.min(checkedAttempts,Math.max(0,Number(row?.mistakes)||0));
  return {attempts:checkedAttempts+submittedAttempts,checkedAttempts,mistakes};
 }
-function rankDailyWins(weekDays,weekKey=''){const wins=Object.fromEntries(names.map(name=>[name,0]));for(const day of weekDays||[]){for(const subject of ['english','math']){const byName=day?.[subject]||{},rows=names.map(name=>{let attempts=0,checkedAttempts=0,mistakes=0;for(const row of Object.values(byName[name]||{})){const totals=dailyRowTotals(row);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;}return {name,attempts,checkedAttempts,mistakes,rate:checkedAttempts?mistakes/checkedAttempts:Infinity};}).filter(row=>row.attempts>0);if(!rows.length)continue;rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate);const leader=rows[0];for(const row of rows)if(row.attempts===leader.attempts&&row.rate===leader.rate)wins[row.name]++;}}
- if(weekKey==='2026-W44'){for(const name of names)wins[name]=name==='Luca'?5:0;}const all=names.map(name=>({name,wins:wins[name]})),rows=all.filter(row=>row.wins>0).sort((a,b)=>b.wins-a.wins||names.indexOf(a.name)-names.indexOf(b.name));let last=null,place=0;const ranked=rows.map((row,index)=>{if(index===0||row.wins!==last)place=index+1;last=row.wins;return {...row,place,tied:rows.filter(x=>x.wins===row.wins).length>1,points:[20,15,10][place-1]||0};});return [...ranked,...all.filter(row=>!row.wins).map(row=>({...row,place:0,tied:false,points:0}))];}
+// A daily win is awarded once per calendar day, combining English and math learning.
+// The historical KW44 Luca correction is retained as a minimum, not a replacement
+// for live Firebase totals; future weeks are calculated exclusively from daily rows.
+function rankDailyWins(days,weekKey=''){
+ const wins=Object.fromEntries(names.map(name=>[name,0]));
+ for(const day of days||[]){
+  const rows=names.map(name=>{
+   let attempts=0,checkedAttempts=0,mistakes=0;
+   for(const subject of ['english','math'])for(const row of Object.values(day?.[subject]?.[name]||{})){
+    const t=dailyRowTotals(row);attempts+=t.attempts;checkedAttempts+=t.checkedAttempts;mistakes+=t.mistakes;
+   }
+   return {name,attempts,rate:checkedAttempts?mistakes/checkedAttempts:Infinity};
+  }).filter(row=>row.attempts>0);
+  if(!rows.length)continue;
+  rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate);
+  const leader=rows[0];
+  for(const row of rows)if(row.attempts===leader.attempts&&row.rate===leader.rate)wins[row.name]++;
+ }
+ if(weekKey==='2026-W44')wins.Luca=Math.max(wins.Luca||0,5);
+ const all=names.map(name=>({name,wins:wins[name]}));
+ const positive=all.filter(row=>row.wins>0).sort((a,b)=>b.wins-a.wins||names.indexOf(a.name)-names.indexOf(b.name));
+ let last=null,place=0;
+ const ranked=positive.map((row,index)=>{if(index===0||row.wins!==last)place=index+1;last=row.wins;return {...row,place,tied:positive.filter(x=>x.wins===row.wins).length>1,points:[20,15,10][place-1]||0};});
+ return [...ranked,...all.filter(row=>!row.wins).map(row=>({...row,place:0,tied:false,points:0}))];
+}
 async function loadWeekDailyRows(weekKey){if(!db)return [];const days=isoWeekDays(weekKey);return Promise.all(days.map(async day=>{const snap=await get(ref(db,`learningDailyLeaderboard/${day}`));return snap.val()||{};}));}
 async function weeklyPrizePlan(weekKey){const sourceWeek=previousIsoWeek(weekKey);if(!sourceWeek)return {sourceWeek:'',rows:[],points:{}};const [dailyRows,claims]=await Promise.all([loadWeekDailyRows(sourceWeek),get(ref(db,`weeklyBattleAwards/${weekKey}`))]);const rows=rankDailyWins(dailyRows,sourceWeek),claimed=claims.val()||{},points={};for(const row of rows)points[row.name]=claimed[row.name]?0:row.points;return {sourceWeek,rows,points};}
 async function showRefereeDailyWeekly(){
@@ -236,7 +259,7 @@ async function showRefereeDailyWeekly(){
    return '<section class="solo-section"><h3>'+(subject==='english'?'🇬🇧 Englisch':'🔢 Mathe')+' · Heute</h3>'+rows.map((row,index)=>'<div class="solo-game"><div class="row"><h3>'+(row.attempts?(index===0?'🥇':index===1?'🥈':index===2?'🥉':'👤'):'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.attempts+' Antworten</span></div><p>'+(row.rate===null?'Noch keine geprüften Antworten':(row.rate*100).toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1})+' % Fehler · '+row.mistakes+' falsch von '+row.checkedAttempts+' geprüften Antworten')+'</p></div>').join('')+'</section>';
   };
   const weekRows=rankDailyWins(weekDays,weekKey);
-  const weekHtml='<section class="solo-section"><h3>📅 Woche · '+esc(weekKey)+'</h3><p>Gezählt werden gewonnene Tagesvergleiche in Englisch und Mathe.</p>'+weekRows.map(row=>'<div class="solo-game"><div class="row"><h3>'+(row.place===1?'🥇':row.place===2?'🥈':row.place===3?'🥉':'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.wins+' '+(row.wins===1?'gewonnener Tag':'gewonnene Tage')+'</span></div></div>').join('')+'</section>';
+  const weekHtml='<section class="solo-section"><h3>📅 Woche · '+esc(weekKey)+'</h3><p>Pro Kalendertag zählt höchstens ein Tagessieg aus Englisch und Mathe zusammen.</p>'+weekRows.map(row=>'<div class="solo-game"><div class="row"><h3>'+(row.place===1?'🥇':row.place===2?'🥈':row.place===3?'🥉':'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.wins+' '+(row.wins===1?'gewonnener Tag':'gewonnene Tage')+'</span></div></div>').join('')+'</section>';
   app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p>'+esc(dateLabel)+'</p>'+lucaDiagnosticHtml+dailyHtml('english')+dailyHtml('math')+weekHtml)+card(btn('↻ Aktualisieren','refereeDailyWeekly','alt'))+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));
  }catch(e){app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p class="error">Wertungen konnten nicht geladen werden: '+esc(e.message||e)+'</p>')+card(btn('Erneut laden','refereeDailyWeekly','alt'))+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));}
 }
