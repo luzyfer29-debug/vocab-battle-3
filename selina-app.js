@@ -18,8 +18,8 @@ function generate(t,d){let r=rng(week()+t+d),pick=(a,b)=>a+Math.floor(r()*(b-a+1
 case"add":a=pick(10,89);b=pick(1,100-a);answer=a+b;display=a+" + "+b;break;
 case"sub":a=pick(10,100);b=pick(1,a);answer=a-b;display=a+" − "+b;break;
 case"mul":a=pick(1,10);b=pick(1,10);answer=a*b;display=a+" × "+b;break;
-case"div":b=pick(2,10);a=pick(Math.ceil(10/b),Math.floor(99/b))*b;answer=a/b;display=a+" : "+b;break;
-default:b=pick(2,9);let q=pick(2,Math.floor((99-(b-1))/b)),rest=pick(1,b-1);a=q*b+rest;answer=q+" R "+rest;display=a+" : "+b;break}
+case"div":b=pick(2,10);answer=pick(Math.ceil(10/b),Math.min(10,Math.floor(99/b)));a=answer*b;display=a+" : "+b;break;
+default:b=pick(2,9);let q=pick(Math.ceil(10/b),Math.min(10,Math.floor((99-(b-1))/b))),rest=pick(1,b-1);a=q*b+rest;answer=q+" R "+rest;display=a+" : "+b;break}
 return{id:t+"-"+d+"-"+i,display,answer:String(answer),topic:t,day:d,number:i+1}})}
 
 const lessons={
