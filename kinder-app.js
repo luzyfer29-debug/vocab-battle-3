@@ -494,16 +494,16 @@ function errorPracticeShow(){
  const group=errorEvalTopics[errorEvalCurrent.topicIndex];
  errorEvalQueue=group.items.filter(x=>!x.item.resolved);
  if(!errorEvalQueue.length){if(errorEvalMode==='childReview')void learningReview(errorEvalName,errorEvalSubject);else void errorEvaluation(errorEvalSubject,errorEvalPeriod);return;}
- const entry=errorEvalQueue[0],item=errorPracticeVariant||entry.item,worksheet={...item,q:item.prompt,answerText:item.answer};
+ const entry=errorEvalQueue[0],item=errorPracticeVariant||entry.item,worksheet={...item,q:item.prompt,answerText:item.answer},activeItemMarkup='<span hidden data-error-active-item="'+esc(JSON.stringify(item))+'"></span>';
  let input;
  if(item.type==='order')input=`${listeningControls(worksheet,'error')}<button data-error-listening-submit="order">Antwort prüfen</button>`;
  else if(item.options)input=`<div class="answers">${item.options.map((o,i)=>`<button data-error-answer="${i}">${esc(o)}</button>`).join('')}</div>`;
  else input=`<label>Deine Antwort<textarea data-error-text rows="${item.type==='open'?3:1}" autocomplete="off" autocapitalize="none"></textarea></label>${btn('Antwort prüfen','errorTextCheck')}`;
- app.innerHTML=card(`<p class="muted">${group.subject==='math'?'🔢 Mathe':'🇬🇧 Englisch'} · ${esc(group.title)} · ${errorEvalQueue.length} noch offen</p><h2>${item.subject==='math'?mathText(item.prompt||'Aufgabe'):esc(item.prompt||'Aufgabe')}</h2>${item.instruction?`<p class="muted">${esc(item.instruction)}</p>`:''}${item.image?'<img src="'+esc(item.image)+'" alt="Bild zur Aufgabe" style="display:block;max-width:100%;max-height:240px;object-fit:contain;margin:12px auto">':''}${item.type==='order'||item.task?listeningTaskImage(item.task):''}${input}<div id="error-feedback"></div>`)+card(btn('Zur Themenliste','errorRefresh','alt'));
+ app.innerHTML=card(`${activeItemMarkup}<p class="muted">${group.subject==='math'?'🔢 Mathe':'🇬🇧 Englisch'} · ${esc(group.title)} · ${errorEvalQueue.length} noch offen</p><h2>${item.subject==='math'?mathText(item.prompt||'Aufgabe'):esc(item.prompt||'Aufgabe')}</h2>${item.instruction?`<p class="muted">${esc(item.instruction)}</p>`:''}${item.image?'<img src="'+esc(item.image)+'" alt="Bild zur Aufgabe" style="display:block;max-width:100%;max-height:240px;object-fit:contain;margin:12px auto">':''}${item.type==='order'||item.task?listeningTaskImage(item.task):''}${input}<div id="error-feedback"></div>`)+card(btn('Zur Themenliste','errorRefresh','alt'));
 }
 async function errorPracticeAnswer(value){
  if(!errorEvalCurrent||!errorEvalQueue.length)return;
- const entry=errorEvalQueue[0],item=entry.item,practiceItem=errorPracticeVariant||item,typed=String(value??'').trim();
+ const entry=errorEvalQueue[0],item=entry.item;let activeItem=null;try{activeItem=JSON.parse(document.querySelector('[data-error-active-item]')?.dataset.errorActiveItem||'null');}catch{}const practiceItem=activeItem||errorPracticeVariant||item,typed=String(value??'').trim();
  let correct;
  const accepted=Array.isArray(practiceItem.accepted)&&practiceItem.accepted.length?practiceItem.accepted:Array.isArray(practiceItem.required)&&practiceItem.required.length?practiceItem.required:practiceItem.answer?[practiceItem.answer]:[];
  if(practiceItem.type==='order')correct=Array.isArray(value)&&value.map(String).join(',')===(practiceItem.accepted||[]).join(',');
