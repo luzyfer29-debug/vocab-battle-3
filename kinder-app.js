@@ -476,6 +476,12 @@ function similarErrorQuestion(entry,offset=1){
  match=exercise.match(/^math_proportional_exam([1-3])$/);if(match)bank=MATH_PROPORTIONAL_CLASSWORKS[Number(match[1])-1]?.questions||null;
  match=exercise.match(/^math_proportional_practice_(.+)$/);if(match)bank=MATH_PROPORTIONAL_PRACTICE_BLOCKS.find(x=>x.id===match[1])?.questions||null;
  match=exercise.match(/^english_grammar_([12])_task(\d+)$/);if(match){const task=GRAMMAR[Number(match[1])-1]?.tasks[Number(match[2])-1];if(task?.items?.length>1)bank=task.items.map(([before,after,accepted])=>({prompt:before+' _____ '+after,accepted}));}
+ if(exercise==='english_listening')bank=LISTENING_QUESTIONS;
+ match=exercise.match(/^english_vocab_work_(?:station2_)?page([12])$/);if(match){const station2=exercise.includes('station2'),page=Number(match[1]),answers=station2?VOCAB_WORK_STATION2_ANSWERS[page]:VOCAB_WORK_ANSWERS[page],prompts=station2?VOCAB_WORK_STATION2_REVIEW_PROMPTS[page]:VOCAB_WORK_REVIEW_PROMPTS[page];if(Array.isArray(answers))bank=answers.map((accepted,i)=>({prompt:prompts?.[i]||`Aufgabe ${i+1}`,instruction:station2?(page===1?'Name the first-aid item or complete the sentence.':'Complete the sentences or name the emergency services.'):(page===2?'Complete Julie’s message with the right words.':'Complete the vocabulary exercise.'),accepted}));}
+ if(exercise==='english_reading'){
+  const paragraphOptions=['1','2','3','4','-'],truthOptions=['Right','Wrong','Not in the text'];
+  bank=[...READING_HEADINGS.map(q=>({prompt:q.text,options:paragraphOptions,correctIndex:paragraphOptions.indexOf(q.correct),type:'tf'})),...READING_STATEMENTS.map(([prompt,correct])=>({prompt,options:truthOptions,correctIndex:truthOptions.indexOf(({right:'Right',wrong:'Wrong',not:'Not in the text'})[correct]),type:'tf'}))];
+ }
  if(!Array.isArray(bank)||bank.length<2)return null;
  const q=bank[(index+Math.max(1,Number(offset)||1))%bank.length];if(!q)return null;
  const correctIndex=Number.isInteger(q.correctIndex)?q.correctIndex:Number.isInteger(q.correct)?q.correct:null;
@@ -497,13 +503,13 @@ function errorPracticeShow(){
 }
 async function errorPracticeAnswer(value){
  if(!errorEvalCurrent||!errorEvalQueue.length)return;
- const entry=errorEvalQueue[0],item=entry.item,typed=String(value??'').trim();
+ const entry=errorEvalQueue[0],item=entry.item,practiceItem=errorPracticeVariant||item,typed=String(value??'').trim();
  let correct;
- const accepted=Array.isArray(item.accepted)&&item.accepted.length?item.accepted:Array.isArray(item.required)&&item.required.length?item.required:item.answer?[item.answer]:[];
- if(item.type==='order')correct=Array.isArray(value)&&value.map(String).join(',')===(item.accepted||[]).join(',');
- else if(Array.isArray(item.options)&&item.correctIndex!==null&&item.correctIndex!==undefined&&Number.isInteger(Number(item.correctIndex)))correct=Number(value)===Number(item.correctIndex);
- else if(Array.isArray(item.options)){const selected=item.options[Number(value)];correct=Boolean(selected)&&accepted.some(x=>grammarNormalize(x)===grammarNormalize(selected));}
- else if(item.type==='open'){const required=Array.isArray(item.required)&&item.required.length?item.required:accepted;correct=required.length>0&&required.every(term=>grammarNormalize(typed).includes(grammarNormalize(term)));}
+ const accepted=Array.isArray(practiceItem.accepted)&&practiceItem.accepted.length?practiceItem.accepted:Array.isArray(practiceItem.required)&&practiceItem.required.length?practiceItem.required:practiceItem.answer?[practiceItem.answer]:[];
+ if(practiceItem.type==='order')correct=Array.isArray(value)&&value.map(String).join(',')===(practiceItem.accepted||[]).join(',');
+ else if(Array.isArray(practiceItem.options)&&practiceItem.correctIndex!==null&&practiceItem.correctIndex!==undefined&&Number.isInteger(Number(practiceItem.correctIndex)))correct=Number(value)===Number(practiceItem.correctIndex);
+ else if(Array.isArray(practiceItem.options)){const selected=practiceItem.options[Number(value)];correct=Boolean(selected)&&accepted.some(x=>grammarNormalize(x)===grammarNormalize(selected));}
+ else if(practiceItem.type==='open'){const required=Array.isArray(practiceItem.required)&&practiceItem.required.length?practiceItem.required:accepted;correct=required.length>0&&required.every(term=>grammarNormalize(typed).includes(grammarNormalize(term)));}
  else correct=accepted.some(x=>grammarNormalize(x)===grammarNormalize(typed));
  const subject=errorEvalSubject==='math'||errorEvalSubject==='english'?errorEvalSubject:(item.subject||(entry.exercise.startsWith('math_')?'math':'english'));
  const saved=await recordLearningError(errorEvalName,subject,entry.exercise,entry.index,item.topic,item,correct);
@@ -523,7 +529,7 @@ async function errorPracticeAnswer(value){
   return;
  }
  const fb=document.querySelector('#error-feedback');
- if(fb){const answer=Array.isArray(item.options)&&item.correctIndex!==null&&item.correctIndex!==undefined?String(item.options[item.correctIndex]??''):accepted.join(' / ');const explanation=String(item.explanation||item.explain||item.steps||'');const similar=similarErrorQuestion(entry,errorPracticeVariantOffset+1);fb.innerHTML='<p class="error"><strong>❌ Deine Eingabe war falsch.</strong></p>'+(answer?'<p><strong>Richtige Lösung:</strong> '+esc(answer)+'</p>':'')+(explanation?'<p style="white-space:pre-line"><strong>Erklärung:</strong> '+mathText(explanation)+'</p>':'')+(similar?'<p>Jetzt übst du mit einer ähnlichen neuen Aufgabe.</p><button type="button" data-error-similar>Ähnliche Aufgabe üben</button>':'<p>Die Aufgabe bleibt offen. Sie verschwindet erst nach einer richtigen Antwort.</p>'); }
+ if(fb){const answer=Array.isArray(practiceItem.options)&&practiceItem.correctIndex!==null&&practiceItem.correctIndex!==undefined?String(practiceItem.options[practiceItem.correctIndex]??''):accepted.join(' / ');const explanation=String(practiceItem.explanation||practiceItem.explain||practiceItem.steps||'');const similar=similarErrorQuestion(entry,errorPracticeVariantOffset+1);fb.innerHTML='<p class="error"><strong>❌ Deine Eingabe war falsch.</strong></p>'+(answer?'<p><strong>Richtige Lösung:</strong> '+esc(answer)+'</p>':'')+(explanation?'<p style="white-space:pre-line"><strong>Erklärung:</strong> '+mathText(explanation)+'</p>':'')+(similar?'<p>Jetzt übst du mit einer ähnlichen neuen Aufgabe.</p><button type="button" data-error-similar>Ähnliche Aufgabe üben</button>':'<p>Die Aufgabe bleibt offen. Sie verschwindet erst nach einer richtigen Antwort.</p>'); }
 }
 function subjectNameForErrors(){return errorEvalSubject==='math'?mathName:soloName;}
 function errorPracticeNext(){if(errorEvalCurrent&&errorEvalQueue.length){errorPracticeShow();return;}if(errorEvalMode==='childReview')void learningReview(errorEvalName,errorEvalSubject);else void errorEvaluation(errorEvalSubject,errorEvalPeriod);}
