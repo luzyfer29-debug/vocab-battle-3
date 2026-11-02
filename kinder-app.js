@@ -1385,6 +1385,9 @@ function studentHelpText(){
 }
 function attachStudentHelp(){
  if(!app||!soloName||!app.querySelector('h2')||app.querySelector('[data-student-help]'))return;
+ // Help is only available after a checked incorrect answer, never before submitting.
+ const wrongCheckedAnswer=!!app.querySelector('.error,[data-incorrect-answer],input[style*="#ff8d8d"]');
+ if(!wrongCheckedAnswer)return;
  const heading=(app.querySelector('h2')?.textContent||'').toLowerCase();
  if(/battle|raum|rangliste|live|schiedsrichter|übersicht|auswahl/.test(heading))return;
  if(!app.querySelector('input,textarea,select,[data-action="grammarReveal"]'))return;
