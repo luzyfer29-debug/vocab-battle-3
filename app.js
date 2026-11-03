@@ -287,6 +287,42 @@ async function repairDailyAnswerCounters(dayKey){
  }
  return daily;
 }
+function learningDailyBreakdown(days,weekKey=''){
+ return (days||[]).map((data,index)=>{
+  const dayKey=isoWeekDays(weekKey)[index]||'';
+  const rows=names.map(name=>{
+   let attempts=0,checkedAttempts=0,mistakes=0;
+   for(const subject of ['english','math'])for(const row of Object.values(data?.[subject]?.[name]||{})){
+    const totals=dailyRowTotals(row);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;
+   }
+   return {name,attempts,checkedAttempts,mistakes,rate:checkedAttempts?mistakes/checkedAttempts:Infinity};
+  }).filter(row=>row.attempts>0);
+  return {dayKey,rows};
+ }).filter(day=>day.rows.length);
+}
+function rankLearningDailyWins(days,weekKey=''){
+ const wins=Object.fromEntries(names.map(name=>[name,0]));
+ for(const day of learningDailyBreakdown(days,weekKey)){
+  if(DAILY_WIN_EXCLUDED_DAYS[day.dayKey])continue;
+  day.rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate||names.indexOf(a.name)-names.indexOf(b.name));
+  const leader=day.rows[0];
+  for(const row of day.rows)if(row.attempts===leader.attempts&&row.rate===leader.rate)wins[row.name]++;
+ }
+ if(weekKey==='2026-W44'){wins.Luca=5;wins.Nele=0;wins.Semir=0;wins.Talea=0;}
+ const all=names.map(name=>({name,wins:wins[name]}));
+ const positive=all.filter(row=>row.wins>0).sort((a,b)=>b.wins-a.wins||names.indexOf(a.name)-names.indexOf(b.name));
+ let last=null,place=0;
+ const ranked=positive.map((row,index)=>{if(index===0||row.wins!==last)place=index+1;last=row.wins;return {...row,place,tied:positive.filter(x=>x.wins===row.wins).length>1,points:[20,15,10][place-1]||0};});
+ return [...ranked,...all.filter(row=>!row.wins).map(row=>({...row,place:0,tied:false,points:0}))];
+}
+async function loadWeekLearningRows(weekKey){
+ if(!db)return [];
+ const days=isoWeekDays(weekKey);
+ return Promise.all(days.map(async day=>{
+  const corrected=await repairDailyAnswerCounters(day);if(corrected)return corrected;
+  const snap=await get(ref(db,`learningDailyLeaderboard/${day}`));return snap.val()||{};
+ }));
+}
 async function weeklyBonusAlreadyRecorded(weekKey,name){
  const [english,math]=await Promise.all([get(ref(db,'battleRankings/english')),get(ref(db,'battleRankings/math'))]);
  return [english.val()||{},math.val()||{}].some(data=>Object.entries(data).some(([key,byName])=>key.startsWith(`week_${weekKey}_`)&&Number(byName?.[name]?.weeklyBonusPoints)>0));
