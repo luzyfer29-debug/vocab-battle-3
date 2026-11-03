@@ -129,16 +129,24 @@ function dailyAnswerItemKey(index,prompt){
 function dailyProgressFromActivity(activity,dayKey){
  const progress={};
  for(const [exercise,entry] of Object.entries(activity||{})){
-  const items={};
-  for(const [index,item] of Object.entries(entry?.errorItems||{})){
+  const items={},checks=entry?.answerChecks&&typeof entry.answerChecks==="object"?entry.answerChecks:{};
+  for(const [index,item] of Object.entries(checks)){
    if(item?.attempted!==true)continue;
+   const checkedAt=Number(item.checkedAt)||0,wrongAt=Number(item.lastWrongAt)||0;
+   const touchedToday=item.dayKey===dayKey||(checkedAt>0&&activityPeriodKeys(checkedAt).dayKey===dayKey);
+   if(!touchedToday)continue;
+   const key=dailyAnswerItemKey(index,item.prompt||item.topic||"");
+   const wrongToday=wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey;
+   items[key]={count:1,mistakes:wrongToday?1:0};
+  }
+  // Read legacy real errors until the per-answer check record has been written.
+  for(const [index,item] of Object.entries(entry?.errorItems||{})){
+   if(checks[index]||item?.attempted!==true)continue;
    const wrongAt=Number(item.lastWrongAt)||0,resolvedAt=Number(item.resolvedAt)||0;
    const touchedToday=item.dayKey===dayKey||(wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey)||(resolvedAt>0&&activityPeriodKeys(resolvedAt).dayKey===dayKey);
    if(!touchedToday)continue;
    const key=dailyAnswerItemKey(index,item.prompt||item.topic||"");
-   const wrongToday=wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey;
-   const prior=items[key];
-   items[key]={count:1,mistakes:wrongToday||Number(prior?.mistakes)>0?1:0};
+   items[key]={count:1,mistakes:wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey?1:0};
   }
   const values=Object.values(items),count=values.length,mistakes=values.reduce((n,item)=>n+(Number(item.mistakes)||0),0);
   if(count)progress[exercise]={count,mistakes,items};
@@ -406,32 +414,63 @@ function learningErrorRecord(name,subject,topic,q,old,eventAt){
  return {attempted:true,source:'answer_check',subject,topic,prompt:String(q?.prompt||q?.q||q?.word||topic||''),type:String(q?.type||''),task:Number(q?.task)||0,instruction:String(q?.instruction||''),images:Array.isArray(q?.images)?q.images:null,image:String(q?.image||''),options:Array.isArray(q?.options)?q.options.map(String):null,correctIndex:Number.isInteger(q?.correct)?q.correct:null,accepted:Array.isArray(q?.accepted)?q.accepted.map(String):Array.isArray(q?.required)?q.required.map(String):null,required:Array.isArray(q?.required)?q.required.map(String):null,explanation:String(q?.explanation||q?.explain||''),answer:String(q?.answer||q?.answerText||''),count:(Number(old?.count)||0)+1,lastWrongAt:eventAt,dayKey,weekKey,resolved:false,resolvedAt:null};
 }
 function reviewItemAt(item){const lastWrongAt=Number(item?.lastWrongAt)||0,resolvedAt=Number(item?.resolvedAt)||0;return item?.resolved===true?Math.max(lastWrongAt,resolvedAt)+1:lastWrongAt;}
+function isFalsePositiveResolvedLearningRecord(item){
+ const wrongAt=Number(item?.lastWrongAt)||0,resolvedAt=Number(item?.resolvedAt)||0;
+ return item?.resolved===true&&wrongAt>0&&resolvedAt===wrongAt+1;
+}
+async function cleanupFalsePositiveLearningErrors(name,subject){
+ if(!db||!uid||!RANKED_NAMES.includes(name))return;
+ for(const exercise of childLearningExercises(subject)){
+  const path=`learningActivity/${uid}/${name}/${exercise}`,snapshot=await get(ref(db,path)),value=snapshot.val();
+  const falseItems=Object.entries(value?.errorItems||{}).filter(([,item])=>isFalsePositiveResolvedLearningRecord(item));
+  if(!falseItems.length)continue;
+  await runTransaction(ref(db,path),current=>{
+   if(!current||typeof current!=="object")return current;
+   const errors={...(current.errorItems||{})},checks={...(current.answerChecks||{})};let changed=false;
+   for(const [index,item] of falseItems){
+    if(!isFalsePositiveResolvedLearningRecord(errors[index]))continue;
+    const checkedAt=Number(item.lastWrongAt)||Date.now(),period=activityPeriodKeys(checkedAt);
+    if(!checks[index])checks[index]={attempted:true,source:"answer_check",subject:item.subject||subject,topic:item.topic||exercise,prompt:item.prompt||item.topic||exercise,dayKey:item.dayKey||period.dayKey,weekKey:item.weekKey||period.weekKey,checkedAt,lastWrongAt:0,correct:true};
+    delete errors[index];changed=true;
+   }
+   return changed?{...current,errorItems:errors,answerChecks:checks}:current;
+  });
+  await Promise.all(falseItems.map(([index,item])=>runTransaction(ref(db,`learningReview/${name}/${subject}/${exercise}/${index}`),current=>isFalsePositiveResolvedLearningRecord(current)?null:current)));
+ }
+}
 async function recordLearningError(name,subject,exercise,index,topic,q,correct,occurredAt=Date.now()){
  if(!db||!uid||!SOLO_NAMES.includes(name)||!exercise)return false;
  const eventAt=Number(occurredAt)||Date.now(),path=`learningActivity/${uid}/${name}/${exercise}`,sharedPath=`learningReview/${name}/${subject}/${exercise}/${index}`;
- // Tages- und Wochenwertung nur für bestätigte Lernantworten, niemals für Live-Battles.
+ // Save every checked answer for counting; only actual wrong answers enter the error list.
  try{
   let changedItem=null;
   await runTransaction(ref(db,path),current=>{
-   const value=current&&typeof current==='object'?{...current}:{};
-   const {dayKey,weekKey}=activityPeriodKeys(eventAt);
+   const value=current&&typeof current==="object"?{...current}:{};
+   const {dayKey,weekKey}=activityPeriodKeys(eventAt),key=String(index);
    if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}
    if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}
    value.lastAt=Math.max(Number(value.lastAt)||0,eventAt);
-   const errors={...(value.errorItems||{})},key=String(index),old=errors[key];
-   if(correct){const base=old||learningErrorRecord(name,subject,topic,q,null,eventAt);changedItem={...base,resolved:true,resolvedAt:Math.max(eventAt,Number(base.lastWrongAt)||0)+1};errors[key]=changedItem;}
-   else{changedItem=learningErrorRecord(name,subject,topic,q,old,eventAt);errors[key]=changedItem;}
+   const checks={...(value.answerChecks||{})},previous=checks[key]||{},errors={...(value.errorItems||{})},old=errors[key];
+   const previousWrongAt=Number(previous.lastWrongAt)||0,wrongAt=correct?previousWrongAt:eventAt;
+   checks[key]={attempted:true,source:"answer_check",subject,topic,prompt:String(q?.prompt||q?.q||q?.word||topic||""),dayKey,weekKey,checkedAt:eventAt,lastWrongAt:wrongAt,correct:!!correct};
+   value.answerChecks=checks;
+   if(correct){
+    if(old&&isFalsePositiveResolvedLearningRecord(old)){delete errors[key];changedItem=null;}
+    else if(old){changedItem={...old,resolved:true,resolvedAt:Math.max(eventAt,Number(old.lastWrongAt)||0)+1};errors[key]=changedItem;}
+    else changedItem=null;
+   }else{changedItem=learningErrorRecord(name,subject,topic,q,old,eventAt);errors[key]=changedItem;}
    value.errorItems=errors;return value;
   });
-  await runTransaction(ref(db,sharedPath),current=>{
-   if(correct){const base=current||learningErrorRecord(name,subject,topic,q,null,eventAt);return {...base,resolved:true,resolvedAt:Math.max(eventAt,Number(base.lastWrongAt)||0)+1};}
-   const next=learningErrorRecord(name,subject,topic,q,current,eventAt);
-   return next;
-  });
+  if(changedItem){
+   await runTransaction(ref(db,sharedPath),current=>{
+    if(correct){if(isFalsePositiveResolvedLearningRecord(current))return null;if(!current)return current;return {...current,resolved:true,resolvedAt:Math.max(eventAt,Number(current.lastWrongAt)||0)+1};}
+    return learningErrorRecord(name,subject,topic,q,current,eventAt);
+   });
+  }else if(correct){
+   await runTransaction(ref(db,sharedPath),current=>isFalsePositiveResolvedLearningRecord(current)?null:current);
+  }
   activitySyncWarned=false;
  }catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg(`Fehler konnten nicht geräteübergreifend gespeichert werden (${e.code||e.message||'Firebase-Zugriff verweigert'}).`,true);}}
- // Die Tageswertung unabhängig vom Fehler-/Wiederholungsspeicher aktualisieren.
- // Sonst gehen geprüfte Lernantworten bei einem Fehler in learningReview verloren.
  await updateDailyLeaderboard(name,subject,eventAt,!correct,exercise,index,q?.prompt||q?.q||q?.word||topic);
  return true;
 }
@@ -964,7 +1003,7 @@ async function syncSolo(){
 function soloChooseName(){if(!resetReady){msg('Lernstände werden abgeglichen. Bitte kurz warten.',true);return;}stopSoloHeartbeat();app.innerHTML=card(`<h2>📚 Wer lernt gerade?</h2><p>Wähle deinen Namen, damit der Schiedsrichter deinen Lernfortschritt sehen kann.</p><div class="solo-actions daily-compare-entry">${btn('🏆 Tagesvergleich Englisch','dailyLeaderboardEnglish','alt')}</div><p class="muted">👑 Tageskrone: meiste Antworten; bei Gleichstand entscheidet die niedrigere Fehlerquote.</p><div class="buttons">${SOLO_NAMES.map((n,i)=>btn(esc(n),`soloName${i}`)).join('')}</div>`)+card(btn('Zurück','home','alt'));applyDailyCrowns('english','soloName');}
 function soloSetName(i){soloName=SOLO_NAMES[i];localStorage.setItem('vb2solo_name',soloName);if(soloNameReturn==='reading'){soloNameReturn='';readingLearnHome();return;}soloHome();}
 function soloHome(){
- grammarCollect();stopSoloHeartbeat();if(!soloName){soloChooseName();return;}solo=null;
+ grammarCollect();stopSoloHeartbeat();if(!soloName){soloChooseName();return;}solo=null;void Promise.all(['english','math'].map(subject=>cleanupFalsePositiveLearningErrors(soloName,subject).catch(error=>console.warn('Alte fälschliche Fehler konnten nicht bereinigt werden:',error))));
  const battles=[0,1,2].map(b=>{const saved=soloSaved(b),done=saved?.index||0,reviewing=saved&&!saved.finished&&saved.review&&saved.wrong.length;return `<div class="solo-game"><div class="row"><h3>Vokabeln ${b+1}</h3><span class="small">${done} von 30</span></div><p>Fragen erledigt${reviewing?` · 🔁 ${saved.wrong.length} wiederholen`:''}${saved?.finished?' · abgeschlossen':''}</p><div class="solo-actions">${btn(saved?'Neu beginnen':'Starten',`soloStart${b}`)}${saved&&!saved.finished?btn('Fortsetzen',`soloResume${b}`,'alt'):''}</div></div>`;}).join('');
  const vocabWorkCards=[
   ['📝 Vokabelarbeit · Station 1 · Seite 1','Aufgaben 1–3 · Sportarten, Gegenteile und Sätze. Schreibe die Antworten selbst wie auf dem Arbeitsblatt.','vocabWorkPage1'],
