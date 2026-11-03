@@ -250,32 +250,18 @@ function dailyRowTotals(row){
 async function repairDailyAnswerCounters(dayKey){
  if(!adminLoggedIn||uid!==ADMIN_UID)return;
  const [dailySnap,activitySnap]=await Promise.all([get(ref(db,"learningDailyLeaderboard/"+dayKey)),get(ref(db,"learningActivity"))]);
- const daily=dailySnap.val()||{},activity=activitySnap.val()||{};console.warn("daily counter source",dayKey,Object.keys(activity).map(id=>({id,keys:Object.keys(activity[id]||{}),exercises:Object.keys(activity[id]?.Luca||{}),items:Object.values(activity[id]?.Luca||{}).reduce((sum,e)=>sum+Object.keys(e?.errorItems||{}).length,0)})));
+ const daily=dailySnap.val()||{},activity=activitySnap.val()||{};
  for(const subject of ["english","math"])for(const name of names){
   const devices=daily?.[subject]?.[name]||{};
   for(const [deviceId,row] of Object.entries(devices)){
    if(!row||Number(row.answerCounterVersion)===3)continue;
-   const childActivity=Object.values(activity).reduce((merged,user)=>{const source=user?.[name]||{};for(const [exercise,entry] of Object.entries(source)){const prior=merged[exercise]||{};merged[exercise]={...prior,...entry,errorItems:{...(prior.errorItems||{}),...(entry?.errorItems||{})}};}return merged;},{});const progress=dailyProgressFromActivity(childActivity,dayKey),totals=dailyProgressCounts(progress),oldChecked=Math.max(0,Number(row.checkedAttempts??row.attempts)||0);
-   if(!totals.checked&&oldChecked>0){console.warn("Tageszähler ohne Antwortprotokoll nicht automatisch überschrieben:",name,subject,deviceId);continue;}
-   const path="learningDailyLeaderboard/"+dayKey+"/"+subject+"/"+name+"/"+deviceId;
-   const repaired={...row,uncertainLegacyDailyCount:row.uncertainLegacyDailyCount||{attempts:Math.max(Number(row.attempts)||0,(Number(row.checkedAttempts)||0)+(Number(row.submittedAttempts)||0)),checkedAttempts:Number(row.checkedAttempts)||0,submittedAttempts:Number(row.submittedAttempts)||0,mistakes:Number(row.mistakes)||0},progressByExercise:progress,submittedByExercise:row.submittedByExercise&&typeof row.submittedByExercise==="object"?row.submittedByExercise:{},legacySubmittedAttempts:Number.isFinite(Number(row.legacySubmittedAttempts))?Math.max(0,Number(row.legacySubmittedAttempts)):Math.max(0,Number(row.submittedAttempts)||0),answerCounterVersion:3,dailyRepairVersion:6,checkedAttempts:totals.checked,mistakes:totals.mistakes,name};repaired.submittedAttempts=repaired.legacySubmittedAttempts+dailySubmittedCount(repaired.submittedByExercise);repaired.attempts=repaired.checkedAttempts+repaired.submittedAttempts;daily[subject]=daily[subject]||{};daily[subject][name]=daily[subject][name]||{};daily[subject][name][deviceId]=repaired;
-   try{await runTransaction(ref(db,path),current=>{
-    const value=current&&typeof current==="object"?{...current}:{name,attempts:0,mistakes:0,checkedAttempts:0,submittedAttempts:0};
-    if(Number(value.answerCounterVersion)===3)return value;
-    const oldSubmitted=Math.max(0,Number(value.submittedAttempts)||0),oldAttempts=Math.max(Number(value.attempts)||0,(Number(value.checkedAttempts)||0)+oldSubmitted);
-    value.uncertainLegacyDailyCount=value.uncertainLegacyDailyCount||{attempts:oldAttempts,checkedAttempts:Number(value.checkedAttempts)||0,submittedAttempts:oldSubmitted,mistakes:Number(value.mistakes)||0};
-    value.progressByExercise=progress;
-    value.submittedByExercise=value.submittedByExercise&&typeof value.submittedByExercise==="object"?value.submittedByExercise:{};
-    value.legacySubmittedAttempts=Number.isFinite(Number(value.legacySubmittedAttempts))?Math.max(0,Number(value.legacySubmittedAttempts)):oldSubmitted;
-    value.answerCounterVersion=3;
-    value.dailyRepairVersion=6;
-    value.checkedAttempts=totals.checked;
-    value.mistakes=totals.mistakes;
-    value.submittedAttempts=value.legacySubmittedAttempts+dailySubmittedCount(value.submittedByExercise);
-    value.attempts=value.checkedAttempts+value.submittedAttempts;
-    value.name=name;
-    return value;
-   });}catch(e){console.warn("Tageszähler wird für die Anzeige aus Antwortprotokollen berechnet:",name,subject,e.code||e.message);}
+   const childActivity=Object.values(activity).reduce((merged,user)=>{const source=user?.[name]||{};for(const [exercise,entry] of Object.entries(source)){const prior=merged[exercise]||{};merged[exercise]={...prior,...entry,errorItems:{...(prior.errorItems||{}),...(entry?.errorItems||{})}};}return merged;},{});
+   const progress=dailyProgressFromActivity(childActivity,dayKey),totals=dailyProgressCounts(progress);
+   const legacyAttempts=Math.max(Number(row.attempts)||0,(Number(row.checkedAttempts)||0)+(Number(row.submittedAttempts)||0));
+   const submitted=dailySubmittedCount(row.submittedByExercise||{});
+   const corrected={...row,progressByExercise:progress,submittedByExercise:row.submittedByExercise&&typeof row.submittedByExercise==="object"?row.submittedByExercise:{},legacySubmittedAttempts:0,answerCounterVersion:3,dailyRepairVersion:6,checkedAttempts:totals.checked,mistakes:totals.mistakes,submittedAttempts:submitted,attempts:totals.checked+submitted,name};
+   if(!totals.checked&&legacyAttempts>0)corrected.unverifiedLegacyDailyCount=legacyAttempts;
+   daily[subject]=daily[subject]||{};daily[subject][name]=daily[subject][name]||{};daily[subject][name][deviceId]=corrected;
   }
  }
  return daily;
@@ -314,14 +300,14 @@ async function showRefereeDailyWeekly(){
  app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p>Wertungen werden geladen …</p>')+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));
  try{
   const repairedDaily=await repairDailyAnswerCounters(dayKey);const [todaySnap,weekDays]=await Promise.all([get(ref(db,`learningDailyLeaderboard/${dayKey}`)),loadWeekDailyRows(weekKey)]);
-  const today=todaySnap.val()||repairedDaily||{};for(const subject of ["english","math"])for(const name of names)if(repairedDaily?.[subject]?.[name])today[subject]={...(today[subject]||{}),[name]:repairedDaily[subject][name]};
+  const today=todaySnap.val()||{};for(const subject of ["english","math"])for(const name of names)if(repairedDaily?.[subject]?.[name])today[subject]={...(today[subject]||{}),[name]:repairedDaily[subject][name]};
   const lucaRows=Object.values(today?.english?.Luca||{});
-  const lucaDiagnostics=lucaRows.map(row=>({raw:Number(row?.attempts)||0,checked:Number(row?.checkedAttempts)||0,exerciseCount:Object.values(row?.progressByExercise||{}).reduce((n,v)=>n+(Number(v?.count)||0),0),calculated:dailyRowTotals(row).attempts}));
+  const lucaDiagnostics=lucaRows.map(row=>({raw:Number(row?.attempts)||0,checked:Number(row?.checkedAttempts)||0,exerciseCount:Object.values(row?.progressByExercise||{}).reduce((n,v)=>n+(Number(v?.count)||0),0),calculated:dailyRowTotals(row).attempts,unverifiedLegacy:row?.unverifiedLegacyDailyCount||0}));
   const lucaDiagnosticHtml='<p class="muted" style="font-size:12px">Prüfung Luca · Datum '+esc(dayKey)+' · Datensätze '+lucaRows.length+' · Werte '+esc(JSON.stringify(lucaDiagnostics))+'</p>';
   const dailyHtml=subject=>{
    const data=today[subject]||{};
    const rows=names.map(name=>{let attempts=0,checkedAttempts=0,mistakes=0;for(const row of Object.values(data[name]||{})){const totals=dailyRowTotals(row);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;}return {name,attempts,checkedAttempts,mistakes,rate:checkedAttempts?mistakes/checkedAttempts:null};}).sort((a,b)=>b.attempts-a.attempts||(a.rate??Infinity)-(b.rate??Infinity)||names.indexOf(a.name)-names.indexOf(b.name));
-   return '<section class="solo-section"><h3>'+(subject==='english'?'🇬🇧 Englisch':'🔢 Mathe')+' · Heute</h3>'+rows.map((row,index)=>'<div class="solo-game"><div class="row"><h3>'+(row.attempts?(index===0?'🥇':index===1?'🥈':index===2?'🥉':'👤'):'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.attempts+' Antworten</span></div><p>'+(row.rate===null?'Noch keine geprüften Antworten':(row.rate*100).toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1})+' % Fehler · '+row.mistakes+' falsch von '+row.checkedAttempts+' geprüften Antworten')+'</p></div>').join('')+'</section>';
+   const unknown=Object.entries(data).flatMap(([name,devices])=>Object.values(devices||{}).filter(row=>Number(row?.unverifiedLegacyDailyCount)>0).map(row=>name+': '+Number(row.unverifiedLegacyDailyCount)+' alte Antworten'));return '<section class="solo-section"><h3>'+(subject==='english'?'🇬🇧 Englisch':'🔢 Mathe')+' · Heute</h3>'+(unknown.length?'<p class="muted">Alte Tageszähler ohne prüfbares Antwortprotokoll werden nicht gewertet ('+esc(unknown.join(', '))+'). Neue Antworten werden korrekt gezählt.</p>':'')+rows.map((row,index)=>'<div class="solo-game"><div class="row"><h3>'+(row.attempts?(index===0?'🥇':index===1?'🥈':index===2?'🥉':'👤'):'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.attempts+' Antworten</span></div><p>'+(row.rate===null?'Noch keine geprüften Antworten':(row.rate*100).toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1})+' % Fehler · '+row.mistakes+' falsch von '+row.checkedAttempts+' geprüften Antworten')+'</p></div>').join('')+'</section>';
   };
   const weekRows=rankDailyWins(weekDays,weekKey);
   const weekHtml='<section class="solo-section"><h3>📅 Woche · '+esc(weekKey)+'</h3><p>Sieben Tageswertungen (Montag bis Sonntag) ergeben eine Wochenwertung. Bei exakt gleicher Tagesleistung gewinnen beide Kinder.</p>'+weekRows.map(row=>'<div class="solo-game"><div class="row"><h3>'+(row.place===1?'🥇':row.place===2?'🥈':row.place===3?'🥉':'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.wins+' '+(row.wins===1?'gewonnener Tag':'gewonnene Tage')+'</span></div></div>').join('')+'</section>';
