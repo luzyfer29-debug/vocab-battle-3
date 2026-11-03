@@ -107,7 +107,7 @@ function grammarClear(){if(grammarStation===null||grammarTask===null)return;gram
 const key='vb2solo';
 const SOLO_NAMES=['Luca','Semir','Talea','Nele','Frauke'];
 const RANKED_NAMES=['Luca','Semir','Talea','Nele']; // Frauke is a test-only profile.
-const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:{count:50,baselineAnswers:6},Semir:{count:30,baselineAnswers:30},Talea:{count:6,baselineAnswers:4}}}};
+const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:{count:50,baselineAnswers:36},Semir:{count:30,baselineAnswers:30},Talea:{count:6,baselineAnswers:4}}}};
 const DAILY_WIN_EXCLUDED_DAYS={'2026-11-02':'Lern- und Battle-Antworten sind an diesem Tag nicht verlässlich getrennt.'};
 function applyDailyCounterOverride(totals,dayKey,subject){for(const [name,setting] of Object.entries(DAILY_COUNTER_OVERRIDES[dayKey]?.[subject]||{})){const row=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0}),count=Number(typeof setting==='number'?setting:setting?.count)||0,baselineAnswers=Number(typeof setting==='number'?0:setting?.baselineAnswers)||0,current=Number(row.attempts)||0;row.attempts=count+Math.max(0,current-baselineAnswers);row.manualAdjustment=true;}}
 let activitySyncWarned=false;
@@ -362,6 +362,40 @@ async function backfillTodayEnglishAnswers(dayKey){
   });
  }
 }
+async function backfillTodayEnglishVocabProgress(dayKey){
+ if(!db||!uid||!dayKey)return;
+ for(const name of RANKED_NAMES){
+  try{
+   const recovered={};let latest=0;
+   for(let battle=1;battle<=3;battle++){
+    let local=null;try{local=JSON.parse(localStorage.getItem(`${key}_${name}_battle_${battle}`)||'null');}catch{}
+    const progress=local,at=Number(local?.updatedAt)||0;
+    if(!progress||!at||activityPeriodKeys(at).dayKey!==dayKey)continue;
+    const done=Math.max(0,Math.min(30,Number(progress.done??progress.index)||0)),mistakes=cleanMistakes(progress.mistakes),questions=BATTLES[battle-1]||{},items={};
+    for(let index=0;index<done;index++){
+     const q=questions[index],prompt=q?.prompt||q?.q||q?.word||`Vokabeln ${battle} · Aufgabe ${index+1}`;
+     items[dailyAnswerItemKey(index,prompt)]={count:1,mistakes:Number(mistakes[index])>0?1:0};
+    }
+    if(done)recovered[`english_vocab_battle${battle}`]={items,count:Object.keys(items).length,mistakes:Object.values(items).reduce((sum,item)=>sum+item.mistakes,0),updatedAt:at,backfilledFromSavedProgress:true};
+    latest=Math.max(latest,at);
+   }
+   if(!Object.keys(recovered).length)continue;
+   const path=`learningDailyLeaderboard/${dayKey}/english/${name}/${uid}`;
+   await runTransaction(ref(db,path),current=>{
+    const row=current&&typeof current==='object'?{...current}:{name,attempts:0,mistakes:0,checkedAttempts:0,submittedAttempts:0,answerCounterVersion:3,progressByExercise:{},submittedByExercise:{},legacySubmittedAttempts:0};
+    const all=Object.fromEntries(Object.entries(row.progressByExercise||{}).map(([exercise,item])=>[exercise,{...item,updatedAt:Number(item?.updatedAt)||latest}]));
+    for(const [exercise,entry] of Object.entries(recovered)){
+     const prior={...(all[exercise]||{}),updatedAt:Math.max(Number(all[exercise]?.updatedAt)||0,entry.updatedAt),backfilledFromSavedProgress:true},items={...(prior.items||{})};
+     for(const [itemKey,item] of Object.entries(entry.items)){const old=items[itemKey];if(!old)items[itemKey]=item;else if(item.mistakes&&!Number(old.mistakes))items[itemKey]={...old,mistakes:1};}
+     prior.items=items;prior.count=Object.keys(items).length;prior.mistakes=Object.values(items).reduce((sum,item)=>sum+(Number(item?.mistakes)||0),0);all[exercise]=prior;
+    }
+    const checked=dailyProgressCounts(all),submittedByExercise=row.submittedByExercise&&typeof row.submittedByExercise==='object'?row.submittedByExercise:{},submitted=dailySubmittedCount(submittedByExercise);
+    if(Number(row.answerCounterVersion)!==3)row.legacySubmittedAttempts=Math.max(Number(row.legacySubmittedAttempts)||0,Number(row.submittedAttempts)||0);
+    row.name=name;row.progressByExercise=all;row.submittedByExercise=submittedByExercise;row.checkedAttempts=checked.checked;row.mistakes=checked.mistakes;row.submittedAttempts=Math.max(0,Number(row.legacySubmittedAttempts)||0)+submitted;row.attempts=row.checkedAttempts+row.submittedAttempts;row.answerCounterVersion=3;row.updatedAt=Math.max(Number(row.updatedAt)||0,latest);return row;
+   });
+  }catch(error){console.warn('Gespeicherte Vokabel-Antworten konnten nicht nachgetragen werden:',name,error);}
+ }
+}
 async function repairCorruptDailyEnglishSummary(dayKey){
  if(!db||!uid||!dayKey)return;
  const path=`learningDailyLeaderboard/${dayKey}/english/Luca`;
@@ -390,6 +424,7 @@ async function showDailyLeaderboard(subject){
  try{
   const {dayKey}=activityPeriodKeys();
   if(subject==='english')await backfillTodayEnglishAnswers(dayKey);
+  if(subject==='english')await backfillTodayEnglishVocabProgress(dayKey);
   // Keine automatischen Änderungen an historischen Tagesdaten beim bloßen Anzeigen.
   // Do not turn exercise sessions or progress snapshots into answer counts.
   // Historical vocabulary progress is not an auditable per-answer log.
