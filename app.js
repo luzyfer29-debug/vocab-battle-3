@@ -299,8 +299,8 @@ async function showRefereeDailyWeekly(){
  const {dayKey,weekKey}=activityDateKeys(),dateLabel=new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',dateStyle:'full'}).format(new Date());
  app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p>Wertungen werden geladen …</p>')+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));
  try{
-  const repairedDaily=await repairDailyAnswerCounters(dayKey);const [todaySnap,weekDays]=await Promise.all([get(ref(db,`learningDailyLeaderboard/${dayKey}`)),loadWeekDailyRows(weekKey)]);
-  const today=todaySnap.val()||{};for(const subject of ["english","math"])for(const name of names)if(repairedDaily?.[subject]?.[name])today[subject]={...(today[subject]||{}),[name]:repairedDaily[subject][name]};
+  const repairedDaily=await repairDailyAnswerCounters(dayKey);const [todaySnap,loadedWeekDays]=await Promise.all([get(ref(db,`learningDailyLeaderboard/${dayKey}`)),loadWeekDailyRows(weekKey)]);
+  const today=todaySnap.val()||{};for(const subject of ["english","math"])for(const name of names)if(repairedDaily?.[subject]?.[name])today[subject]={...(today[subject]||{}),[name]:repairedDaily[subject][name]};const weekDays=loadedWeekDays.map((day,index)=>isoWeekDays(weekKey)[index]===dayKey?today:day);
   const lucaRows=Object.values(today?.english?.Luca||{});
   const lucaDiagnostics=lucaRows.map(row=>({raw:Number(row?.attempts)||0,checked:Number(row?.checkedAttempts)||0,exerciseCount:Object.values(row?.progressByExercise||{}).reduce((n,v)=>n+(Number(v?.count)||0),0),calculated:dailyRowTotals(row).attempts,unverifiedLegacy:row?.unverifiedLegacyDailyCount||0}));
   const lucaDiagnosticHtml='<p class="muted" style="font-size:12px">Prüfung Luca · Datum '+esc(dayKey)+' · Datensätze '+lucaRows.length+' · Werte '+esc(JSON.stringify(lucaDiagnostics))+'</p>';
