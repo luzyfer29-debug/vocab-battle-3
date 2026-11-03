@@ -1019,12 +1019,12 @@ async function retroCorrectVocabWorkToday(){
    if(!room||meta.hostUid!==uid||meta.stage!=='finished'||expectedActivity!==group.activity||berlinDayKey(Number(meta.finishedAt)||Math.max(...Object.values(group.records).map(x=>Number(x.updatedAt)||0)))!==dayKey){roomsSkipped++;continue;}
    const questions=station2?VOCAB_WORK_STATION2_BATTLE_QUESTIONS:VOCAB_WORK_BATTLE_QUESTIONS,players=Object.entries(room.slots||{}).map(([id,p])=>({id,...p})).filter(p=>p.uid&&SOLO_NAMES.includes(p.name)),scores={},reviewsPatch={},playerRows={};
    for(const p of players){scores[p.name]=0;playerRows[p.name]=[];for(let index=0;index<questions.length;index++){
-    const q=questions[index],answer=room.submissions?.[index]?.[p.uid],review=room.reviews?.[index]?.[p.uid],text=String(answer?.text||''),accepted=(Array.isArray(q?.accepted)?q.accepted:q?.accepted?[q.accepted]:[]).map(gbNorm),correct=!!text.trim()&&accepted.includes(gbNorm(text));
+    const q=questions[index],answer=room.submissions?.[index]?.[p.uid],review=room.reviews?.[index]?.[p.uid],text=String(answer?.text||''),correct=vocabWorkAnswerCorrect(q,text);
     if(correct)scores[p.name]++;
     if(answer){reviewsPatch['reviews/'+index+'/'+p.uid]={correct,automatic:true,answer:text,at:Number(answer.at)||Number(review?.at)||Date.now(),retroactiveAudit:true};if(Boolean(review?.correct)!==correct)changedAnswers++;}
     if(answer)playerRows[p.name].push('<tr><td data-label="Aufgabe">'+(index+1)+'</td><td data-label="Kategorie / Aufgabe">'+esc(q?.category||q?.title||'')+'</td><td data-label="Eingegebenes Wort">'+esc(text)+'</td><td data-label="Wertung">'+(correct?'✅ Richtig':'❌ Falsch')+'</td></tr>');
    }}
-   const ranked=rankByScore(players,p=>scores[p.name]||0),roomPatch={...reviewsPatch},rankPatch={};for(const p of players){const awarded={};for(let index=0;index<questions.length;index++){const answer=room.submissions?.[index]?.[p.uid],q=questions[index],accepted=(Array.isArray(q?.accepted)?q.accepted:q?.accepted?[q.accepted]:[]).map(gbNorm);if(answer&&String(answer.text||'').trim()&&accepted.includes(gbNorm(answer.text)))awarded[(meta.runId||meta.createdAt||'vocab')+':'+index]=true;}roomPatch['slots/'+p.id+'/score']=(scores[p.name]||0)*10;roomPatch['slots/'+p.id+'/awarded']=awarded;}
+   const ranked=rankByScore(players,p=>scores[p.name]||0),roomPatch={...reviewsPatch},rankPatch={};for(const p of players){const awarded={};for(let index=0;index<questions.length;index++){const answer=room.submissions?.[index]?.[p.uid],q=questions[index];if(answer&&vocabWorkAnswerCorrect(q,answer.text))awarded[(meta.runId||meta.createdAt||'vocab')+':'+index]=true;}roomPatch['slots/'+p.id+'/score']=(scores[p.name]||0)*10;roomPatch['slots/'+p.id+'/awarded']=awarded;}
    await update(ref(db,'grammarRooms/'+roomCode),roomPatch);
    for(const {row:p,place,tied} of ranked){const previous=group.records[p.name];if(!previous)continue;rankPatch[p.name]={...previous,correct:scores[p.name]||0,maxCorrect:questions.length,bonusPoints:battleBonusPoints(place),place,tied,roomCode};}
    if(Object.keys(rankPatch).length)await update(ref(db,'battleRankings/english/'+group.resultKey),rankPatch);
@@ -1093,7 +1093,7 @@ function mathAction(v){if(v==='mathChoose')mathChoose();else if(v==='mathHome')m
 // Grammatik-Battle: Originalaufgaben, Texteingaben und Bewertung durch den Schiedsrichter.
 const GB_TIME=20000;
 let gbCode='',gbRoom=null,gbOff=null,gbRole='',gbSlot='',gbBusy=false,gbTimer=null,gbRetryTimer=null,gbReadRetries=0,gbChooseAction='',gbRoomReady=false,gbRoomListenError=false;
-const gbNorm=s=>String(s||'').normalize('NFKC').trim().toLocaleLowerCase('en').replace(/[’‘`´]/g,"'").replace(/[‐‑‒–—]/g,'-').replace(/^[.,!?;:'\"]+|[.,!?;:'\"]+$/g,'').replace(/\s+/g,' ');
+const gbNorm=s=>String(s||'').normalize('NFKD').replace(/[\\u0300-\\u036f]/g,'').replace(/ß/g,'ss').trim().toLocaleLowerCase('en').replace(/&/g,' and ').replace(/[^a-z0-9]+/g,' ').trim().replace(/\\s+/g,' ');\nfunction vocabWorkAnswerCorrect(q,text){if(!String(text||'').trim())return false;const category=gbNorm(q?.category),pool=category.includes('water')?VOCAB_WORK_SPORT_POOLS.water:category.includes('ball')?VOCAB_WORK_SPORT_POOLS.ball:category.includes('winter')?VOCAB_WORK_SPORT_POOLS.winter:null;const accepted=pool||((Array.isArray(q?.accepted)?q.accepted:q?.accepted?[q.accepted]:[]));return accepted.map(gbNorm).includes(gbNorm(text));}
 const emergencyServiceInitials=['P','F','A','C'];
 const gbQuestions=st=>GRAMMAR[st].tasks.flatMap((t,ti)=> (t.items||t.open||[]).map((item,i)=>({task:ti,number:i+1,title:t.title,intro:st===1&&ti===0?'Setze immer has oder have UND die passende 3. Verbform ein. Beide Wörter müssen eingegeben werden.':(t.intro||''),prompt:t.items?item[0]+' _____ '+(st===1&&ti===0?' (has/have + '+(String(item[1]).match(/has\/have\s*\+\s*([^)]*)/)?.[1]?.trim()||String(item[1]).replace(/^\s*\(|\)\s*$/g,''))+')':item[1]):(t.prompts?.[i]||'Schreibe einen vollständigen englischen Satz.'),accepted:t.items?item[2]:null,example:t.open?.[i]||null,image:st===0&&ti===2?'./grammar1-task3.jpg?v=20261022-1':st===0&&ti===3?'./grammar1-task4.jpg?v=20261022-1':st===1&&ti===1?'./grammar2-task2.png?v=20261027-1':null})));
 function gbStop(){if(gbOff){gbOff();gbOff=null;}if(gbTimer){clearInterval(gbTimer);gbTimer=null;}if(gbRetryTimer){clearTimeout(gbRetryTimer);gbRetryTimer=null;}gbReadRetries=0;gbRoom=null;gbCode='';gbRole='';gbSlot='';gbChooseAction='';gbRoomReady=false;gbRoomListenError=false;}
@@ -1133,7 +1133,7 @@ async function gbAutoAdvance(){
   const submissions=gbRoom.submissions?.[idx]||{};
   for(const p of gbPlayers()){
    const answer=submissions[p.uid];
-   const correct=!!answer&&accepted.includes(gbNorm(answer.text));
+   const correct=!!answer&&(isWork?vocabWorkAnswerCorrect(q,answer.text):accepted.includes(gbNorm(answer.text)));
    await set(ref(db,'grammarRooms/'+gbCode+'/reviews/'+idx+'/'+p.uid),{correct,at:Date.now(),automatic:true});
    if(correct)await awardRoomPointsOnce('grammarRooms/'+gbCode,p.id,(m.runId||m.createdAt)+':'+idx,10);
    if(!isWork)await saveGrammarProgress(p,Number(m.station)||0,idx,correct,m.runId||gbCode,questions.length);
