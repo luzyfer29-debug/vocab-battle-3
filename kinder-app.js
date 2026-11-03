@@ -142,7 +142,7 @@ function dailyProgressFromActivity(activity,dayKey){
   }
   // Read legacy real errors until the per-answer check record has been written.
   for(const [index,item] of Object.entries(entry?.errorItems||{})){
-   if(checks[index]||item?.attempted!==true)continue;
+   if(checks[index]||item?.attempted!==true||isFalsePositiveResolvedLearningRecord(item))continue;
    const wrongAt=Number(item.lastWrongAt)||0,resolvedAt=Number(item.resolvedAt)||0;
    const touchedToday=item.dayKey===dayKey||(wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey)||(resolvedAt>0&&activityPeriodKeys(resolvedAt).dayKey===dayKey);
    if(!touchedToday)continue;
