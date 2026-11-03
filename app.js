@@ -276,7 +276,17 @@ async function repairDailyAnswerCounters(dayKey){
    }
    return merged;
   },{});
-  const progress=dailyProgressFromActivity(childActivity,dayKey),totals=dailyProgressCounts(progress),submittedByExercise={};
+  const progress=dailyProgressFromActivity(childActivity,dayKey);
+  // Preserve auditable vocabulary answers recovered from this day's saved solo progress.
+  for(const row of Object.values(existing))for(const [exercise,entry] of Object.entries(row?.progressByExercise||{})){
+   if(entry?.backfilledFromSavedProgress!==true)continue;
+   const prior=progress[exercise]||{items:{}},items={...(prior.items||{})};
+   for(const [key,item] of Object.entries(entry.items||{})){
+    const old=items[key];if(!old)items[key]=item;else if(Number(item?.mistakes)>Number(old?.mistakes||0))items[key]={...old,mistakes:Number(item.mistakes)||0};
+   }
+   prior.items=items;prior.count=Object.keys(items).length;prior.mistakes=Object.values(items).reduce((sum,item)=>sum+(Number(item.mistakes)||0),0);progress[exercise]=prior;
+  }
+  const totals=dailyProgressCounts(progress),submittedByExercise={};
   for(const row of Object.values(existing))for(const [exercise,entry] of Object.entries(row?.submittedByExercise||{})){
    const merged=submittedByExercise[exercise]||{items:{}},items={...(merged.items||{})};
    for(const [key,item] of Object.entries(entry?.items||{}))if(!items[key])items[key]=item;
