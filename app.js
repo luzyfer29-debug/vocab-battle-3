@@ -258,7 +258,8 @@ async function repairDailyAnswerCounters(dayKey){
    const childActivity=Object.values(activity).reduce((merged,user)=>{const source=user?.[name]||{};for(const [exercise,entry] of Object.entries(source)){const prior=merged[exercise]||{};merged[exercise]={...prior,...entry,errorItems:{...(prior.errorItems||{}),...(entry?.errorItems||{})}};}return merged;},{});const progress=dailyProgressFromActivity(childActivity,dayKey),totals=dailyProgressCounts(progress),oldChecked=Math.max(0,Number(row.checkedAttempts??row.attempts)||0);
    if(!totals.checked&&oldChecked>0){console.warn("Tageszähler ohne Antwortprotokoll nicht automatisch überschrieben:",name,subject,deviceId);continue;}
    const path="learningDailyLeaderboard/"+dayKey+"/"+subject+"/"+name+"/"+deviceId;
-   await runTransaction(ref(db,path),current=>{
+   const repaired={...row,uncertainLegacyDailyCount:row.uncertainLegacyDailyCount||{attempts:Math.max(Number(row.attempts)||0,(Number(row.checkedAttempts)||0)+(Number(row.submittedAttempts)||0)),checkedAttempts:Number(row.checkedAttempts)||0,submittedAttempts:Number(row.submittedAttempts)||0,mistakes:Number(row.mistakes)||0},progressByExercise:progress,submittedByExercise:row.submittedByExercise&&typeof row.submittedByExercise==="object"?row.submittedByExercise:{},legacySubmittedAttempts:Number.isFinite(Number(row.legacySubmittedAttempts))?Math.max(0,Number(row.legacySubmittedAttempts)):Math.max(0,Number(row.submittedAttempts)||0),answerCounterVersion:3,dailyRepairVersion:6,checkedAttempts:totals.checked,mistakes:totals.mistakes,name};repaired.submittedAttempts=repaired.legacySubmittedAttempts+dailySubmittedCount(repaired.submittedByExercise);repaired.attempts=repaired.checkedAttempts+repaired.submittedAttempts;daily[subject]=daily[subject]||{};daily[subject][name]=daily[subject][name]||{};daily[subject][name][deviceId]=repaired;
+   try{await runTransaction(ref(db,path),current=>{
     const value=current&&typeof current==="object"?{...current}:{name,attempts:0,mistakes:0,checkedAttempts:0,submittedAttempts:0};
     if(Number(value.answerCounterVersion)===3)return value;
     const oldSubmitted=Math.max(0,Number(value.submittedAttempts)||0),oldAttempts=Math.max(Number(value.attempts)||0,(Number(value.checkedAttempts)||0)+oldSubmitted);
@@ -274,9 +275,10 @@ async function repairDailyAnswerCounters(dayKey){
     value.attempts=value.checkedAttempts+value.submittedAttempts;
     value.name=name;
     return value;
-   });
+   });}catch(e){console.warn("Tageszähler wird für die Anzeige aus Antwortprotokollen berechnet:",name,subject,e.code||e.message);}
   }
  }
+ return daily;
 }
 // A daily win is awarded once per calendar day, combining English and math learning.
 // The historical KW44 Luca correction is retained as a minimum, not a replacement
@@ -311,8 +313,8 @@ async function showRefereeDailyWeekly(){
  const {dayKey,weekKey}=activityDateKeys(),dateLabel=new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',dateStyle:'full'}).format(new Date());
  app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p>Wertungen werden geladen …</p>')+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));
  try{
-  await repairDailyAnswerCounters(dayKey);const [todaySnap,weekDays]=await Promise.all([get(ref(db,`learningDailyLeaderboard/${dayKey}`)),loadWeekDailyRows(weekKey)]);
-  const today=todaySnap.val()||{};
+  const repairedDaily=await repairDailyAnswerCounters(dayKey);const [todaySnap,weekDays]=await Promise.all([get(ref(db,`learningDailyLeaderboard/${dayKey}`)),loadWeekDailyRows(weekKey)]);
+  const today=todaySnap.val()||repairedDaily||{};for(const subject of ["english","math"])for(const name of names)if(repairedDaily?.[subject]?.[name])today[subject]={...(today[subject]||{}),[name]:repairedDaily[subject][name]};
   const lucaRows=Object.values(today?.english?.Luca||{});
   const lucaDiagnostics=lucaRows.map(row=>({raw:Number(row?.attempts)||0,checked:Number(row?.checkedAttempts)||0,exerciseCount:Object.values(row?.progressByExercise||{}).reduce((n,v)=>n+(Number(v?.count)||0),0),calculated:dailyRowTotals(row).attempts}));
   const lucaDiagnosticHtml='<p class="muted" style="font-size:12px">Prüfung Luca · Datum '+esc(dayKey)+' · Datensätze '+lucaRows.length+' · Werte '+esc(JSON.stringify(lucaDiagnostics))+'</p>';
