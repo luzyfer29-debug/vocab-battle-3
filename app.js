@@ -71,7 +71,7 @@ import {WRITING_TASKS,WRITING_BATTLE} from './writing-data.js';
 
 const app=document.querySelector('#app'),status=document.querySelector('#status');
 const names=['Luca','Semir','Talea','Nele'];
-const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:50,Semir:30,Talea:6}}};
+const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:{count:50,baselineAnswers:36},Semir:{count:30,baselineAnswers:30},Talea:{count:6,baselineAnswers:4}}}};
 const DAILY_WIN_EXCLUDED_DAYS={'2026-11-02':'Lern- und Battle-Antworten sind an diesem Tag nicht verlässlich getrennt.'};
 const VOCAB_QUESTION_MS=20000,OTHER_QUESTION_MS=15000,REVEAL_MS=3000;
 let db,uid='',code='',role='',slot='',room=null,unsubscribe=null,solo=null;
@@ -286,9 +286,11 @@ async function repairDailyAnswerCounters(dayKey){
   daily[subject][name]={"learning-activity":{name,attempts:totals.checked+submitted,checkedAttempts:totals.checked,mistakes:totals.mistakes,submittedAttempts:submitted,answerCounterVersion:3,dailyRepairVersion:8,progressByExercise:progress,submittedByExercise,unverifiedLegacyDailyCount:unverified}};
  }
  const manual=DAILY_COUNTER_OVERRIDES[dayKey]||{};
- for(const [subject,children] of Object.entries(manual))for(const [name,count] of Object.entries(children)){
-  const priorRows=Object.values(daily?.[subject]?.[name]||{}),unverified=Math.max(0,...priorRows.map(row=>Number(row?.unverifiedLegacyDailyCount)||Number(row?.attempts)||0));
-  daily[subject]=daily[subject]||{};daily[subject][name]={...(daily[subject][name]||{}),"manual-today":{name,attempts:count,checkedAttempts:0,mistakes:0,submittedAttempts:0,legacySubmittedAttempts:count,answerCounterVersion:3,dailyRepairVersion:8,manualDailyOverride:true,manualCount:count,unverifiedLegacyDailyCount:unverified,progressByExercise:{},submittedByExercise:{}}};
+ for(const [subject,children] of Object.entries(manual))for(const [name,setting] of Object.entries(children)){
+  const count=Number(typeof setting==='number'?setting:setting?.count)||0,baselineAnswers=Number(typeof setting==='number'?0:setting?.baselineAnswers)||0;
+  const rows=daily?.[subject]?.[name]||{},actual=dailyRowTotals(rows['learning-activity']||{}).attempts,adjustment=Math.max(0,count-Math.min(actual,baselineAnswers));
+  const priorRows=Object.values(rows),unverified=Math.max(0,...priorRows.map(row=>Number(row?.unverifiedLegacyDailyCount)||Number(row?.attempts)||0));
+  daily[subject]=daily[subject]||{};daily[subject][name]={...rows,"manual-today":{name,attempts:adjustment,checkedAttempts:0,mistakes:0,submittedAttempts:0,legacySubmittedAttempts:adjustment,answerCounterVersion:3,dailyRepairVersion:8,manualDailyOverride:true,manualCount:count,baselineAnswers,unverifiedLegacyDailyCount:unverified,progressByExercise:{},submittedByExercise:{}}};
  }
  return daily;
 }
