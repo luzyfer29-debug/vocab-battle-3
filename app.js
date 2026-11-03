@@ -335,15 +335,16 @@ async function repairWeeklyBattleBonuses(){
    const records=allResults.filter(x=>x.name===winner.name).sort((a,b)=>(Number(a.result.updatedAt)||0)-(Number(b.result.updatedAt)||0));
    if(!records.length){report.push(`${winner.name}: ${winner.points} Bonuspunkte vorgemerkt; noch kein Battle diese Woche abgeschlossen.`);continue;}
    const existing=records.find(x=>Number(x.result.weeklyBonusPoints)>0);
-   const target=existing||records[0],bonus=Math.max(winner.points,Number(target.result.weeklyBonusPoints)||0);
+   if(existing){report.push(`${winner.name}: +${Number(existing.result.weeklyBonusPoints)} Wochenbonus ist bereits in ${existing.result.label||'einem Battle'} gutgeschrieben.`);continue;}
+   const target=records[0],bonus=winner.points;
    const resultRef=ref(db,`battleRankings/${target.subject}/${target.key}/${winner.name}`);
    const tx=await runTransaction(resultRef,current=>{
-    if(!current?.finished)return current;
-    return {...current,weeklyBonusPoints:Math.max(Number(current.weeklyBonusPoints)||0,bonus),weeklyAwardWeek:weekKey};
+    if(!current?.finished||Number(current.weeklyBonusPoints)>0)return current;
+    return {...current,weeklyBonusPoints:bonus,weeklyAwardWeek:weekKey};
    });
    const saved=tx.snapshot.val();
-   if(!saved?.finished){report.push(`${winner.name}: Battle-Ergebnis konnte nicht aktualisiert werden.`);continue;}
-   report.push(`${winner.name}: +${Math.max(Number(saved.weeklyBonusPoints)||0,bonus)} Wochenbonus in ${saved.label||target.result.label||'Battle'} (${target.subject==='english'?'Englisch':'Mathe'}).`);
+   if(!saved?.finished||Number(saved.weeklyBonusPoints)<bonus){report.push(`${winner.name}: Battle-Ergebnis konnte nicht aktualisiert werden.`);continue;}
+   report.push(`${winner.name}: +${Number(saved.weeklyBonusPoints)} Wochenbonus in ${saved.label||target.result.label||'Battle'} (${target.subject==='english'?'Englisch':'Mathe'}).`);
   }
   weeklyBonusAuditHtml='<details open><summary>Wochensieg-Bonus · KW '+esc(weekKey)+'</summary><p>'+esc(report.join(' '))+'</p></details>';
   await showBattleSeries('english');
