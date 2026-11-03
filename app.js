@@ -231,6 +231,18 @@ function dailyProgressFromActivity(activity,dayKey){
    const key=dailyAnswerItemKey(index,item.prompt||item.topic||"");
    items[key]={count:1,mistakes:wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey?1:0};
   }
+  // Vocabulary live state records how many indexed questions were completed even
+  // when older clients failed to write answerChecks or the daily counter row.
+  const vocabMatch=/^english_vocab_battle([1-3])$/.exec(exercise),liveAt=Number(entry?.live?.updatedAt)||Number(entry?.lastAt)||0;
+  if(vocabMatch&&entry?.dayKey===dayKey&&liveAt>0&&activityPeriodKeys(liveAt).dayKey===dayKey){
+   const battle=Number(vocabMatch[1])-1,questions=BATTLES[battle]||[],done=Math.max(0,Math.min(30,Number(entry?.live?.done)||0));exerciseUpdatedAt=Math.max(exerciseUpdatedAt,liveAt);
+   for(let index=0;index<done;index++){
+    const q=questions[index],check=checks[String(index)],error=entry?.errorItems?.[String(index)],prompt=check?.prompt||q?.prompt||q?.q||q?.word||`Vokabeln ${battle+1} · Aufgabe ${index+1}`,key=dailyAnswerItemKey(index,prompt);
+    const wrongAt=Number(check?.lastWrongAt||error?.lastWrongAt)||0,wrongToday=wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey&&!isFalsePositiveResolvedLearningRecord(error);
+    const mistakes=check?.attempted===true?Number(wrongToday):Number(error?.attempted===true&&wrongToday);
+    items[key]={count:1,mistakes};
+   }
+  }
   const values=Object.values(items),count=values.length,mistakes=values.reduce((n,item)=>n+(Number(item.mistakes)||0),0);
   if(count)progress[exercise]={count,mistakes,items,updatedAt:exerciseUpdatedAt||Date.now()};
  }
