@@ -210,6 +210,7 @@ function dailyAnswerItemKey(index,prompt){
  for(let i=0;i<clean.length;i++){hash^=clean.charCodeAt(i);hash=Math.imul(hash,16777619);}
  return String(index).replace(/[^A-Za-z0-9_-]/g,"_")+"_"+(hash>>>0).toString(36);
 }
+function isFalsePositiveResolvedLearningRecord(item){const wrongAt=Number(item?.lastWrongAt)||0,resolvedAt=Number(item?.resolvedAt)||0;return item?.resolved===true&&wrongAt>0&&resolvedAt===wrongAt+1;}
 function dailyProgressFromActivity(activity,dayKey){
  const progress={};
  for(const [exercise,entry] of Object.entries(activity||{})){
@@ -223,7 +224,7 @@ function dailyProgressFromActivity(activity,dayKey){
    items[key]={count:1,mistakes:wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey?1:0};
   }
   for(const [index,item] of Object.entries(entry?.errorItems||{})){
-   if(checks[index]||item?.attempted!==true||item?.source==='battle'||item?.source==='live_battle')continue;
+   if(checks[index]||item?.attempted!==true||item?.source==='battle'||item?.source==='live_battle'||isFalsePositiveResolvedLearningRecord(item))continue;
    const wrongAt=Number(item.lastWrongAt)||0,resolvedAt=Number(item.resolvedAt)||0;
    const touchedToday=item.dayKey===dayKey||(wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey)||(resolvedAt>0&&activityPeriodKeys(resolvedAt).dayKey===dayKey);
    if(!touchedToday)continue;
