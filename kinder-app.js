@@ -108,7 +108,8 @@ const key='vb2solo';
 const SOLO_NAMES=['Luca','Semir','Talea','Nele','Frauke'];
 const RANKED_NAMES=['Luca','Semir','Talea','Nele']; // Frauke is a test-only profile.
 const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:{count:50,baselineAnswers:36},Semir:{count:30,baselineAnswers:30},Talea:{count:6,baselineAnswers:4}}}};
-const DAILY_WIN_EXCLUDED_DAYS={'2026-11-02':'Lern- und Battle-Antworten sind an diesem Tag nicht verlässlich getrennt.'};
+const DAILY_WIN_EXCLUDED_DAYS={'2026-11-02':'Lern- und Battle-Antworten sind an diesem Tag nicht verlässlich getrennt; der Tagessieg wurde manuell Luca gutgeschrieben.'};
+const DAILY_WINNER_OVERRIDES={'2026-11-02':{Luca:1}};
 function applyDailyCounterOverride(totals,dayKey,subject){for(const [name,setting] of Object.entries(DAILY_COUNTER_OVERRIDES[dayKey]?.[subject]||{})){const row=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0}),count=Number(typeof setting==='number'?setting:setting?.count)||0,baselineAnswers=Number(typeof setting==='number'?0:setting?.baselineAnswers)||0,current=Number(row.attempts)||0;row.attempts=count+Math.max(0,current-baselineAnswers);row.manualAdjustment=true;}}
 let activitySyncWarned=false;
 function activityPeriodKeys(timestamp=Date.now()){
@@ -285,6 +286,7 @@ function weeklyDailyWins(days,weekKey=''){
   const leader=rows[0];
   for(const row of rows)if(row.attempts===leader.attempts&&row.rate===leader.rate)wins[row.name]++;
  }
+ for(const [dayKey,awards] of Object.entries(DAILY_WINNER_OVERRIDES))if(dayKeys.includes(dayKey))for(const [name,count] of Object.entries(awards))if(Object.hasOwn(wins,name))wins[name]+=Math.max(0,Math.floor(Number(count)||0));
  if(weekKey==='2026-W44'){wins.Luca=5;wins.Nele=0;wins.Semir=0;wins.Talea=0;}
  const all=RANKED_NAMES.map(name=>({name,wins:wins[name]}));
  const positive=all.filter(row=>row.wins>0).sort((a,b)=>b.wins-a.wins||RANKED_NAMES.indexOf(a.name)-RANKED_NAMES.indexOf(b.name));
