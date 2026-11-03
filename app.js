@@ -256,12 +256,12 @@ async function repairDailyAnswerCounters(dayKey){
  for(const subject of ["english","math"])for(const name of names){
   const devices=daily?.[subject]?.[name]||{};
   for(const [deviceId,row] of Object.entries(devices)){
-   if(!row||row.manualDailyOverride||Number(row.dailyRepairVersion)>=7)continue;
+   if(!row||row.manualDailyOverride||(Number(row.dailyRepairVersion)>=8&&dayKey!==activityDateKeys().dayKey))continue;
    const childActivity=Object.values(activity).reduce((merged,user)=>{const source=user?.[name]||{};for(const [exercise,entry] of Object.entries(source)){if(!(subject==='english'?exercise.startsWith('english_'):exercise.startsWith('math_')))continue;const prior=merged[exercise]||{};merged[exercise]={...prior,...entry,errorItems:{...(prior.errorItems||{}),...(entry?.errorItems||{})}};}return merged;},{});
    const progress=dailyProgressFromActivity(childActivity,dayKey),totals=dailyProgressCounts(progress);
    const legacyAttempts=Math.max(Number(row.attempts)||0,(Number(row.checkedAttempts)||0)+(Number(row.submittedAttempts)||0));
    const submitted=dailySubmittedCount(row.submittedByExercise||{});
-   const corrected={...row,progressByExercise:progress,submittedByExercise:row.submittedByExercise&&typeof row.submittedByExercise==="object"?row.submittedByExercise:{},legacySubmittedAttempts:0,answerCounterVersion:3,dailyRepairVersion:7,checkedAttempts:totals.checked,mistakes:totals.mistakes,submittedAttempts:submitted,attempts:totals.checked+submitted,name};
+   const corrected={...row,progressByExercise:progress,submittedByExercise:row.submittedByExercise&&typeof row.submittedByExercise==="object"?row.submittedByExercise:{},legacySubmittedAttempts:0,answerCounterVersion:3,dailyRepairVersion:8,checkedAttempts:totals.checked,mistakes:totals.mistakes,submittedAttempts:submitted,attempts:totals.checked+submitted,name};
    if(!totals.checked&&legacyAttempts>0)corrected.unverifiedLegacyDailyCount=legacyAttempts;
    daily[subject]=daily[subject]||{};daily[subject][name]=daily[subject][name]||{};daily[subject][name][deviceId]=corrected;
   }
