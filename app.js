@@ -274,9 +274,9 @@ async function repairDailyAnswerCounters(dayKey){
 // A daily win is awarded once per calendar day, combining English and math learning.
 // The historical KW44 Luca correction is retained as a minimum, not a replacement
 // for live Firebase totals; future weeks are calculated exclusively from daily rows.
-function rankBattleDailyWins(data,weekKey=''){
- const wins=Object.fromEntries(names.map(name=>[name,0])),weekPrefix=`week_${weekKey}_`;
- for(const dayKey of isoWeekDays(weekKey)){
+function battleDailyBreakdown(data,weekKey=''){
+ const weekPrefix=`week_${weekKey}_`;
+ return isoWeekDays(weekKey).map(dayKey=>{
   const rows=names.map(name=>({name,points:0,correct:0,battles:0}));
   for(const subject of ['english','math'])for(const [key,byName] of Object.entries(data?.[subject]||{})){
    if(key.startsWith('week_')&&!key.startsWith(weekPrefix))continue;
@@ -289,8 +289,13 @@ function rankBattleDailyWins(data,weekKey=''){
     row.battles++;
    }
   }
-  const played=rows.filter(row=>row.battles>0);if(!played.length)continue;
-  played.sort((a,b)=>b.points-a.points||b.correct-a.correct||names.indexOf(a.name)-names.indexOf(b.name));
+  return {dayKey,rows:rows.filter(row=>row.battles>0)};
+ }).filter(day=>day.rows.length);
+}
+function rankBattleDailyWins(data,weekKey=''){
+ const wins=Object.fromEntries(names.map(name=>[name,0]));
+ for(const day of battleDailyBreakdown(data,weekKey)){
+  const played=day.rows;played.sort((a,b)=>b.points-a.points||b.correct-a.correct||names.indexOf(a.name)-names.indexOf(b.name));
   const leader=played[0];
   for(const row of played)if(row.points===leader.points&&row.correct===leader.correct)wins[row.name]++;
  }
@@ -379,8 +384,9 @@ async function showRefereeDailyWeekly(){
    const rows=names.map(name=>{let attempts=0,checkedAttempts=0,mistakes=0;for(const row of Object.values(data[name]||{})){const totals=dailyRowTotals(row);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;}return {name,attempts,checkedAttempts,mistakes,rate:checkedAttempts?mistakes/checkedAttempts:null};}).sort((a,b)=>b.attempts-a.attempts||(a.rate??Infinity)-(b.rate??Infinity)||names.indexOf(a.name)-names.indexOf(b.name));
    const manual=Object.entries(data).flatMap(([name,devices])=>Object.values(devices||{}).filter(row=>row?.manualDailyOverride).map(row=>name+': heute ausnahmsweise '+Number(row.manualCount)+' gesetzt'));const unknown=Object.entries(data).flatMap(([name,devices])=>Object.values(devices||{}).filter(row=>Number(row?.unverifiedLegacyDailyCount)>0&&!row?.manualDailyOverride).map(row=>name+': '+Number(row.unverifiedLegacyDailyCount)+' alte Antworten'));const note=[...manual,...(unknown.length?['nicht prüfbare Altsummen werden nicht gewertet ('+unknown.join(', ')+')']:[])];return '<section class="solo-section"><h3>'+(subject==='english'?'🇬🇧 Englisch':'🔢 Mathe')+' · Heute</h3>'+(note.length?'<p class="muted">'+esc(note.join('; '))+'. Neue Antworten werden korrekt gezählt.</p>':'')+rows.map((row,index)=>'<div class="solo-game"><div class="row"><h3>'+(row.attempts?(index===0?'🥇':index===1?'🥈':index===2?'🥉':'👤'):'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.attempts+' Antworten</span></div><p>'+(row.rate===null?'Noch keine geprüften Antworten':(row.rate*100).toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1})+' % Fehler · '+row.mistakes+' falsch von '+row.checkedAttempts+' geprüften Antworten')+'</p></div>').join('')+'</section>';
   };
-  const weekRows=rankBattleDailyWins(battleData,weekKey);
-  const weekHtml='<section class="solo-section"><h3>📅 Woche · '+esc(weekKey)+'</h3><p>Tagessiege zählen abgeschlossene Battles. Pro Tag zählen die Battle-Punkte; bei Gleichstand die richtigen Antworten. Bei exakt gleichem Ergebnis gewinnen beide Kinder.</p>'+weekRows.map(row=>'<div class="solo-game"><div class="row"><h3>'+(row.place===1?'🥇':row.place===2?'🥈':row.place===3?'🥉':'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.wins+' '+(row.wins===1?'gewonnener Tag':'gewonnene Tage')+'</span></div></div>').join('')+'</section>';
+  const weekRows=rankBattleDailyWins(battleData,weekKey),battleDays=battleDailyBreakdown(battleData,weekKey);
+  const dayAudit=battleDays.length?'<details><summary>Battle-Punkte je Tag anzeigen</summary><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Datum</th><th>Kind</th><th>Battles</th><th>Battle-Punkte</th><th>Richtig</th></tr></thead><tbody>'+battleDays.flatMap(day=>day.rows.sort((a,b)=>b.points-a.points||b.correct-a.correct).map(row=>'<tr><td>'+esc(day.dayKey)+'</td><td>'+esc(row.name)+'</td><td>'+row.battles+'</td><td>'+row.points+'</td><td>'+row.correct+'</td></tr>')).join('')+'</tbody></table></div></details>':'<p class="muted">Diese Woche noch keine abgeschlossenen Battles.</p>';
+  const weekHtml='<section class="solo-section"><h3>📅 Woche · '+esc(weekKey)+'</h3><p>Tagessiege zählen abgeschlossene Battles. Pro Tag zählen die Battle-Punkte; bei Gleichstand die richtigen Antworten. Bei exakt gleichem Ergebnis gewinnen beide Kinder.</p>'+dayAudit+weekRows.map(row=>'<div class="solo-game"><div class="row"><h3>'+(row.place===1?'🥇':row.place===2?'🥈':row.place===3?'🥉':'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.wins+' '+(row.wins===1?'gewonnener Tag':'gewonnene Tage')+'</span></div></div>').join('')+'</section>';
   app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p>'+esc(dateLabel)+'</p>'+lucaDiagnosticHtml+dailyHtml('english')+dailyHtml('math')+weekHtml)+card(btn('↻ Aktualisieren','refereeDailyWeekly','alt'))+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));
  }catch(e){app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p class="error">Wertungen konnten nicht geladen werden: '+esc(e.message||e)+'</p>')+card(btn('Erneut laden','refereeDailyWeekly','alt'))+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));}
 }
