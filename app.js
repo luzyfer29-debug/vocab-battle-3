@@ -255,7 +255,7 @@ async function repairDailyAnswerCounters(dayKey){
   const devices=daily?.[subject]?.[name]||{};
   for(const [deviceId,row] of Object.entries(devices)){
    if(!row||Number(row.answerCounterVersion)===3)continue;
-   const progress=dailyProgressFromActivity(activity?.[deviceId]?.[name]||{},dayKey),totals=dailyProgressCounts(progress),oldChecked=Math.max(0,Number(row.checkedAttempts??row.attempts)||0);
+   const childActivity=Object.values(activity).reduce((merged,user)=>{const source=user?.[name]||{};for(const [exercise,entry] of Object.entries(source)){const prior=merged[exercise]||{};merged[exercise]={...prior,...entry,errorItems:{...(prior.errorItems||{}),...(entry?.errorItems||{})}};}return merged;},{});const progress=dailyProgressFromActivity(childActivity,dayKey),totals=dailyProgressCounts(progress),oldChecked=Math.max(0,Number(row.checkedAttempts??row.attempts)||0);
    if(!totals.checked&&oldChecked>0){console.warn("Tageszähler ohne Antwortprotokoll nicht automatisch überschrieben:",name,subject,deviceId);continue;}
    const path="learningDailyLeaderboard/"+dayKey+"/"+subject+"/"+name+"/"+deviceId;
    await runTransaction(ref(db,path),current=>{
