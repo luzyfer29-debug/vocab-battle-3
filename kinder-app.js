@@ -120,6 +120,7 @@ function activityPeriodKeys(timestamp=Date.now()){
  return {dayKey:`${parts.year}-${parts.month}-${parts.day}`,weekKey:`${weekYear}-W${String(week).padStart(2,'0')}`};
 }
 let dailyLeaderboardSyncWarned=false;
+const falsePositiveCleanupDone=new Set();
 function dailyAnswerItemKey(index,prompt){
  const clean=String(prompt||"").trim().toLowerCase().replace(/\s+/g," ");
  let hash=2166136261;
@@ -418,8 +419,10 @@ function isFalsePositiveResolvedLearningRecord(item){
  const wrongAt=Number(item?.lastWrongAt)||0,resolvedAt=Number(item?.resolvedAt)||0;
  return item?.resolved===true&&wrongAt>0&&resolvedAt===wrongAt+1;
 }
+const falsePositiveCleanupDone=new Set();
 async function cleanupFalsePositiveLearningErrors(name,subject){
  if(!db||!uid||!RANKED_NAMES.includes(name))return;
+ const cleanupKey=uid+':'+name+':'+subject;if(falsePositiveCleanupDone.has(cleanupKey))return;
  for(const exercise of childLearningExercises(subject)){
   const path=`learningActivity/${uid}/${name}/${exercise}`,snapshot=await get(ref(db,path)),value=snapshot.val();
   const falseItems=Object.entries(value?.errorItems||{}).filter(([,item])=>isFalsePositiveResolvedLearningRecord(item));
@@ -437,6 +440,7 @@ async function cleanupFalsePositiveLearningErrors(name,subject){
   });
   await Promise.all(falseItems.map(([index,item])=>runTransaction(ref(db,`learningReview/${name}/${subject}/${exercise}/${index}`),current=>isFalsePositiveResolvedLearningRecord(current)?null:current)));
  }
+ falsePositiveCleanupDone.add(cleanupKey);
 }
 async function recordLearningError(name,subject,exercise,index,topic,q,correct,occurredAt=Date.now()){
  if(!db||!uid||!SOLO_NAMES.includes(name)||!exercise)return false;
