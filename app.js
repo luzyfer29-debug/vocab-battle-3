@@ -71,6 +71,7 @@ import {WRITING_TASKS,WRITING_BATTLE} from './writing-data.js';
 const app=document.querySelector('#app'),status=document.querySelector('#status');
 const names=['Luca','Semir','Talea','Nele'];
 const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:50}}};
+const DAILY_WIN_EXCLUDED_DAYS={'2026-11-02':'Lern- und Battle-Antworten sind an diesem Tag nicht verlässlich getrennt.'};
 const VOCAB_QUESTION_MS=20000,OTHER_QUESTION_MS=15000,REVEAL_MS=3000;
 let db,uid='',code='',role='',slot='',room=null,unsubscribe=null,solo=null;
 let clock=null,busy=false,previousStageKey='',lastClockText='';
@@ -290,6 +291,7 @@ function learningDailyBreakdown(days,weekKey=''){
 function rankLearningDailyWins(days,weekKey=''){
  const wins=Object.fromEntries(names.map(name=>[name,0]));
  for(const day of learningDailyBreakdown(days,weekKey)){
+  if(DAILY_WIN_EXCLUDED_DAYS[day.dayKey])continue;
   day.rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate||names.indexOf(a.name)-names.indexOf(b.name));
   const leader=day.rows[0];
   for(const row of day.rows)if(row.attempts===leader.attempts&&row.rate===leader.rate)wins[row.name]++;
@@ -384,7 +386,8 @@ async function showRefereeDailyWeekly(){
   };
   const weekRows=rankLearningDailyWins(weekDays,weekKey),learningDays=learningDailyBreakdown(weekDays,weekKey);
   const dayAudit=learningDays.length?'<details><summary>Lernantworten je Tag anzeigen</summary><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Datum</th><th>Kind</th><th>Antworten</th><th>Geprüft</th><th>Falsch</th></tr></thead><tbody>'+learningDays.flatMap(day=>day.rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate).map(row=>'<tr><td>'+esc(day.dayKey)+'</td><td>'+esc(row.name)+'</td><td>'+row.attempts+'</td><td>'+row.checkedAttempts+'</td><td>'+row.mistakes+'</td></tr>')).join('')+'</tbody></table></div></details>':'<p class="muted">Diese Woche noch keine Lernantworten erfasst.</p>';
-  const weekHtml='<section class="solo-section"><h3>📅 Woche · '+esc(weekKey)+'</h3><p>Tagessiege zählen Lernantworten aus Englisch und Mathe, nicht Battles. Es zählen die Antworten je Tag; bei Gleichstand entscheidet die Fehlerquote. Bei exakt gleichem Ergebnis gewinnen beide Kinder.</p>'+dayAudit+weekRows.map(row=>'<div class="solo-game"><div class="row"><h3>'+(row.place===1?'🥇':row.place===2?'🥈':row.place===3?'🥉':'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.wins+' '+(row.wins===1?'gewonnener Tag':'gewonnene Tage')+'</span></div></div>').join('')+'</section>';
+  const excludedDayNote=learningDailyBreakdown(weekDays,weekKey).filter(day=>DAILY_WIN_EXCLUDED_DAYS[day.dayKey]).map(day=>'<p class="muted">'+esc(day.dayKey)+': nicht gewertet – '+esc(DAILY_WIN_EXCLUDED_DAYS[day.dayKey])+'</p>').join('');
+  const weekHtml='<section class="solo-section"><h3>📅 Woche · '+esc(weekKey)+'</h3><p>Tagessiege zählen Lernantworten aus Englisch und Mathe, nicht Battles. Es zählen die Antworten je Tag; bei Gleichstand entscheidet die Fehlerquote. Bei exakt gleichem Ergebnis gewinnen beide Kinder.</p>'+excludedDayNote+dayAudit+weekRows.map(row=>'<div class="solo-game"><div class="row"><h3>'+(row.place===1?'🥇':row.place===2?'🥈':row.place===3?'🥉':'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.wins+' '+(row.wins===1?'gewonnener Tag':'gewonnene Tage')+'</span></div></div>').join('')+'</section>';
   app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p>'+esc(dateLabel)+'</p>'+lucaDiagnosticHtml+dailyHtml('english')+dailyHtml('math')+weekHtml)+card(btn('↻ Aktualisieren','refereeDailyWeekly','alt'))+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));
  }catch(e){app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p class="error">Wertungen konnten nicht geladen werden: '+esc(e.message||e)+'</p>')+card(btn('Erneut laden','refereeDailyWeekly','alt'))+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));}
 }
