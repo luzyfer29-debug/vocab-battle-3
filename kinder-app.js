@@ -109,7 +109,7 @@ const SOLO_NAMES=['Luca','Semir','Talea','Nele','Frauke'];
 const RANKED_NAMES=['Luca','Semir','Talea','Nele']; // Frauke is a test-only profile.
 const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:50,Semir:30,Talea:6}}};
 const DAILY_WIN_EXCLUDED_DAYS={'2026-11-02':'Lern- und Battle-Antworten sind an diesem Tag nicht verlässlich getrennt.'};
-function applyDailyCounterOverride(totals,dayKey,subject){for(const [name,count] of Object.entries(DAILY_COUNTER_OVERRIDES[dayKey]?.[subject]||{}))totals[name]={name,attempts:count,checkedAttempts:0,mistakes:0,manualAdjustment:true};}
+function applyDailyCounterOverride(totals,dayKey,subject){for(const [name,count] of Object.entries(DAILY_COUNTER_OVERRIDES[dayKey]?.[subject]||{})){const row=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0});row.attempts=(Number(row.attempts)||0)+Number(count||0);row.manualAdjustment=true;}}
 let activitySyncWarned=false;
 function activityPeriodKeys(timestamp=Date.now()){
 
@@ -373,8 +373,13 @@ async function showDailyLeaderboard(subject){
   // Keine automatischen Änderungen an historischen Tagesdaten beim bloßen Anzeigen.
   // Do not turn exercise sessions or progress snapshots into answer counts.
   // Historical vocabulary progress is not an auditable per-answer log.
-  let snapshot=await get(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}`)),raw=snapshot.val()||{};for(let retry=0;retry<3&&!Object.keys(raw).length;retry++){await new Promise(resolve=>setTimeout(resolve,300));snapshot=await get(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}`));raw=snapshot.val()||{};}const totals={};
-  for(const [name,byUid] of Object.entries(raw)){if(!RANKED_NAMES.includes(name))continue;for(const row of Object.values(byUid||{})){const t=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0});const values=dailyRowTotals(row);t.attempts+=values.attempts;t.checkedAttempts+=values.checkedAttempts;t.mistakes+=values.mistakes;}}
+  let snapshot=await get(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}`)),raw=snapshot.val()||{};for(let retry=0;retry<3&&!Object.keys(raw).length;retry++){await new Promise(resolve=>setTimeout(resolve,300));snapshot=await get(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}`));raw=snapshot.val()||{};}
+  // If the daily-counter write is blocked, rebuild this device's checked answers from the
+  // already-synced per-answer learning activity. This keeps the child's view current too.
+  let ownChecked={checked:0,mistakes:0};if(uid&&RANKED_NAMES.includes(soloName)){const ownActivity=await get(ref(db,`learningActivity/${uid}/${soloName}`));ownChecked=dailyProgressCounts(dailyProgressFromActivity(ownActivity.val()||{},dayKey));}
+  const totals={},ownRecordSeen=new Set();
+  for(const [name,byUid] of Object.entries(raw)){if(!RANKED_NAMES.includes(name))continue;for(const [rowUid,row] of Object.entries(byUid||{})){const t=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0});const values=dailyRowTotals(row);let attempts=values.attempts,checked=values.checkedAttempts,mistakes=values.mistakes;if(name===soloName&&rowUid===uid){attempts=Math.max(attempts,ownChecked.checked+Math.max(0,values.attempts-values.checkedAttempts));checked=Math.max(checked,ownChecked.checked);mistakes=Math.max(mistakes,ownChecked.mistakes);ownRecordSeen.add(name);}t.attempts+=attempts;t.checkedAttempts+=checked;t.mistakes+=mistakes;}}
+  if(soloName&&RANKED_NAMES.includes(soloName)&&!ownRecordSeen.has(soloName)&&ownChecked.checked){const t=totals[soloName]||(totals[soloName]={name:soloName,attempts:0,checkedAttempts:0,mistakes:0});t.attempts+=ownChecked.checked;t.checkedAttempts+=ownChecked.checked;t.mistakes+=ownChecked.mistakes;}
   applyDailyCounterOverride(totals,dayKey,subject);const rows=Object.values(totals).map(x=>({...x,rate:x.checkedAttempts?100*x.mistakes/x.checkedAttempts:null})),most=[...rows].filter(x=>x.attempts>0).sort((a,b)=>b.attempts-a.attempts||a.name.localeCompare(b.name)),fewest=[...rows].filter(x=>x.checkedAttempts>0).sort((a,b)=>a.rate-b.rate||b.attempts-a.attempts||a.name.localeCompare(b.name));
   const renderRow=(x,i,metric)=>`<div class="solo-game"><div class="row"><h3>${i===0?'🥇':i===1?'🥈':i===2?'🥉':'👤'} ${esc(x.name)}</h3><span class="small">${metric==='attempts'?`${x.attempts} Antworten bearbeitet`:`${x.rate.toFixed(1).replace('.',',')} % Fehler`}</span></div><p>${x.manualAdjustment?'Fehlerquote für die nachgetragenen Antworten nicht verfügbar':`${x.mistakes} falsch von ${x.checkedAttempts} geprüften Antworten`}</p></div>`;
   const dateLabel=new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',dateStyle:'full'}).format(new Date());const manualNote=Object.entries(DAILY_COUNTER_OVERRIDES[dayKey]?.[subject]||{}).map(([name,count])=>name+': heute ausnahmsweise '+count+' gesetzt').join('; ');
