@@ -276,14 +276,16 @@ async function repairDailyAnswerCounters(dayKey){
 // for live Firebase totals; future weeks are calculated exclusively from daily rows.
 function rankDailyWins(days,weekKey=''){
  const wins=Object.fromEntries(names.map(name=>[name,0]));
- for(const day of days||[]){
+ for(const [dayIndex,day] of (days||[]).entries()){
+  const dayKey=weekKey?isoWeekDays(weekKey)[dayIndex]:'';
+  const excludedNames=dayKey==='2026-11-02'?['Talea']:[];
   const rows=names.map(name=>{
    let attempts=0,checkedAttempts=0,mistakes=0;
    for(const subject of ['english','math'])for(const row of Object.values(day?.[subject]?.[name]||{})){
     const t=dailyRowTotals(row);attempts+=t.attempts;checkedAttempts+=t.checkedAttempts;mistakes+=t.mistakes;
    }
    return {name,attempts,rate:checkedAttempts?mistakes/checkedAttempts:Infinity};
-  }).filter(row=>row.attempts>0);
+  }).filter(row=>row.attempts>0&&!excludedNames.includes(row.name));
   if(!rows.length)continue;
   rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate);
   const leader=rows[0];
