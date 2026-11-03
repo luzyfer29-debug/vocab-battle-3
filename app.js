@@ -255,7 +255,6 @@ async function repairDailyAnswerCounters(dayKey){
  const daily=dailySnap.val()||{},activity=activitySnap.val()||{};
  for(const subject of ["english","math"])for(const name of names){
   const existing=daily?.[subject]?.[name]||{};
-  if(Object.values(existing).some(row=>row?.manualDailyOverride))continue;
   const childActivity=Object.values(activity).reduce((merged,user)=>{
    const source=user?.[name]||{};
    for(const [exercise,entry] of Object.entries(source)){
@@ -283,7 +282,7 @@ async function repairDailyAnswerCounters(dayKey){
  const manual=DAILY_COUNTER_OVERRIDES[dayKey]||{};
  for(const [subject,children] of Object.entries(manual))for(const [name,count] of Object.entries(children)){
   const priorRows=Object.values(daily?.[subject]?.[name]||{}),unverified=Math.max(0,...priorRows.map(row=>Number(row?.unverifiedLegacyDailyCount)||Number(row?.attempts)||0));
-  daily[subject]=daily[subject]||{};daily[subject][name]={"manual-today":{name,attempts:count,checkedAttempts:0,mistakes:0,submittedAttempts:0,legacySubmittedAttempts:count,answerCounterVersion:3,dailyRepairVersion:8,manualDailyOverride:true,manualCount:count,unverifiedLegacyDailyCount:unverified,progressByExercise:{},submittedByExercise:{}}};
+  daily[subject]=daily[subject]||{};daily[subject][name]={...(daily[subject][name]||{}),"manual-today":{name,attempts:count,checkedAttempts:0,mistakes:0,submittedAttempts:0,legacySubmittedAttempts:count,answerCounterVersion:3,dailyRepairVersion:8,manualDailyOverride:true,manualCount:count,unverifiedLegacyDailyCount:unverified,progressByExercise:{},submittedByExercise:{}}};
  }
  return daily;
 }
