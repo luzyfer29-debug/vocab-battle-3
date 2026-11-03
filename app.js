@@ -963,7 +963,23 @@ let retroVocabAuditHtml='';
 function berlinDayKey(stamp=Date.now()){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(stamp));const pick=t=>parts.find(x=>x.type===t)?.value||'';return pick('year')+'-'+pick('month')+'-'+pick('day');}
 async function retroCorrectVocabWorkToday(){
  if(!adminLoggedIn||uid!==ADMIN_UID||!db){msg('Bitte als Schiedsrichter anmelden.',true);return;}
- const dayKey=berlinDayKey();app.innerHTML=card('<h2>Heutige Vokabelarbeit wird geprüft …</h2><p>Gespeicherte Antworten und Wertungen werden abgeglichen.</p>');
+ const dayKey=berlinDayKey();
+ if(!document.getElementById('retro-battle-mobile-table-style')){
+  const style=document.createElement('style');style.id='retro-battle-mobile-table-style';style.textContent=`
+   @media(max-width:700px){
+    .retro-answer-table-wrap{overflow:visible!important}
+    .retro-answer-table{display:block!important;width:100%!important;min-width:0!important;border-collapse:separate!important}
+    .retro-answer-table thead{display:none!important}
+    .retro-answer-table tbody{display:grid!important;gap:10px!important}
+    .retro-answer-table tbody tr{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:5px!important;padding:12px!important;margin:0!important;border:1px solid rgba(255,255,255,.16)!important;border-radius:12px!important;background:rgba(255,255,255,.055)!important}
+    .retro-answer-table tbody td{display:grid!important;grid-template-columns:minmax(88px,34%) minmax(0,1fr)!important;align-items:start!important;gap:8px!important;padding:4px 0!important;border:0!important;text-align:left!important;white-space:normal!important;overflow-wrap:anywhere!important;min-width:0!important}
+    .retro-answer-table tbody td:before{content:attr(data-label);font-size:12px!important;font-weight:700!important;opacity:.75!important}
+    .retro-answer-table tbody td:nth-child(2){line-height:1.35!important}
+    .retro-answer-table tbody td:nth-child(2) small{display:block!important;margin-top:3px!important;opacity:.8!important}
+   }
+  `;document.head.appendChild(style);
+ }
+ app.innerHTML=card('<h2>Heutige Vokabelarbeit wird geprüft …</h2><p>Gespeicherte Antworten und Wertungen werden abgeglichen.</p>');
  try{
   const rankingSnap=await get(ref(db,'battleRankings/english')),rankingData=rankingSnap.val()||{},activitySet=new Set(['vocab_work_station1','vocab_work_station2']),groups=new Map();
   for(const [key,byName] of Object.entries(rankingData))for(const [name,result] of Object.entries(byName||{})){
@@ -982,13 +998,13 @@ async function retroCorrectVocabWorkToday(){
     const q=questions[index],answer=room.submissions?.[index]?.[p.uid],review=room.reviews?.[index]?.[p.uid],text=String(answer?.text||''),accepted=(Array.isArray(q?.accepted)?q.accepted:q?.accepted?[q.accepted]:[]).map(gbNorm),correct=!!text.trim()&&accepted.includes(gbNorm(text));
     if(correct)scores[p.name]++;
     if(answer){reviewsPatch['reviews/'+index+'/'+p.uid]={correct,automatic:true,answer:text,at:Number(answer.at)||Number(review?.at)||Date.now(),retroactiveAudit:true};if(Boolean(review?.correct)!==correct)changedAnswers++;}
-    if(answer)rows.push('<tr><td>'+(index+1)+'</td><td>'+esc(q?.title||'')+'<br><small>'+esc(q?.prompt||'')+'</small></td><td>'+esc(p.name)+'</td><td style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(text)+'</td><td>'+esc(accepted.join(' / '))+'</td><td>'+(review?.correct?'Richtig':'Falsch')+' → '+(correct?'✅ Richtig':'❌ Falsch')+'</td></tr>');
+    if(answer)rows.push('<tr><td data-label="Aufgabe">'+(index+1)+'</td><td data-label="Frage">'+esc(q?.title||'')+'<small>'+esc(q?.prompt||'')+'</small></td><td data-label="Kind">'+esc(p.name)+'</td><td data-label="Eingegeben">'+esc(text)+'</td><td data-label="Lösung">'+esc(accepted.join(' / '))+'</td><td data-label="Wertung">'+(review?.correct?'Richtig':'Falsch')+' → '+(correct?'✅ Richtig':'❌ Falsch')+'</td></tr>');
    }}
    const ranked=rankByScore(players,p=>scores[p.name]||0),roomPatch={...reviewsPatch},rankPatch={};for(const p of players){const awarded={};for(let index=0;index<questions.length;index++){const answer=room.submissions?.[index]?.[p.uid],q=questions[index],accepted=(Array.isArray(q?.accepted)?q.accepted:q?.accepted?[q.accepted]:[]).map(gbNorm);if(answer&&String(answer.text||'').trim()&&accepted.includes(gbNorm(answer.text)))awarded[(meta.runId||meta.createdAt||'vocab')+':'+index]=true;}roomPatch['slots/'+p.id+'/score']=(scores[p.name]||0)*10;roomPatch['slots/'+p.id+'/awarded']=awarded;}
    await update(ref(db,'grammarRooms/'+roomCode),roomPatch);
    for(const {row:p,place,tied} of ranked){const previous=group.records[p.name];if(!previous)continue;rankPatch[p.name]={...previous,correct:scores[p.name]||0,maxCorrect:questions.length,bonusPoints:battleBonusPoints(place),place,tied,roomCode};}
    if(Object.keys(rankPatch).length)await update(ref(db,'battleRankings/english/'+group.resultKey),rankPatch);
-   const title=station2?'Vokabelarbeit · Station 2':'Vokabelarbeit · Station 1';report.push('<details open><summary>'+esc(title)+' · Raum '+esc(roomCode)+' · '+players.length+' Kinder</summary><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Aufgabe</th><th>Aufgabe / Frage</th><th>Kind</th><th>Eingegebenes Wort</th><th>Erwartete Antwort</th><th>Wertung vorher → jetzt</th></tr></thead><tbody>'+(rows.join('')||'<tr><td colspan="6">Keine gespeicherten Eingaben.</td></tr>')+'</tbody></table></div></details>');roomsChecked++;
+   const title=station2?'Vokabelarbeit · Station 2':'Vokabelarbeit · Station 1';report.push('<details open><summary>'+esc(title)+' · Raum '+esc(roomCode)+' · '+players.length+' Kinder</summary><div class="retro-answer-table-wrap" style="overflow-x:auto"><table class="retro-answer-table" style="width:100%;border-collapse:collapse"><thead><tr><th>Aufgabe</th><th>Aufgabe / Frage</th><th>Kind</th><th>Eingegebenes Wort</th><th>Erwartete Antwort</th><th>Wertung vorher → jetzt</th></tr></thead><tbody>'+(rows.join('')||'<tr><td colspan="6">Keine gespeicherten Eingaben.</td></tr>')+'</tbody></table></div></details>');roomsChecked++;
   }
   retroVocabAuditHtml='<details open><summary>Rückwirkende Prüfung · '+dayKey+' · '+roomsChecked+' Runden korrigiert · '+changedAnswers+' Wertungen geändert'+(roomsSkipped?' · '+roomsSkipped+' nicht zuordenbar':'')+'</summary>'+report.join('')+'</details>';
   await showBattleSeries('english');
