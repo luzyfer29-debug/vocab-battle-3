@@ -296,7 +296,7 @@ function rankDailyWins(days,weekKey=''){
  const ranked=positive.map((row,index)=>{if(index===0||row.wins!==last)place=index+1;last=row.wins;return {...row,place,tied:positive.filter(x=>x.wins===row.wins).length>1,points:[20,15,10][place-1]||0};});
  return [...ranked,...all.filter(row=>!row.wins).map(row=>({...row,place:0,tied:false,points:0}))];
 }
-async function loadWeekDailyRows(weekKey){if(!db)return [];const days=isoWeekDays(weekKey);return Promise.all(days.map(async day=>{const snap=await get(ref(db,`learningDailyLeaderboard/${day}`));return snap.val()||{};}));}
+async function loadWeekDailyRows(weekKey){if(!db)return [];const days=isoWeekDays(weekKey);return Promise.all(days.map(async day=>{const corrected=await repairDailyAnswerCounters(day);if(corrected)return corrected;const snap=await get(ref(db,`learningDailyLeaderboard/${day}`));return snap.val()||{};}));}
 async function weeklyBonusAlreadyRecorded(weekKey,name){
  const [english,math]=await Promise.all([get(ref(db,'battleRankings/english')),get(ref(db,'battleRankings/math'))]);
  return [english.val()||{},math.val()||{}].some(data=>Object.entries(data).some(([key,byName])=>key.startsWith(`week_${weekKey}_`)&&Number(byName?.[name]?.weeklyBonusPoints)>0));
