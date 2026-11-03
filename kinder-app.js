@@ -329,42 +329,34 @@ async function backfillTodayLearningProgress(subject,dayKey){
  })());
  await Promise.all(reads);
 }
-async function backfillTodayEnglishVocab(dayKey){
+async function backfillTodayEnglishAnswers(dayKey){
  if(!db||!uid||!dayKey)return;
- const snap=await get(ref(db,`soloProgress/${uid}`)),profiles=snap.val()||{};
+ const exercises=childLearningExercises('english'),byName=Object.fromEntries(SOLO_NAMES.map(name=>[name,{}]));
+ await Promise.all(SOLO_NAMES.flatMap(name=>exercises.map(async exercise=>{
+  try{const snap=await get(ref(db,`learningActivity/${uid}/${name}/${exercise}`)),value=snap.val();if(value)byName[name][exercise]=value;}
+  catch(error){console.warn('Einzelantworten konnten nicht nachgetragen werden:',name,exercise,error);}
+ })));
  for(const name of SOLO_NAMES){
-  const progress=profiles[name]||{},byExercise={};let updatedAt=0;
-  for(let battle=1;battle<=3;battle++){
-   let local=null;try{local=JSON.parse(localStorage.getItem(`${key}_${name}_battle_${battle}`)||'null');}catch{}
-   const online=progress[`battle${battle}`],localAt=Number(local?.updatedAt)||0,onlineAt=Number(online?.updatedAt)||0;
-   const row=localAt>onlineAt?local:online,at=Math.max(localAt,onlineAt);
-   if(!row||!at||activityPeriodKeys(at).dayKey!==dayKey)continue;
-   const done=Math.max(0,Math.min(30,Number(row.done??row.index)||0)),wrong=cleanMistakes(row.mistakes);
-   const questions=BATTLES[battle-1]||[],items={};
-   for(let index=0;index<done;index++){
-    const q=questions[index],prompt=q?.prompt||q?.q||q?.word||`Vokabeln ${battle} · Aufgabe ${index+1}`;
-    const answerKey=dailyAnswerItemKey(index,prompt),wasWrong=Number(wrong[index])>0;
-    items[answerKey]={count:1,mistakes:wasWrong?1:0};
-   }
-   if(done)byExercise[`english_vocab_battle${battle}`]={items,updatedAt:at};
-   updatedAt=Math.max(updatedAt,at);
-  }
-  if(!updatedAt)continue;
+  const progress=dailyProgressFromActivity(byName[name],dayKey);
+  if(!Object.keys(progress).length)continue;
+  const eventAt=Math.max(Date.now(),...Object.values(progress).map(item=>Number(item.updatedAt)||0));
   const path=`learningDailyLeaderboard/${dayKey}/english/${name}/${uid}`;
   await runTransaction(ref(db,path),current=>{
    const value=current&&typeof current==='object'?{...current}:{name,attempts:0,mistakes:0,checkedAttempts:0,submittedAttempts:0,answerCounterVersion:3,progressByExercise:{},submittedByExercise:{},legacySubmittedAttempts:0};
-   const all={...(value.progressByExercise||{})};
-   for(const [exercise,entry] of Object.entries(byExercise)){
-    const prior={...(all[exercise]||{})},items={...(prior.items||{})};
-    for(const [itemKey,item] of Object.entries(entry.items)){
-     const old=items[itemKey];if(!old)items[itemKey]=item;else if(item.mistakes&&!Number(old.mistakes))items[itemKey]={...old,mistakes:1};
+   const all=Object.fromEntries(Object.entries(value.progressByExercise||{}).map(([exercise,item])=>[exercise,{...item,updatedAt:Number(item?.updatedAt)||eventAt}]));
+   for(const [exercise,entry] of Object.entries(progress)){
+    const prior={...(all[exercise]||{}),updatedAt:Math.max(Number(all[exercise]?.updatedAt)||0,Number(entry.updatedAt)||eventAt)},items={...(prior.items||{})};
+    for(const [key,item] of Object.entries(entry.items||{})){
+     const old=items[key];if(!old)items[key]=item;else if(Number(item?.mistakes)>Number(old?.mistakes||0))items[key]={...old,mistakes:Number(item.mistakes)||0};
     }
-    prior.items=items;prior.count=Object.keys(items).length;prior.mistakes=Object.values(items).reduce((sum,item)=>sum+(Number(item.mistakes)||0),0);prior.updatedAt=Math.max(Number(prior.updatedAt)||0,Number(entry.updatedAt)||updatedAt);prior.backfilledFromSavedProgress=true;all[exercise]=prior;
+    prior.items=items;prior.count=Object.keys(items).length;prior.mistakes=Object.values(items).reduce((sum,item)=>sum+(Number(item.mistakes)||0),0);prior.backfilledFromSavedProgress=true;all[exercise]=prior;
    }
-   const checked=dailyProgressCounts(all),submitted=dailySubmittedCount(value.submittedByExercise);
-   value.name=name;value.progressByExercise=all;value.checkedAttempts=checked.checked;value.mistakes=checked.mistakes;
+   const submittedByExercise=value.submittedByExercise&&typeof value.submittedByExercise==='object'?value.submittedByExercise:{};
+   const checked=dailyProgressCounts(all),submitted=dailySubmittedCount(submittedByExercise);
+   if(Number(value.answerCounterVersion)!==3)value.legacySubmittedAttempts=Math.max(Number(value.legacySubmittedAttempts)||0,Number(value.submittedAttempts)||0);
+   value.name=name;value.progressByExercise=all;value.submittedByExercise=submittedByExercise;value.checkedAttempts=checked.checked;value.mistakes=checked.mistakes;
    value.submittedAttempts=Math.max(0,Number(value.legacySubmittedAttempts)||0)+submitted;value.attempts=value.checkedAttempts+value.submittedAttempts;
-   value.answerCounterVersion=3;value.updatedAt=Math.max(Number(value.updatedAt)||0,updatedAt);return value;
+   value.answerCounterVersion=3;value.updatedAt=Math.max(Number(value.updatedAt)||0,eventAt);return value;
   });
  }
 }
@@ -395,7 +387,7 @@ async function showDailyLeaderboard(subject){
  app.innerHTML=card(`<h2>🏆 ${title} · Tagesvergleich</h2><p>Wer hat heute die meisten Antworten bearbeitet und wer hat die niedrigste Fehlerquote?</p><p class="muted">Es zählen geprüfte und ausdrücklich ausgewertete freie Antworten. Live-Eingaben zählen erst nach der Auswertung.</p><p>Lade Tageswerte …</p>`)+card(btn('Zurück zum Lernen',back,'alt'));
  try{
   const {dayKey}=activityPeriodKeys();
-  if(subject==='english')await backfillTodayEnglishVocab(dayKey);
+  if(subject==='english')await backfillTodayEnglishAnswers(dayKey);
   // Keine automatischen Änderungen an historischen Tagesdaten beim bloßen Anzeigen.
   // Do not turn exercise sessions or progress snapshots into answer counts.
   // Historical vocabulary progress is not an auditable per-answer log.
