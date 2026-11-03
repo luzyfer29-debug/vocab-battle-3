@@ -201,19 +201,82 @@ function battleBonusPoints(place){return [10,8,5,3][Number(place)-1]||0;}
 function englishSeriesPoints(place,tied=false){return battleBonusPoints(place);}
 function isoWeekDays(weekKey){const match=String(weekKey||'').match(/^(\d{4})-W(\d{2})$/);if(!match)return [];const year=Number(match[1]),week=Number(match[2]),jan4=new Date(Date.UTC(year,0,4)),weekday=jan4.getUTCDay()||7,monday=new Date(Date.UTC(year,0,4-(weekday-1)+(week-1)*7));return Array.from({length:7},(_,i)=>{const d=new Date(monday);d.setUTCDate(d.getUTCDate()+i);return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;});}
 function previousIsoWeek(weekKey){const first=isoWeekDays(weekKey)[0];if(!first)return '';const d=new Date(`${first}T12:00:00Z`);d.setUTCDate(d.getUTCDate()-7);return activityDateKeys(d.getTime()).weekKey;}
+function dailyAnswerItemKey(index,prompt){
+ const clean=String(prompt||"").trim().toLowerCase().replace(/\s+/g," ");
+ let hash=2166136261;
+ for(let i=0;i<clean.length;i++){hash^=clean.charCodeAt(i);hash=Math.imul(hash,16777619);}
+ return String(index).replace(/[^A-Za-z0-9_-]/g,"_")+"_"+(hash>>>0).toString(36);
+}
+function dailyProgressFromActivity(activity,dayKey){
+ const progress={};
+ for(const [exercise,entry] of Object.entries(activity||{})){
+  const items={};
+  for(const [index,item] of Object.entries(entry?.errorItems||{})){
+   if(item?.attempted!==true)continue;
+   const wrongAt=Number(item.lastWrongAt)||0,resolvedAt=Number(item.resolvedAt)||0;
+   const touchedToday=item.dayKey===dayKey||(wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey)||(resolvedAt>0&&activityPeriodKeys(resolvedAt).dayKey===dayKey);
+   if(!touchedToday)continue;
+   const key=dailyAnswerItemKey(index,item.prompt||item.topic||"");
+   const wrongToday=wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey;
+   const prior=items[key];
+   items[key]={count:1,mistakes:wrongToday||Number(prior?.mistakes)>0?1:0};
+  }
+  const values=Object.values(items),count=values.length,mistakes=values.reduce((n,item)=>n+(Number(item.mistakes)||0),0);
+  if(count)progress[exercise]={count,mistakes,items};
+ }
+ return progress;
+}
+function dailyProgressCounts(progress){
+ let checked=0,mistakes=0;
+ for(const item of Object.values(progress||{})){checked+=Math.max(0,Math.floor(Number(item?.count)||0));mistakes+=Math.max(0,Math.floor(Number(item?.mistakes)||0));}
+ return {checked,mistakes:Math.min(checked,mistakes)};
+}
+function dailySubmittedCount(progress){
+ return Object.values(progress||{}).reduce((sum,item)=>sum+Math.max(0,Math.floor(Number(item?.count)||0)),0);
+}
 function dailyRowTotals(row){
- const entries=Object.values(row?.progressByExercise||{});
+ const entries=Object.values(row?.progressByExercise||{}),stored=Math.max(Number(row?.attempts)||0,(Number(row?.checkedAttempts)||0)+(Number(row?.submittedAttempts)||0));
+ if(Number(row?.answerCounterVersion)===3){
+  const checked=entries.reduce((sum,item)=>sum+Math.max(0,Math.floor(Number(item?.count)||0)),0),mistakes=entries.reduce((sum,item)=>sum+Math.max(0,Math.floor(Number(item?.mistakes)||0)),0),mappedSubmitted=dailySubmittedCount(row?.submittedByExercise),legacy=Math.max(0,Number(row?.legacySubmittedAttempts)||0);
+  return {attempts:checked+legacy+mappedSubmitted,checkedAttempts:checked,mistakes:Math.min(checked,mistakes)};
+ }
  const progress=entries.reduce((sum,item)=>sum+Math.max(0,Math.floor(Number(item?.count)||0)),0);
- const stored=Math.max(Number(row?.attempts)||0,(Number(row?.checkedAttempts)||0)+(Number(row?.submittedAttempts)||0));
- if(stored>=1000 && entries.length)return {attempts:progress,checkedAttempts:progress,mistakes:Math.min(progress,Math.max(0,Number(row?.mistakes)||0))};
+ if(stored>=1000&&entries.length)return {attempts:progress,checkedAttempts:progress,mistakes:Math.min(progress,Math.max(0,Number(row?.mistakes)||0))};
  if(stored>=1000)return {attempts:0,checkedAttempts:0,mistakes:0};
- const hasProgress=entries.length>0,verified=Number(row?.answerCounterVersion)===2;
- const hasChecked=Object.prototype.hasOwnProperty.call(row||{},'checkedAttempts')&&Number.isFinite(Number(row.checkedAttempts))&&Number(row.checkedAttempts)>=0;
- const trusted=verified||hasChecked;
- const checkedAttempts=Math.max(0,Number(trusted?row?.checkedAttempts:row?.attempts)||0);
- const submittedAttempts=verified?Math.max(0,Number(row?.submittedAttempts)||0):0;
- const mistakes=Math.min(checkedAttempts,Math.max(0,Number(row?.mistakes)||0));
+ const verified=Number(row?.answerCounterVersion)===2,hasChecked=Object.prototype.hasOwnProperty.call(row||{},"checkedAttempts")&&Number.isFinite(Number(row.checkedAttempts))&&Number(row.checkedAttempts)>=0,trusted=verified||hasChecked;
+ const checkedAttempts=Math.max(0,Number(trusted?row?.checkedAttempts:row?.attempts)||0),submittedAttempts=verified?Math.max(0,Number(row?.submittedAttempts)||0):0,mistakes=Math.min(checkedAttempts,Math.max(0,Number(row?.mistakes)||0));
  return {attempts:checkedAttempts+submittedAttempts,checkedAttempts,mistakes};
+}
+async function repairDailyAnswerCounters(dayKey){
+ if(!adminLoggedIn||uid!==ADMIN_UID)return;
+ const [dailySnap,activitySnap]=await Promise.all([get(ref(db,"learningDailyLeaderboard/"+dayKey)),get(ref(db,"learningActivity"))]);
+ const daily=dailySnap.val()||{},activity=activitySnap.val()||{};
+ for(const subject of ["english","math"])for(const name of names){
+  const devices=daily?.[subject]?.[name]||{};
+  for(const [deviceId,row] of Object.entries(devices)){
+   if(!row||Number(row.answerCounterVersion)===3)continue;
+   const progress=dailyProgressFromActivity(activity?.[deviceId]?.[name]||{},dayKey),totals=dailyProgressCounts(progress),oldChecked=Math.max(0,Number(row.checkedAttempts??row.attempts)||0);
+   if(!totals.checked&&oldChecked>0){console.warn("Tageszähler ohne Antwortprotokoll nicht automatisch überschrieben:",name,subject,deviceId);continue;}
+   const path="learningDailyLeaderboard/"+dayKey+"/"+subject+"/"+name+"/"+deviceId;
+   await runTransaction(ref(db,path),current=>{
+    const value=current&&typeof current==="object"?{...current}:{name,attempts:0,mistakes:0,checkedAttempts:0,submittedAttempts:0};
+    if(Number(value.answerCounterVersion)===3)return value;
+    const oldSubmitted=Math.max(0,Number(value.submittedAttempts)||0),oldAttempts=Math.max(Number(value.attempts)||0,(Number(value.checkedAttempts)||0)+oldSubmitted);
+    value.uncertainLegacyDailyCount=value.uncertainLegacyDailyCount||{attempts:oldAttempts,checkedAttempts:Number(value.checkedAttempts)||0,submittedAttempts:oldSubmitted,mistakes:Number(value.mistakes)||0};
+    value.progressByExercise=progress;
+    value.submittedByExercise=value.submittedByExercise&&typeof value.submittedByExercise==="object"?value.submittedByExercise:{};
+    value.legacySubmittedAttempts=Number.isFinite(Number(value.legacySubmittedAttempts))?Math.max(0,Number(value.legacySubmittedAttempts)):oldSubmitted;
+    value.answerCounterVersion=3;
+    value.dailyRepairVersion=6;
+    value.checkedAttempts=totals.checked;
+    value.mistakes=totals.mistakes;
+    value.submittedAttempts=value.legacySubmittedAttempts+dailySubmittedCount(value.submittedByExercise);
+    value.attempts=value.checkedAttempts+value.submittedAttempts;
+    value.name=name;
+    return value;
+   });
+  }
+ }
 }
 // A daily win is awarded once per calendar day, combining English and math learning.
 // The historical KW44 Luca correction is retained as a minimum, not a replacement
@@ -248,7 +311,7 @@ async function showRefereeDailyWeekly(){
  const {dayKey,weekKey}=activityDateKeys(),dateLabel=new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',dateStyle:'full'}).format(new Date());
  app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p>Wertungen werden geladen …</p>')+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));
  try{
-  const [todaySnap,weekDays]=await Promise.all([get(ref(db,`learningDailyLeaderboard/${dayKey}`)),loadWeekDailyRows(weekKey)]);
+  await repairDailyAnswerCounters(dayKey);const [todaySnap,weekDays]=await Promise.all([get(ref(db,`learningDailyLeaderboard/${dayKey}`)),loadWeekDailyRows(weekKey)]);
   const today=todaySnap.val()||{};
   const lucaRows=Object.values(today?.english?.Luca||{});
   const lucaDiagnostics=lucaRows.map(row=>({raw:Number(row?.attempts)||0,checked:Number(row?.checkedAttempts)||0,exerciseCount:Object.values(row?.progressByExercise||{}).reduce((n,v)=>n+(Number(v?.count)||0),0),calculated:dailyRowTotals(row).attempts}));
