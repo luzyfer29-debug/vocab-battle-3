@@ -107,7 +107,7 @@ function grammarClear(){if(grammarStation===null||grammarTask===null)return;gram
 const key='vb2solo';
 const SOLO_NAMES=['Luca','Semir','Talea','Nele','Frauke'];
 const RANKED_NAMES=['Luca','Semir','Talea','Nele']; // Frauke is a test-only profile.
-const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:{count:50,baselineAnswers:36}}}};
+const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:{count:50,baselineAnswers:36},Semir:{count:30,baselineAnswers:30},Talea:{count:6,baselineAnswers:4}}}};
 const DAILY_WIN_EXCLUDED_DAYS={'2026-11-02':'Lern- und Battle-Antworten sind an diesem Tag nicht verlässlich getrennt.'};
 function applyDailyCounterOverride(totals,dayKey,subject){for(const [name,setting] of Object.entries(DAILY_COUNTER_OVERRIDES[dayKey]?.[subject]||{})){const row=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0}),count=Number(typeof setting==='number'?setting:setting?.count)||0,baselineAnswers=Number(typeof setting==='number'?0:setting?.baselineAnswers)||0,current=Number(row.attempts)||0;row.attempts=count+Math.max(0,current-baselineAnswers);row.manualAdjustment=true;}}
 let activitySyncWarned=false;
@@ -275,7 +275,7 @@ function weeklyDailyWins(days,weekKey=''){
    for(const subject of ['english','math'])for(const row of Object.values(day?.[subject]?.[name]||{})){
     const t=dailyRowTotals(row);attempts+=t.attempts;checkedAttempts+=t.checkedAttempts;mistakes+=t.mistakes;
    }
-   if(DAILY_COUNTER_OVERRIDES[dayKey]?.english?.[name]!==undefined){attempts=DAILY_COUNTER_OVERRIDES[dayKey].english[name];checkedAttempts=attempts;mistakes=0;}
+   if(DAILY_COUNTER_OVERRIDES[dayKey]?.english?.[name]!==undefined){const setting=DAILY_COUNTER_OVERRIDES[dayKey].english[name],base=Number(typeof setting==='number'?setting:setting?.count)||0,baseline=Number(typeof setting==='number'?0:setting?.baselineAnswers)||0;attempts=base+Math.max(0,attempts-baseline);}
    return {name,attempts,rate:checkedAttempts?mistakes/checkedAttempts:Infinity};
   }).filter(row=>row.attempts>0);
   if(!rows.length)continue;
