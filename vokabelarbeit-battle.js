@@ -64,7 +64,7 @@ const root=document.querySelector('#app'),status=document.querySelector('#status
 const btn=(text,action,cls='')=>`<button type="button" data-action="${action}" ${cls?`class="${cls}"`:''}>${text}</button>`,card=html=>`<section class="card">${html}</section>`;
 let auth,db,user=null,code='',room=null,off=null,busy=false,savedRun='',creating=false,clock=null;
 const QUESTION_MS=20000,REVEAL_MS=1800;
-const normalize=s=>String(s||'').normalize('NFKC').trim().toLocaleLowerCase('en').replace(/[’‘`´]/g,"'").replace(/[‐‑‒–—]/g,'-').replace(/^[\s\"'([{]+|[\s\"')\]},.!?;:]+$/g,'').replace(/\s+/g,' ');
+const normalize=s=>String(s||'').normalize('NFKC').trim().toLocaleLowerCase('en').replace(/[’‘`´]/g,"'").replace(/[‐‑‒–—]/g,'-').replace(/^[.,!?;:'\"]+|[.,!?;:'\"]+$/g,'').replace(/\s+/g,' ');
 const isCorrect=(text,q)=>!!String(text||'').trim()&&(q?.accepted||[]).some(answer=>normalize(text)===normalize(answer));
 function message(text,bad=false){status.innerHTML=`<p class="${bad?'error':'good'}">${esc(text)}</p>`;}
 function layout(html){root.innerHTML=html;}
