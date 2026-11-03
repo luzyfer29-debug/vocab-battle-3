@@ -465,6 +465,7 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
    }else{changedItem=learningErrorRecord(name,subject,topic,q,old,eventAt);errors[key]=changedItem;}
    value.errorItems=errors;return value;
   });
+  activitySaved=true;
   if(changedItem){
    await runTransaction(ref(db,sharedPath),current=>{
     if(correct){if(isFalsePositiveResolvedLearningRecord(current))return null;if(!current)return current;return {...current,resolved:true,resolvedAt:Math.max(eventAt,Number(current.lastWrongAt)||0)+1};}
@@ -1243,12 +1244,12 @@ function soloQuestion(){if(!solo)return;startSoloHeartbeat();const b=solo.battle
  const title=solo.review?`🔁 Wiederholung · ${solo.wrong.length} Wörter offen`:`Frage ${solo.index+1}/30`;
  app.innerHTML=card(`<h2>${esc(soloName)} · Vokabeln ${b+1}</h2><p>${title} · ${solo.score} Punkte</p><div class="bar"><div class="fill" style="width:${solo.index/30*100}%"></div></div><h2>${esc(q.q)}</h2><div class="answers">${q.options.map((o,j)=>`<button data-soloanswer="${j}">${esc(o)}</button>`).join('')}</div>`)+card(btn('Zur Vokabelauswahl','solo','alt'));
 }
-function soloAnswer(i){if(!solo||solo.finished)return;const reviewing=solo.review;const questionIndex=reviewing?solo.wrong[solo.reviewPos]:solo.index;
+async function soloAnswer(i){if(!solo||solo.finished)return;const reviewing=solo.review;const questionIndex=reviewing?solo.wrong[solo.reviewPos]:solo.index;
  const q=BATTLES[solo.battle]?.[questionIndex];if(!q||!Number.isInteger(i)||i<0||i>=q.options.length)return;
  // Sofort deaktivieren, damit Doppeltippen keine Fragen überspringt.
  document.querySelectorAll('[data-soloanswer]').forEach(el=>el.disabled=true);
  const ok=i===q.correct;
- void recordLearningError(soloName,'english',`english_vocab_battle${solo.battle+1}`,questionIndex,`Vokabeln ${solo.battle+1}`,q,ok);
+ const saved=await recordLearningError(soloName,'english',`english_vocab_battle${solo.battle+1}`,questionIndex,`Vokabeln ${solo.battle+1}`,q,ok);if(!saved){msg('Antwort konnte nicht gespeichert werden. Bitte Verbindung prüfen und noch einmal eingeben.',true);soloQuestion();return;}
  if(!ok){solo.mistakes=cleanMistakes(solo.mistakes);solo.mistakes[questionIndex]=(solo.mistakes[questionIndex]||0)+1;}
  if(reviewing){if(ok){solo.wrong.splice(solo.reviewPos,1);if(solo.reviewPos>=solo.wrong.length)solo.reviewPos=0;}
  else if(solo.wrong.length>1)solo.reviewPos=(solo.reviewPos+1)%solo.wrong.length;
