@@ -213,16 +213,22 @@ function dailyAnswerItemKey(index,prompt){
 function dailyProgressFromActivity(activity,dayKey){
  const progress={};
  for(const [exercise,entry] of Object.entries(activity||{})){
-  const items={};
+  const items={},checks=entry?.answerChecks&&typeof entry.answerChecks==="object"?entry.answerChecks:{};
+  for(const [index,item] of Object.entries(checks)){
+   if(item?.attempted!==true)continue;
+   const checkedAt=Number(item.checkedAt)||0,wrongAt=Number(item.lastWrongAt)||0;
+   const touchedToday=item.dayKey===dayKey||(checkedAt>0&&activityPeriodKeys(checkedAt).dayKey===dayKey);
+   if(!touchedToday)continue;
+   const key=dailyAnswerItemKey(index,item.prompt||item.topic||"");
+   items[key]={count:1,mistakes:wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey?1:0};
+  }
   for(const [index,item] of Object.entries(entry?.errorItems||{})){
-   if(item?.attempted!==true||item?.source==='battle'||item?.source==='live_battle')continue;
+   if(checks[index]||item?.attempted!==true||item?.source==='battle'||item?.source==='live_battle')continue;
    const wrongAt=Number(item.lastWrongAt)||0,resolvedAt=Number(item.resolvedAt)||0;
    const touchedToday=item.dayKey===dayKey||(wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey)||(resolvedAt>0&&activityPeriodKeys(resolvedAt).dayKey===dayKey);
    if(!touchedToday)continue;
    const key=dailyAnswerItemKey(index,item.prompt||item.topic||"");
-   const wrongToday=wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey;
-   const prior=items[key];
-   items[key]={count:1,mistakes:wrongToday||Number(prior?.mistakes)>0?1:0};
+   items[key]={count:1,mistakes:wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey?1:0};
   }
   const values=Object.values(items),count=values.length,mistakes=values.reduce((n,item)=>n+(Number(item.mistakes)||0),0);
   if(count)progress[exercise]={count,mistakes,items};
