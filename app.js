@@ -679,7 +679,7 @@ function evaluationDate(timestamp){
  return new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(at));
 }
 function errorDetailsForActivity(entry){
- const rows=Object.entries(entry?.errorItems||{}).filter(([,item])=>{const wrongAt=Number(item?.lastWrongAt)||0,resolvedAt=Number(item?.resolvedAt)||0;return item?.source!=='live_battle'&&item?.source!=='battle'&&!(item?.resolved===true&&wrongAt>0&&resolvedAt===wrongAt+1);}).sort((a,b)=>Number(a[1]?.lastWrongAt||0)-Number(b[1]?.lastWrongAt||0));
+ const rows=Object.entries(entry?.errorItems||{}).filter(([index,item])=>{const wrongAt=Number(item?.lastWrongAt)||0,resolvedAt=Number(item?.resolvedAt)||0,check=entry?.answerChecks?.[index],correctFirst=check?.attempted===true&&check?.correct===true&&!(Number(check?.lastWrongAt)||0);return item?.source!=='live_battle'&&item?.source!=='battle'&&!correctFirst&&!(item?.resolved===true&&wrongAt>0&&resolvedAt===wrongAt+1);}).sort((a,b)=>Number(a[1]?.lastWrongAt||0)-Number(b[1]?.lastWrongAt||0));
  if(!rows.length)return '';
  const open=rows.filter(([,item])=>!item?.resolved).length,done=rows.length-open;
  const details=rows.map(([index,item])=>{
