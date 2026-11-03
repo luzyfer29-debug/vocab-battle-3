@@ -419,7 +419,7 @@ function isFalsePositiveResolvedLearningRecord(item){
  const wrongAt=Number(item?.lastWrongAt)||0,resolvedAt=Number(item?.resolvedAt)||0;
  return item?.resolved===true&&wrongAt>0&&resolvedAt===wrongAt+1;
 }
-const falsePositiveCleanupDone=new Set();
+
 async function cleanupFalsePositiveLearningErrors(name,subject){
  if(!db||!uid||!RANKED_NAMES.includes(name))return;
  const cleanupKey=uid+':'+name+':'+subject;if(falsePositiveCleanupDone.has(cleanupKey))return;
