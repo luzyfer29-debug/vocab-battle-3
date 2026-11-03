@@ -254,63 +254,38 @@ async function repairDailyAnswerCounters(dayKey){
  const [dailySnap,activitySnap]=await Promise.all([get(ref(db,"learningDailyLeaderboard/"+dayKey)),get(ref(db,"learningActivity"))]);
  const daily=dailySnap.val()||{},activity=activitySnap.val()||{};
  for(const subject of ["english","math"])for(const name of names){
-  const devices=daily?.[subject]?.[name]||{};
-  for(const [deviceId,row] of Object.entries(devices)){
-   if(!row||row.manualDailyOverride||(Number(row.dailyRepairVersion)>=8&&dayKey!==activityDateKeys().dayKey))continue;
-   const childActivity=Object.values(activity).reduce((merged,user)=>{const source=user?.[name]||{};for(const [exercise,entry] of Object.entries(source)){if(!(subject==='english'?exercise.startsWith('english_'):exercise.startsWith('math_')))continue;const prior=merged[exercise]||{};merged[exercise]={...prior,...entry,errorItems:{...(prior.errorItems||{}),...(entry?.errorItems||{})}};}return merged;},{});
-   const progress=dailyProgressFromActivity(childActivity,dayKey),totals=dailyProgressCounts(progress);
-   const legacyAttempts=Math.max(Number(row.attempts)||0,(Number(row.checkedAttempts)||0)+(Number(row.submittedAttempts)||0));
-   const submitted=dailySubmittedCount(row.submittedByExercise||{});
-   const corrected={...row,progressByExercise:progress,submittedByExercise:row.submittedByExercise&&typeof row.submittedByExercise==="object"?row.submittedByExercise:{},legacySubmittedAttempts:0,answerCounterVersion:3,dailyRepairVersion:8,checkedAttempts:totals.checked,mistakes:totals.mistakes,submittedAttempts:submitted,attempts:totals.checked+submitted,name};
-   if(!totals.checked&&legacyAttempts>0)corrected.unverifiedLegacyDailyCount=legacyAttempts;
-   daily[subject]=daily[subject]||{};daily[subject][name]=daily[subject][name]||{};daily[subject][name][deviceId]=corrected;
+  const existing=daily?.[subject]?.[name]||{};
+  if(Object.values(existing).some(row=>row?.manualDailyOverride))continue;
+  const childActivity=Object.values(activity).reduce((merged,user)=>{
+   const source=user?.[name]||{};
+   for(const [exercise,entry] of Object.entries(source)){
+    if(!(subject==='english'?exercise.startsWith('english_'):exercise.startsWith('math_')))continue;
+    const prior=merged[exercise]||{};
+    const errors={...(prior.errorItems||{})};
+    for(const [index,item] of Object.entries(entry?.errorItems||{})){
+     const old=errors[index],at=Number(item?.resolvedAt||item?.lastWrongAt||0),oldAt=Number(old?.resolvedAt||old?.lastWrongAt||0);
+     if(!old||at>=oldAt)errors[index]=item;
+    }
+    merged[exercise]={...prior,...entry,errorItems:errors};
+   }
+   return merged;
+  },{});
+  const progress=dailyProgressFromActivity(childActivity,dayKey),totals=dailyProgressCounts(progress),submittedByExercise={};
+  for(const row of Object.values(existing))for(const [exercise,entry] of Object.entries(row?.submittedByExercise||{})){
+   const merged=submittedByExercise[exercise]||{items:{}},items={...(merged.items||{})};
+   for(const [key,item] of Object.entries(entry?.items||{}))if(!items[key])items[key]=item;
+   merged.items=items;merged.count=Object.keys(items).length;submittedByExercise[exercise]=merged;
   }
+  const submitted=dailySubmittedCount(submittedByExercise),unverified=Math.max(0,...Object.values(existing).map(row=>Number(row?.unverifiedLegacyDailyCount)||0));
+  daily[subject]=daily[subject]||{};
+  daily[subject][name]={"learning-activity":{name,attempts:totals.checked+submitted,checkedAttempts:totals.checked,mistakes:totals.mistakes,submittedAttempts:submitted,answerCounterVersion:3,dailyRepairVersion:8,progressByExercise:progress,submittedByExercise,unverifiedLegacyDailyCount:unverified}};
  }
  const manual=DAILY_COUNTER_OVERRIDES[dayKey]||{};
  for(const [subject,children] of Object.entries(manual))for(const [name,count] of Object.entries(children)){
   const priorRows=Object.values(daily?.[subject]?.[name]||{}),unverified=Math.max(0,...priorRows.map(row=>Number(row?.unverifiedLegacyDailyCount)||Number(row?.attempts)||0));
-  daily[subject]=daily[subject]||{};daily[subject][name]={"manual-today":{name,attempts:count,checkedAttempts:count,mistakes:0,submittedAttempts:0,answerCounterVersion:3,dailyRepairVersion:7,manualDailyOverride:true,manualCount:count,unverifiedLegacyDailyCount:unverified,progressByExercise:{manualOverride:{count,mistakes:0}},submittedByExercise:{}}};
+  daily[subject]=daily[subject]||{};daily[subject][name]={"manual-today":{name,attempts:count,checkedAttempts:count,mistakes:0,submittedAttempts:0,answerCounterVersion:3,dailyRepairVersion:8,manualDailyOverride:true,manualCount:count,unverifiedLegacyDailyCount:unverified,progressByExercise:{manualOverride:{count,mistakes:0}},submittedByExercise:{}}};
  }
  return daily;
-}
-// A daily win is awarded once per calendar day, combining English and math learning.
-// The historical KW44 Luca correction is retained as a minimum, not a replacement
-// for live Firebase totals; future weeks are calculated exclusively from daily rows.
-function learningDailyBreakdown(days,weekKey=''){
- return (days||[]).map((data,index)=>{
-  const dayKey=isoWeekDays(weekKey)[index]||'';
-  const rows=names.map(name=>{
-   let attempts=0,checkedAttempts=0,mistakes=0;
-   for(const subject of ['english','math'])for(const row of Object.values(data?.[subject]?.[name]||{})){
-    const totals=dailyRowTotals(row);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;
-   }
-   return {name,attempts,checkedAttempts,mistakes,rate:checkedAttempts?mistakes/checkedAttempts:Infinity};
-  }).filter(row=>row.attempts>0);
-  return {dayKey,rows};
- }).filter(day=>day.rows.length);
-}
-function rankLearningDailyWins(days,weekKey=''){
- const wins=Object.fromEntries(names.map(name=>[name,0]));
- for(const day of learningDailyBreakdown(days,weekKey)){
-  if(DAILY_WIN_EXCLUDED_DAYS[day.dayKey])continue;
-  day.rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate||names.indexOf(a.name)-names.indexOf(b.name));
-  const leader=day.rows[0];
-  for(const row of day.rows)if(row.attempts===leader.attempts&&row.rate===leader.rate)wins[row.name]++;
- }
- if(weekKey==='2026-W44'){wins.Luca=5;wins.Nele=0;wins.Semir=0;wins.Talea=0;}
- const all=names.map(name=>({name,wins:wins[name]}));
- const positive=all.filter(row=>row.wins>0).sort((a,b)=>b.wins-a.wins||names.indexOf(a.name)-names.indexOf(b.name));
- let last=null,place=0;
- const ranked=positive.map((row,index)=>{if(index===0||row.wins!==last)place=index+1;last=row.wins;return {...row,place,tied:positive.filter(x=>x.wins===row.wins).length>1,points:[20,15,10][place-1]||0};});
- return [...ranked,...all.filter(row=>!row.wins).map(row=>({...row,place:0,tied:false,points:0}))];
-}
-async function loadWeekLearningRows(weekKey){
- if(!db)return [];
- const days=isoWeekDays(weekKey);
- return Promise.all(days.map(async day=>{
-  const corrected=await repairDailyAnswerCounters(day);if(corrected)return corrected;
-  const snap=await get(ref(db,`learningDailyLeaderboard/${day}`));return snap.val()||{};
- }));
 }
 async function weeklyBonusAlreadyRecorded(weekKey,name){
  const [english,math]=await Promise.all([get(ref(db,'battleRankings/english')),get(ref(db,'battleRankings/math'))]);
