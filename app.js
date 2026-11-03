@@ -70,6 +70,7 @@ import {WRITING_TASKS,WRITING_BATTLE} from './writing-data.js';
 
 const app=document.querySelector('#app'),status=document.querySelector('#status');
 const names=['Luca','Semir','Talea','Nele'];
+const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:50}}};
 const VOCAB_QUESTION_MS=20000,OTHER_QUESTION_MS=15000,REVEAL_MS=3000;
 let db,uid='',code='',role='',slot='',room=null,unsubscribe=null,solo=null;
 let clock=null,busy=false,previousStageKey='',lastClockText='';
@@ -241,8 +242,7 @@ function dailyRowTotals(row){
   return {attempts:checked+legacy+mappedSubmitted,checkedAttempts:checked,mistakes:Math.min(checked,mistakes)};
  }
  const progress=entries.reduce((sum,item)=>sum+Math.max(0,Math.floor(Number(item?.count)||0)),0);
- if(stored>=1000&&entries.length)return {attempts:progress,checkedAttempts:progress,mistakes:Math.min(progress,Math.max(0,Number(row?.mistakes)||0))};
- if(stored>=1000)return {attempts:0,checkedAttempts:0,mistakes:0};
+ if(stored>=100&&Number(row?.answerCounterVersion)!==3)return {attempts:0,checkedAttempts:0,mistakes:0};
  const verified=Number(row?.answerCounterVersion)===2,hasChecked=Object.prototype.hasOwnProperty.call(row||{},"checkedAttempts")&&Number.isFinite(Number(row.checkedAttempts))&&Number(row.checkedAttempts)>=0,trusted=verified||hasChecked;
  const checkedAttempts=Math.max(0,Number(trusted?row?.checkedAttempts:row?.attempts)||0),submittedAttempts=verified?Math.max(0,Number(row?.submittedAttempts)||0):0,mistakes=Math.min(checkedAttempts,Math.max(0,Number(row?.mistakes)||0));
  return {attempts:checkedAttempts+submittedAttempts,checkedAttempts,mistakes};
@@ -263,6 +263,11 @@ async function repairDailyAnswerCounters(dayKey){
    if(!totals.checked&&legacyAttempts>0)corrected.unverifiedLegacyDailyCount=legacyAttempts;
    daily[subject]=daily[subject]||{};daily[subject][name]=daily[subject][name]||{};daily[subject][name][deviceId]=corrected;
   }
+ }
+ const manual=DAILY_COUNTER_OVERRIDES[dayKey]||{};
+ for(const [subject,children] of Object.entries(manual))for(const [name,count] of Object.entries(children)){
+  const priorRows=Object.values(daily?.[subject]?.[name]||{}),unverified=Math.max(0,...priorRows.map(row=>Number(row?.unverifiedLegacyDailyCount)||Number(row?.attempts)||0));
+  daily[subject]=daily[subject]||{};daily[subject][name]={"manual-today":{name,attempts:count,checkedAttempts:count,mistakes:0,submittedAttempts:0,answerCounterVersion:3,dailyRepairVersion:6,manualDailyOverride:true,manualCount:count,unverifiedLegacyDailyCount:unverified,progressByExercise:{manualOverride:{count,mistakes:0}},submittedByExercise:{}}};
  }
  return daily;
 }
@@ -307,7 +312,7 @@ async function showRefereeDailyWeekly(){
   const dailyHtml=subject=>{
    const data=today[subject]||{};
    const rows=names.map(name=>{let attempts=0,checkedAttempts=0,mistakes=0;for(const row of Object.values(data[name]||{})){const totals=dailyRowTotals(row);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;}return {name,attempts,checkedAttempts,mistakes,rate:checkedAttempts?mistakes/checkedAttempts:null};}).sort((a,b)=>b.attempts-a.attempts||(a.rate??Infinity)-(b.rate??Infinity)||names.indexOf(a.name)-names.indexOf(b.name));
-   const unknown=Object.entries(data).flatMap(([name,devices])=>Object.values(devices||{}).filter(row=>Number(row?.unverifiedLegacyDailyCount)>0).map(row=>name+': '+Number(row.unverifiedLegacyDailyCount)+' alte Antworten'));return '<section class="solo-section"><h3>'+(subject==='english'?'🇬🇧 Englisch':'🔢 Mathe')+' · Heute</h3>'+(unknown.length?'<p class="muted">Alte Tageszähler ohne prüfbares Antwortprotokoll werden nicht gewertet ('+esc(unknown.join(', '))+'). Neue Antworten werden korrekt gezählt.</p>':'')+rows.map((row,index)=>'<div class="solo-game"><div class="row"><h3>'+(row.attempts?(index===0?'🥇':index===1?'🥈':index===2?'🥉':'👤'):'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.attempts+' Antworten</span></div><p>'+(row.rate===null?'Noch keine geprüften Antworten':(row.rate*100).toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1})+' % Fehler · '+row.mistakes+' falsch von '+row.checkedAttempts+' geprüften Antworten')+'</p></div>').join('')+'</section>';
+   const manual=Object.entries(data).flatMap(([name,devices])=>Object.values(devices||{}).filter(row=>row?.manualDailyOverride).map(row=>name+': heute ausnahmsweise '+Number(row.manualCount)+' gesetzt'));const unknown=Object.entries(data).flatMap(([name,devices])=>Object.values(devices||{}).filter(row=>Number(row?.unverifiedLegacyDailyCount)>0&&!row?.manualDailyOverride).map(row=>name+': '+Number(row.unverifiedLegacyDailyCount)+' alte Antworten'));const note=[...manual,...(unknown.length?['nicht prüfbare Altsummen werden nicht gewertet ('+unknown.join(', ')+')']:[])];return '<section class="solo-section"><h3>'+(subject==='english'?'🇬🇧 Englisch':'🔢 Mathe')+' · Heute</h3>'+(note.length?'<p class="muted">'+esc(note.join('; '))+'. Neue Antworten werden korrekt gezählt.</p>':'')+rows.map((row,index)=>'<div class="solo-game"><div class="row"><h3>'+(row.attempts?(index===0?'🥇':index===1?'🥈':index===2?'🥉':'👤'):'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.attempts+' Antworten</span></div><p>'+(row.rate===null?'Noch keine geprüften Antworten':(row.rate*100).toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1})+' % Fehler · '+row.mistakes+' falsch von '+row.checkedAttempts+' geprüften Antworten')+'</p></div>').join('')+'</section>';
   };
   const weekRows=rankDailyWins(weekDays,weekKey);
   const weekHtml='<section class="solo-section"><h3>📅 Woche · '+esc(weekKey)+'</h3><p>Sieben Tageswertungen (Montag bis Sonntag) ergeben eine Wochenwertung. Bei exakt gleicher Tagesleistung gewinnen beide Kinder.</p>'+weekRows.map(row=>'<div class="solo-game"><div class="row"><h3>'+(row.place===1?'🥇':row.place===2?'🥈':row.place===3?'🥉':'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.wins+' '+(row.wins===1?'gewonnener Tag':'gewonnene Tage')+'</span></div></div>').join('')+'</section>';
