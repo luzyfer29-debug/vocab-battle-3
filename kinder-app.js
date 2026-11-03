@@ -788,19 +788,44 @@ function battleResultsMenu(){
  app.innerHTML=card(`<h2>🏆 Battle-Auswertung</h2><p>Wähle ein Fach. Die Ergebnisse werden aus derselben gemeinsamen Wertung geladen wie auf der Schiedsrichterseite.</p><div class="solo-actions">${btn('🇬🇧 Englisch','battleSeriesEnglish')}${btn('🔢 Mathe','battleSeriesMath')}</div>`)+card(btn('Zurück zur Startseite','home','alt'));
 }
 async function showBattleSeries(subject){
- stopSoloHeartbeat();const isMath=subject==='math',root=isMath?'mathProgress':'soloProgress',title=isMath?'Mathe':'Englisch';
- app.innerHTML=card(`<h2>🏆 ${title} · Battle-Auswertung</h2><p>Battle-Ergebnisse werden geladen …</p>`)+card(btn('Zurück','home','alt'));
- 
-try{
-  const snap=await get(ref(db,`battleRankings/${subject}`)),data=snap.val()||{},activities=battleOverviewActivities(subject),rows=RANKED_NAMES.map(name=>({name,results:{},total:0,played:0}));
-  for(const activity of activities)for(const row of rows){const record=data?.[activity.id]?.[row.name];if(!record?.finished||!Number.isFinite(Number(record.correct))||Number(record.maxCorrect)<=0)continue;row.results[activity.id]={correct:Math.min(Number(record.maxCorrect),Math.max(0,Number(record.correct)||0)),maxCorrect:Number(record.maxCorrect),updatedAt:Number(record.updatedAt)||0};}
-  for(const activity of activities){const ranked=competitionRank(rows.filter(row=>row.results[activity.id]).map(row=>({...row,...row.results[activity.id]})));for(const entry of ranked){const result=rows.find(row=>row.name===entry.row.name).results[activity.id];result.place=entry.place;result.tied=entry.tied;result.bonus=entry.bonus;}}
-  for(const row of rows){row.played=activities.filter(a=>row.results[a.id]).length;row.total=activities.reduce((sum,a)=>sum+(row.results[a.id]?.bonus||0),0);}
-  const overall=competitionRank(rows.filter(row=>row.played).map(row=>({...row,correct:row.total})));for(const entry of overall){const row=rows.find(item=>item.name===entry.row.name);row.totalPlace=entry.place;row.totalTied=entry.tied;}
-  const summaryRows=[...rows].sort((a,b)=>(a.totalPlace||99)-(b.totalPlace||99)||b.total-a.total).map(row=>`<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:${row.totalPlace===1?'rgba(244,192,80,.15)':'rgba(255,255,255,.055)'};border:1px solid rgba(255,255,255,.10)"><div><strong>${row.totalPlace?row.totalPlace+'.'+(row.totalTied?' · Gleichstand':''):'–'} ${esc(row.name)}</strong><div class="small">${row.played} abgeschlossene Battles</div></div><strong style="white-space:nowrap">${row.played?row.total:'–'} Punkte</strong></div>`).join('');
-  const details=activities.map(activity=>{const ranked=competitionRank(rows.filter(row=>row.results[activity.id]).map(row=>({...row,...row.results[activity.id]}))),byName=new Map(ranked.map(e=>[e.row.name,e]));return `<details class="player"><summary><strong>${esc(activity.label)}</strong></summary><div style="overflow-x:auto"><table style="width:100%;min-width:0;table-layout:fixed;border-collapse:collapse;text-align:center;font-size:clamp(13px,3.6vw,16px)"><thead><tr><th style="width:15%">Platz</th><th style="width:30%">Name</th><th style="width:25%">Richtig</th><th style="width:30%">Bonus</th></tr></thead><tbody>${rows.map(row=>{const e=byName.get(row.name);return `<tr><td>${e?`${e.place}.`:'–'}</td><td>${esc(row.name)}</td><td>${e?`${e.row.correct}/${e.row.maxCorrect}`:'–'}</td><td>${e?`+${e.bonus}${e.tied?' · Gleichstand':''}`:'–'}</td></tr>`;}).join('')}</tbody></table></div>${ranked.length?'':'<p class="muted">Dieses Battle wurde noch nicht gewertet.</p>'}</details>`;}).join('');
-  app.innerHTML=card(`<h2>🏆 ${title} · Battle-Auswertung</h2><p>Jedes Battle wird nach der Zahl der richtigen Antworten gewertet. Pro Battle gibt es zusätzlich 10 Punkte für Platz 1, 8 für Platz 2, 5 für Platz 3 und 3 für Platz 4. Bei Gleichstand erhalten alle denselben Bonus. Die Gesamtwertung addiert die Battle-Bonuspunkte dieses Fachs.</p><h3>Einzelwertung je Battle</h3>${details}<h3>Gesamtübersicht · nur ${title}</h3><div style="display:grid;gap:8px;margin:12px 0">${summaryRows}</div>${rows.every(row=>!row.played)?'<p class="muted">Noch keine abgeschlossenen Battles gespeichert.</p>':''}`)+card(`<p class="muted">Diese Ansicht nutzt dieselben gespeicherten Battle-Ergebnisse wie die Schiedsrichterseite. Aktualisieren lädt den neuesten Stand.</p><div class="solo-actions">${btn('↻ Aktualisieren',isMath?'battleSeriesMath':'battleSeriesEnglish')}${btn('Fach wählen','battleResultsMenu','alt')}${btn('Zur Startseite','home','alt')}</div>`);
- }catch(e){app.innerHTML=card(`<h2>🏆 ${title} · Battle-Auswertung</h2><p class="error">Auswertung konnte nicht geladen werden: ${esc(e.message)}</p>`)+card(btn('Zurück zur Übersicht','home','alt'));}
+ stopSoloHeartbeat();const title=subject==='math'?'Mathe':'Englisch';
+ app.innerHTML=card('<h2>🏆 '+title+' · Battle-Wochenwertung</h2><p>Ergebnisse werden geladen …</p>')+card(btn('Zurück','home','alt'));
+ try{
+  const snap=await get(ref(db,'battleRankings/'+subject)),data=snap.val()||{},weekKey=activityPeriodKeys().weekKey;
+  const weeks=new Set([weekKey]);
+  for(const [key,entries] of Object.entries(data)){
+   const match=key.match(/^week_(\d{4}-W\d{2})_/);
+   if(match)weeks.add(match[1]);
+   else for(const rec of Object.values(entries||{}))if(rec?.finished&&Number(rec.updatedAt)>0)weeks.add(activityPeriodKeys(Number(rec.updatedAt)).weekKey);
+  }
+  const selected=Array.from(weeks).sort().reverse();
+  const weeklyTables=selected.map(week=>{
+   const rows=RANKED_NAMES.map(name=>({name,points:0,played:0,correct:0}));
+   const records=[];
+   for(const [key,byName] of Object.entries(data)){
+    const match=key.match(/^week_(\d{4}-W\d{2})_/);
+    if(match&&match[1]!==week)continue;
+    for(const row of rows){
+     const result=byName?.[row.name];if(!result?.finished)continue;
+     const at=Number(result.updatedAt)||0;
+     if(!match&&(!at||activityPeriodKeys(at).weekKey!==week))continue;
+     const battlePoints=Math.max(0,Number(result.bonusPoints)||0),weeklyPoints=Math.max(0,Number(result.weeklyBonusPoints)||0);
+     row.points+=battlePoints+weeklyPoints;row.correct+=Math.max(0,Number(result.correct)||0);row.played++;
+     records.push({name:row.name,label:String(result.label||result.originalActivity||result.activity||'Battle'),points:battlePoints+weeklyPoints,at});
+    }
+   }
+   rows.sort((a,b)=>b.points-a.points||b.correct-a.correct||a.name.localeCompare(b.name,'de'));
+   const range=isoWeekDays(week),period=range.length?range[0].slice(8,10)+'.'+range[0].slice(5,7)+'. – '+range[6].slice(8,10)+'.'+range[6].slice(5,7)+'.'+range[6].slice(0,4):'';
+   const table='<div style="display:grid;gap:8px;margin:12px 0">'+rows.map((row,index)=>{
+    const medal=row.played?(index===0?'🥇':index===1?'🥈':index===2?'🥉':(index+1)+'.'):'–';
+    return '<div style="display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:'+(index===0&&row.played?'rgba(244,192,80,.15)':'rgba(255,255,255,.055)')+';border:1px solid rgba(255,255,255,.10)"><span style="font-size:20px;text-align:center">'+medal+'</span><div><strong style="font-size:17px">'+esc(row.name)+'</strong><div style="opacity:.75;font-size:12px">'+row.played+' '+(row.played===1?'Battle':'Battles')+'</div></div><strong style="font-size:22px;white-space:nowrap">'+row.points+' <span style="font-size:12px;font-weight:400;opacity:.8">Pkt.</span></strong></div>';
+   }).join('')+'</div>';
+   records.sort((a,b)=>b.at-a.at);
+   const history=records.length?'<details><summary>Einzelne Battle-Ergebnisse ('+records.length+')</summary><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Datum</th><th>Kind</th><th>Battle</th><th>Punkte</th></tr></thead><tbody>'+records.map(row=>'<tr><td>'+(row.at?esc(new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(row.at))):'–')+'</td><td>'+esc(row.name)+'</td><td>'+esc(row.label)+'</td><td>+'+row.points+'</td></tr>').join('')+'</tbody></table></div></details>':'<p class="muted">Noch keine Battles in dieser Woche.</p>';
+   return '<details '+(week===weekKey?'open ':'')+'style="margin:14px 0"><summary style="font-size:17px"><strong>'+(week===weekKey?'🏆 Aktuelle Woche':'📅 Vergangene Woche')+'</strong> · '+esc(period)+'</summary>'+table+history+'</details>';
+  }).join('');
+  app.innerHTML=card('<h2>🏆 '+title+' · Battle-Wochenwertung</h2><p>Montag–Sonntag · abgeschlossene Battles. Diese Battle-Punkte sind getrennt von der Lernwertung.</p>'+weeklyTables)+card('<div class="solo-actions">'+btn('↻ Aktualisieren',subject==='math'?'battleSeriesMath':'battleSeriesEnglish')+btn('Fach wählen','battleResultsMenu','alt')+btn('Zur Startseite','home','alt')+'</div>');
+ }catch(e){app.innerHTML=card('<h2>🏆 '+title+' · Battle-Wochenwertung</h2><p class="error">Auswertung konnte nicht geladen werden: '+esc(e.message)+'</p>')+card(btn('Zur Startseite','home','alt'));}
 }
 function showEnglishSeries(){return showBattleSeries('english');}
 function showGrammarSeries(){return showBattleSeries('english');}
