@@ -297,7 +297,17 @@ function rankDailyWins(days,weekKey=''){
  return [...ranked,...all.filter(row=>!row.wins).map(row=>({...row,place:0,tied:false,points:0}))];
 }
 async function loadWeekDailyRows(weekKey){if(!db)return [];const days=isoWeekDays(weekKey);return Promise.all(days.map(async day=>{const snap=await get(ref(db,`learningDailyLeaderboard/${day}`));return snap.val()||{};}));}
-async function weeklyPrizePlan(weekKey){const sourceWeek=previousIsoWeek(weekKey);if(!sourceWeek)return {sourceWeek:'',rows:[],points:{}};const [dailyRows,claims]=await Promise.all([loadWeekDailyRows(sourceWeek),get(ref(db,`weeklyBattleAwards/${weekKey}`))]);const rows=rankDailyWins(dailyRows,sourceWeek),claimed=claims.val()||{},points={};for(const row of rows)points[row.name]=claimed[row.name]?0:row.points;return {sourceWeek,rows,points};}
+async function weeklyBonusAlreadyRecorded(weekKey,name){
+ const [english,math]=await Promise.all([get(ref(db,'battleRankings/english')),get(ref(db,'battleRankings/math'))]);
+ return [english.val()||{},math.val()||{}].some(data=>Object.entries(data).some(([key,byName])=>key.startsWith(`week_${weekKey}_`)&&Number(byName?.[name]?.weeklyBonusPoints)>0));
+}
+async function weeklyPrizePlan(weekKey){
+ const sourceWeek=previousIsoWeek(weekKey);if(!sourceWeek)return {sourceWeek:'',rows:[],points:{}};
+ const [dailyRows,english,math]=await Promise.all([loadWeekDailyRows(sourceWeek),get(ref(db,'battleRankings/english')),get(ref(db,'battleRankings/math'))]);
+ const rows=rankDailyWins(dailyRows,sourceWeek),data=[english.val()||{},math.val()||{}],points={};
+ for(const row of rows)points[row.name]=data.some(subject=>Object.entries(subject).some(([key,byName])=>key.startsWith(`week_${weekKey}_`)&&Number(byName?.[row.name]?.weeklyBonusPoints)>0))?0:row.points;
+ return {sourceWeek,rows,points};
+}
 let weeklyBonusAuditHtml='';
 async function repairWeeklyBattleBonuses(){
  if(!adminLoggedIn||uid!==ADMIN_UID){loginForm();return;}
@@ -333,8 +343,6 @@ async function repairWeeklyBattleBonuses(){
    });
    const saved=tx.snapshot.val();
    if(!saved?.finished){report.push(`${winner.name}: Battle-Ergebnis konnte nicht aktualisiert werden.`);continue;}
-   const awardRef=ref(db,`weeklyBattleAwards/${weekKey}/${winner.name}`);
-   await set(awardRef,{name:winner.name,points:Math.max(Number(saved.weeklyBonusPoints)||0,bonus),sourceWeek,claimedAt:Number((await get(awardRef)).val()?.claimedAt)||Date.now(),subject:target.subject,activity:target.key,roomCode:String(saved.roomCode||''),runId:String(saved.runId||'')});
    report.push(`${winner.name}: +${Math.max(Number(saved.weeklyBonusPoints)||0,bonus)} Wochenbonus in ${saved.label||target.result.label||'Battle'} (${target.subject==='english'?'Englisch':'Mathe'}).`);
   }
   weeklyBonusAuditHtml='<details open><summary>Wochensieg-Bonus · KW '+esc(weekKey)+'</summary><p>'+esc(report.join(' '))+'</p></details>';
@@ -367,7 +375,7 @@ async function showRefereeDailyWeekly(){
  }catch(e){app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p class="error">Wertungen konnten nicht geladen werden: '+esc(e.message||e)+'</p>')+card(btn('Erneut laden','refereeDailyWeekly','alt'))+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));}
 }
 async function weeklyAwardStartFields(){const weekKey=activityDateKeys().weekKey;try{const plan=await weeklyPrizePlan(weekKey);return {weeklyAwardWeek:weekKey,weeklyAwards:plan.points};}catch(e){console.warn('Wochenbonus konnte nicht vorbereitet werden:',e);return {weeklyAwardWeek:weekKey,weeklyAwards:{}};}}
-async function claimWeeklyAward(m,p,activity,roomCode,runId){if(!p?.name||!SOLO_NAMES.includes(p.name)||!m?.weeklyAwardWeek)return 0;const weekKey=String(m.weeklyAwardWeek),points=Number(m.weeklyAwards?.[p.name])||0,sourceWeek=previousIsoWeek(weekKey);try{const tx=await runTransaction(ref(db,`weeklyBattleAwards/${weekKey}/${p.name}`),current=>current||{name:p.name,points,sourceWeek,claimedAt:Date.now(),subject:activity.subject,activity:activity.id,roomCode:String(roomCode||''),runId:String(runId||'')});const award=tx.snapshot.val();return award?.runId===String(runId||'')&&award?.roomCode===String(roomCode||'')?Number(award.points)||0:0;}catch(e){console.warn(`Wochenpunkte für ${p.name} konnten nicht gespeichert werden:`,e);return 0;}}
+async function claimWeeklyAward(m,p,activity,roomCode,runId){if(!p?.name||!SOLO_NAMES.includes(p.name)||!m?.weeklyAwardWeek)return 0;const weekKey=String(m.weeklyAwardWeek),points=Number(m.weeklyAwards?.[p.name])||0;if(!points)return 0;try{return await weeklyBonusAlreadyRecorded(weekKey,p.name)?0:points;}catch(e){console.warn(`Wochenpunkte für ${p.name} konnten nicht geprüft werden:`,e);return 0;}}
 function roster(){return rankByScore(players()).map(({row:p,place,tied})=>{const listening=room?.meta?.mode==='listening',points=Math.floor((Number(p.score)||0)/10),score=listening?`${points}/${LISTENING_TOTAL_POINTS} Punkte`:String(Number(p.score)||0),weekly=Number(room?.meta?.weeklyAwards?.[p.name])||0,award=room?.meta?.stage==='finished'?(listening?` · +${battleBonusPoints(place)} Battle-Punkte${tied?' (Gleichstand)':''}${weekly?` · +${weekly} Wochenbonus`:''}`:` · ${points} richtig · +${battleBonusPoints(place)} Battle-Punkte${tied?' (Gleichstand)':''}${weekly?` · +${weekly} Wochenbonus`:''}`):'';return `<div class="player row"><span>${place}. ${esc(p.name)}</span><span class="score">${score}${award}</span></div>`;}).join('')||'<p>Noch keine Spieler.</p>'; }
 function roomQuestionAt(m,index){const b=Number(m.battle||1)-1;if(m.mode==='math-exam')return MATH_PROPORTIONAL_CLASSWORKS[0].questions[index];if(m.mode==='fractions')return FRACTION_MODULES[b]?.questions[index];if(m.mode==='reading')return READING_QUIZ[index];if(m.mode==='listening')return LISTENING_QUESTIONS[index];return (m.subject==='math'?MATH_BATTLES:BATTLES)[b]?.[index%30];}
 function roomBattleResultTable(m){const total=roomQuestionCount(m),start=battleOffset(m),ranked=rankByScore(players());if(!ranked.length)return '';const rows=ranked.map(({row:p,place,tied})=>{let correct=0;for(let n=0;n<total;n++){const q=roomQuestionAt(m,start+n),answer=room?.answers?.[start+n]?.[p.uid];if(q&&answer&&(m.mode==='listening'?listeningIsCorrect(q,answer.choice):Number(answer.choice)===Number(q.correct)))correct++;}const errors=total-correct,weekly=Number(m.weeklyAwards?.[p.name])||0;return `<tr><td><strong>${place}.${tied?' · Gleichstand':''}</strong></td><td>${esc(p.name)}</td><td>${correct}/${total}</td><td>${errors}</td><td>${Number(p.score)||0}</td><td>+${battleBonusPoints(place)}</td><td>+${weekly}</td></tr>`;}).join('');return `<section class="card"><h3>🏆 Battle-Ergebnis</h3><div style="overflow-x:auto"><table style="width:100%;min-width:560px;border-collapse:collapse;text-align:left"><thead><tr><th>Platz</th><th>Kind</th><th>Richtig</th><th>Fehler</th><th>Punkte</th><th>Platzpunkte</th><th>Wochenbonus</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;}
