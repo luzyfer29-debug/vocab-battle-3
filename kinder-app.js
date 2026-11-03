@@ -130,10 +130,10 @@ function dailyAnswerItemKey(index,prompt){
 function dailyProgressFromActivity(activity,dayKey){
  const progress={};
  for(const [exercise,entry] of Object.entries(activity||{})){
-  const items={},checks=entry?.answerChecks&&typeof entry.answerChecks==="object"?entry.answerChecks:{};
+  let exerciseUpdatedAt=0;const items={},checks=entry?.answerChecks&&typeof entry.answerChecks==="object"?entry.answerChecks:{};
   for(const [index,item] of Object.entries(checks)){
    if(item?.attempted!==true)continue;
-   const checkedAt=Number(item.checkedAt)||0,wrongAt=Number(item.lastWrongAt)||0;
+   const checkedAt=Number(item.checkedAt)||0,wrongAt=Number(item.lastWrongAt)||0;exerciseUpdatedAt=Math.max(exerciseUpdatedAt,checkedAt);
    const touchedToday=item.dayKey===dayKey||(checkedAt>0&&activityPeriodKeys(checkedAt).dayKey===dayKey);
    if(!touchedToday)continue;
    const key=dailyAnswerItemKey(index,item.prompt||item.topic||"");
@@ -143,14 +143,14 @@ function dailyProgressFromActivity(activity,dayKey){
   // Read legacy real errors until the per-answer check record has been written.
   for(const [index,item] of Object.entries(entry?.errorItems||{})){
    if(checks[index]||item?.attempted!==true||isFalsePositiveResolvedLearningRecord(item))continue;
-   const wrongAt=Number(item.lastWrongAt)||0,resolvedAt=Number(item.resolvedAt)||0;
+   const wrongAt=Number(item.lastWrongAt)||0,resolvedAt=Number(item.resolvedAt)||0;exerciseUpdatedAt=Math.max(exerciseUpdatedAt,wrongAt,resolvedAt);
    const touchedToday=item.dayKey===dayKey||(wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey)||(resolvedAt>0&&activityPeriodKeys(resolvedAt).dayKey===dayKey);
    if(!touchedToday)continue;
    const key=dailyAnswerItemKey(index,item.prompt||item.topic||"");
    items[key]={count:1,mistakes:wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey?1:0};
   }
   const values=Object.values(items),count=values.length,mistakes=values.reduce((n,item)=>n+(Number(item.mistakes)||0),0);
-  if(count)progress[exercise]={count,mistakes,items};
+  if(count)progress[exercise]={count,mistakes,items,updatedAt:exerciseUpdatedAt||Date.now()};
  }
  return progress;
 }
@@ -194,7 +194,7 @@ async function updateDailyLeaderboard(name,subject,eventAt,wrong,exercise,index,
   await runTransaction(ref(db,path),current=>{
    const value=current&&typeof current==="object"?{...current}:{name,attempts:0,mistakes:0,checkedAttempts:0,submittedAttempts:0,answerCounterVersion:3,progressByExercise:{},submittedByExercise:{},legacySubmittedAttempts:0};
    if(Number(value.answerCounterVersion)!==3)return current;
-   const progress={...(value.progressByExercise||{})},exerciseValue={...(progress[exercise]||{})},items={...(exerciseValue.items||{})},old=items[key];
+   const progress=Object.fromEntries(Object.entries(value.progressByExercise||{}).map(([id,item])=>[id,{...item,updatedAt:Number(item?.updatedAt)||eventAt}])),exerciseValue={...(progress[exercise]||{}),updatedAt:eventAt},items={...(exerciseValue.items||{})},old=items[key];
    if(!old)items[key]={count:1,mistakes:wrong?1:0};
    else if(wrong&&!Number(old.mistakes))items[key]={...old,mistakes:1};
    exerciseValue.items=items;
@@ -225,7 +225,7 @@ async function updateDailySubmittedAnswers(name,subject,eventAt,exercise,answerK
   await runTransaction(ref(db,path),current=>{
    const value=current&&typeof current==="object"?{...current}:{name,attempts:0,mistakes:0,checkedAttempts:0,submittedAttempts:0,answerCounterVersion:3,progressByExercise:{},submittedByExercise:{},legacySubmittedAttempts:0};
    if(Number(value.answerCounterVersion)!==3)return current;
-   const progress={...(value.submittedByExercise||{})},exerciseValue={...(progress[exercise]||{})},items={...(exerciseValue.items||{})};
+   value.progressByExercise=Object.fromEntries(Object.entries(value.progressByExercise||{}).map(([id,item])=>[id,{...item,updatedAt:Number(item?.updatedAt)||eventAt}]));const progress={...(value.submittedByExercise||{})},exerciseValue={...(progress[exercise]||{})},items={...(exerciseValue.items||{})};
    for(const answerKey of keys){const key=dailyAnswerItemKey(answerKey,"submitted");if(!items[key])items[key]={count:1};}
    exerciseValue.items=items;
    exerciseValue.count=Object.keys(items).length;
@@ -359,7 +359,7 @@ async function backfillTodayEnglishVocab(dayKey){
     for(const [itemKey,item] of Object.entries(entry.items)){
      const old=items[itemKey];if(!old)items[itemKey]=item;else if(item.mistakes&&!Number(old.mistakes))items[itemKey]={...old,mistakes:1};
     }
-    prior.items=items;prior.count=Object.keys(items).length;prior.mistakes=Object.values(items).reduce((sum,item)=>sum+(Number(item.mistakes)||0),0);prior.backfilledFromSavedProgress=true;all[exercise]=prior;
+    prior.items=items;prior.count=Object.keys(items).length;prior.mistakes=Object.values(items).reduce((sum,item)=>sum+(Number(item.mistakes)||0),0);prior.updatedAt=Math.max(Number(prior.updatedAt)||0,Number(entry.updatedAt)||updatedAt);prior.backfilledFromSavedProgress=true;all[exercise]=prior;
    }
    const checked=dailyProgressCounts(all),submitted=dailySubmittedCount(value.submittedByExercise);
    value.name=name;value.progressByExercise=all;value.checkedAttempts=checked.checked;value.mistakes=checked.mistakes;
