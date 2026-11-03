@@ -108,6 +108,7 @@ const key='vb2solo';
 const SOLO_NAMES=['Luca','Semir','Talea','Nele','Frauke'];
 const RANKED_NAMES=['Luca','Semir','Talea','Nele']; // Frauke is a test-only profile.
 const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:50,Semir:30,Talea:6}}};
+const DAILY_WIN_EXCLUDED_DAYS={'2026-11-02':'Lern- und Battle-Antworten sind an diesem Tag nicht verlässlich getrennt.'};
 function applyDailyCounterOverride(totals,dayKey,subject){for(const [name,count] of Object.entries(DAILY_COUNTER_OVERRIDES[dayKey]?.[subject]||{}))totals[name]={name,attempts:count,checkedAttempts:0,mistakes:0,manualAdjustment:true};}
 let activitySyncWarned=false;
 function activityPeriodKeys(timestamp=Date.now()){
@@ -256,14 +257,16 @@ function dailyRowTotals(row){
 // The historical KW44 Luca correction is retained as a minimum, not a replacement
 // for live Firebase totals; future weeks are calculated exclusively from daily rows.
 function weeklyDailyWins(days,weekKey=''){
- const wins=Object.fromEntries(RANKED_NAMES.map(name=>[name,0]));
- for(const day of days||[]){
+ const wins=Object.fromEntries(RANKED_NAMES.map(name=>[name,0])),dayKeys=isoWeekDays(weekKey);
+ for(const [dayIndex,day] of (days||[]).entries()){
+  const dayKey=dayKeys[dayIndex]||'';
+  if(DAILY_WIN_EXCLUDED_DAYS[dayKey])continue;
   const rows=RANKED_NAMES.map(name=>{
    let attempts=0,checkedAttempts=0,mistakes=0;
    for(const subject of ['english','math'])for(const row of Object.values(day?.[subject]?.[name]||{})){
     const t=dailyRowTotals(row);attempts+=t.attempts;checkedAttempts+=t.checkedAttempts;mistakes+=t.mistakes;
    }
-   const overrideKey=isoWeekDays(weekKey)[(days||[]).indexOf(day)];if(DAILY_COUNTER_OVERRIDES[overrideKey]?.english?.[name]!==undefined){attempts=DAILY_COUNTER_OVERRIDES[overrideKey].english[name];checkedAttempts=attempts;mistakes=0;}
+   if(DAILY_COUNTER_OVERRIDES[dayKey]?.english?.[name]!==undefined){attempts=DAILY_COUNTER_OVERRIDES[dayKey].english[name];checkedAttempts=attempts;mistakes=0;}
    return {name,attempts,rate:checkedAttempts?mistakes/checkedAttempts:Infinity};
   }).filter(row=>row.attempts>0);
   if(!rows.length)continue;
