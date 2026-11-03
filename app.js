@@ -361,7 +361,7 @@ function rankLearningDailyWins(days,weekKey=''){
   const leader=day.rows[0];
   for(const row of day.rows)if(row.attempts===leader.attempts&&row.rate===leader.rate)wins[row.name]++;
  }
- for(const [dayKey,awards] of Object.entries(DAILY_WINNER_OVERRIDES))if(dayKeys.includes(dayKey))for(const [name,count] of Object.entries(awards))if(Object.hasOwn(wins,name))wins[name]+=Math.max(0,Math.floor(Number(count)||0));
+ for(const [dayKey,awards] of Object.entries(DAILY_WINNER_OVERRIDES))if(isoWeekDays(weekKey).includes(dayKey))for(const [name,count] of Object.entries(awards))if(Object.hasOwn(wins,name))wins[name]+=Math.max(0,Math.floor(Number(count)||0));
  if(weekKey==='2026-W44'){wins.Luca=5;wins.Nele=0;wins.Semir=0;wins.Talea=0;}
  const all=names.map(name=>({name,wins:wins[name]}));
  const positive=all.filter(row=>row.wins>0).sort((a,b)=>b.wins-a.wins||names.indexOf(a.name)-names.indexOf(b.name));
