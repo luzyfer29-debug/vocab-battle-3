@@ -983,6 +983,13 @@ async function retroCorrectVocabWorkToday(){
  const dayKey=berlinDayKey();
  if(!document.getElementById('retro-battle-mobile-table-style')){
   const style=document.createElement('style');style.id='retro-battle-mobile-table-style';style.textContent=`
+   .retro-player-results{margin:8px 0;border:1px solid rgba(255,255,255,.18);border-radius:12px;overflow:hidden;background:rgba(255,255,255,.045)}
+   .retro-player-results>summary{display:block;cursor:pointer;list-style:none;padding:13px 15px;font-weight:800;background:rgba(255,255,255,.08)}
+   .retro-player-results>summary::-webkit-details-marker{display:none}
+   .retro-player-results>summary::after{content:'＋';float:right;font-size:18px}
+   .retro-player-results[open]>summary::after{content:'−'}
+   .retro-player-results-table{width:100%;border-collapse:collapse;text-align:left}
+   .retro-player-results-table th,.retro-player-results-table td{padding:8px;border-bottom:1px solid rgba(255,255,255,.12);vertical-align:top}
    @media(max-width:700px){
     .retro-answer-table-wrap{overflow:visible!important}
     .retro-answer-table{display:block!important;width:100%!important;min-width:0!important;border-collapse:separate!important}
@@ -1010,18 +1017,18 @@ async function retroCorrectVocabWorkToday(){
   for(const [roomCode,group] of groups){
    const roomSnap=await get(ref(db,'grammarRooms/'+roomCode)),room=roomSnap.val(),meta=room?.meta||{},station2=meta.kind==='vocab-work-station2',expectedActivity=station2?'vocab_work_station2':'vocab_work_station1';
    if(!room||meta.hostUid!==uid||meta.stage!=='finished'||expectedActivity!==group.activity||berlinDayKey(Number(meta.finishedAt)||Math.max(...Object.values(group.records).map(x=>Number(x.updatedAt)||0)))!==dayKey){roomsSkipped++;continue;}
-   const questions=station2?VOCAB_WORK_STATION2_BATTLE_QUESTIONS:VOCAB_WORK_BATTLE_QUESTIONS,players=Object.entries(room.slots||{}).map(([id,p])=>({id,...p})).filter(p=>p.uid&&SOLO_NAMES.includes(p.name)),scores={},reviewsPatch={},rows=[];
-   for(const p of players){scores[p.name]=0;for(let index=0;index<questions.length;index++){
+   const questions=station2?VOCAB_WORK_STATION2_BATTLE_QUESTIONS:VOCAB_WORK_BATTLE_QUESTIONS,players=Object.entries(room.slots||{}).map(([id,p])=>({id,...p})).filter(p=>p.uid&&SOLO_NAMES.includes(p.name)),scores={},reviewsPatch={},playerRows={};
+   for(const p of players){scores[p.name]=0;playerRows[p.name]=[];for(let index=0;index<questions.length;index++){
     const q=questions[index],answer=room.submissions?.[index]?.[p.uid],review=room.reviews?.[index]?.[p.uid],text=String(answer?.text||''),accepted=(Array.isArray(q?.accepted)?q.accepted:q?.accepted?[q.accepted]:[]).map(gbNorm),correct=!!text.trim()&&accepted.includes(gbNorm(text));
     if(correct)scores[p.name]++;
     if(answer){reviewsPatch['reviews/'+index+'/'+p.uid]={correct,automatic:true,answer:text,at:Number(answer.at)||Number(review?.at)||Date.now(),retroactiveAudit:true};if(Boolean(review?.correct)!==correct)changedAnswers++;}
-    if(answer)rows.push('<tr><td data-label="Aufgabe">'+(index+1)+'</td><td data-label="Frage">'+esc(q?.title||'')+'<small>'+esc(q?.prompt||'')+'</small></td><td data-label="Kind">'+esc(p.name)+'</td><td data-label="Eingegeben">'+esc(text)+'</td><td data-label="Lösung">'+esc(q?.category?'Alle passenden Sportarten aus „'+q.category+'“':accepted.join(' / '))+'</td><td data-label="Wertung">'+(review?.correct?'Richtig':'Falsch')+' → '+(correct?'✅ Richtig':'❌ Falsch')+'</td></tr>');
+    if(answer)playerRows[p.name].push('<tr><td data-label="Aufgabe">'+(index+1)+'</td><td data-label="Kategorie / Aufgabe">'+esc(q?.category||q?.title||'')+'</td><td data-label="Eingegebenes Wort">'+esc(text)+'</td><td data-label="Wertung">'+(correct?'✅ Richtig':'❌ Falsch')+'</td></tr>');
    }}
    const ranked=rankByScore(players,p=>scores[p.name]||0),roomPatch={...reviewsPatch},rankPatch={};for(const p of players){const awarded={};for(let index=0;index<questions.length;index++){const answer=room.submissions?.[index]?.[p.uid],q=questions[index],accepted=(Array.isArray(q?.accepted)?q.accepted:q?.accepted?[q.accepted]:[]).map(gbNorm);if(answer&&String(answer.text||'').trim()&&accepted.includes(gbNorm(answer.text)))awarded[(meta.runId||meta.createdAt||'vocab')+':'+index]=true;}roomPatch['slots/'+p.id+'/score']=(scores[p.name]||0)*10;roomPatch['slots/'+p.id+'/awarded']=awarded;}
    await update(ref(db,'grammarRooms/'+roomCode),roomPatch);
    for(const {row:p,place,tied} of ranked){const previous=group.records[p.name];if(!previous)continue;rankPatch[p.name]={...previous,correct:scores[p.name]||0,maxCorrect:questions.length,bonusPoints:battleBonusPoints(place),place,tied,roomCode};}
    if(Object.keys(rankPatch).length)await update(ref(db,'battleRankings/english/'+group.resultKey),rankPatch);
-   const title=station2?'Vokabelarbeit · Station 2':'Vokabelarbeit · Station 1';report.push('<details open><summary>'+esc(title)+' · Raum '+esc(roomCode)+' · '+players.length+' Kinder</summary><div class="retro-answer-table-wrap" style="overflow-x:auto"><table class="retro-answer-table" style="width:100%;border-collapse:collapse"><thead><tr><th>Aufgabe</th><th>Aufgabe / Frage</th><th>Kind</th><th>Eingegebenes Wort</th><th>Erwartete Antwort</th><th>Wertung vorher → jetzt</th></tr></thead><tbody>'+(rows.join('')||'<tr><td colspan="6">Keine gespeicherten Eingaben.</td></tr>')+'</tbody></table></div></details>');roomsChecked++;
+   const title=station2?'Vokabelarbeit · Station 2':'Vokabelarbeit · Station 1';const playerPanels=players.map(p=>{const rows=playerRows[p.name]||[],table=rows.length?'<div class="retro-answer-table-wrap" style="overflow-x:auto"><table class="retro-player-results-table"><thead><tr><th>Aufgabe</th><th>Kategorie / Aufgabe</th><th>Eingegebenes Wort</th><th>Wertung</th></tr></thead><tbody>'+rows.join('')+'</tbody></table></div>':'<p class="muted" style="padding:0 14px">Keine Antworten gespeichert.</p>';return '<details class="retro-player-results"><summary>'+esc(p.name)+' · '+rows.length+' Antworten</summary>'+table+'</details>';}).join('');report.push('<details open><summary>'+esc(title)+' · Raum '+esc(roomCode)+' · '+players.length+' Kinder</summary><div>'+playerPanels+'</div></details>');roomsChecked++;
   }
   retroVocabAuditHtml='<details open><summary>Rückwirkende Prüfung · '+dayKey+' · '+roomsChecked+' Runden korrigiert · '+changedAnswers+' Wertungen geändert'+(roomsSkipped?' · '+roomsSkipped+' nicht zuordenbar':'')+'</summary>'+report.join('')+'</details>';
   await showBattleSeries('english');
