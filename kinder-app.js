@@ -340,6 +340,21 @@ async function backfillTodayEnglishAnswers(dayKey){
  })));
  for(const name of SOLO_NAMES){
   const progress=dailyProgressFromActivity(byName[name],dayKey);
+  // Solo saves also carry today's completed question index in the activity row.
+  // Recover answers even when older app versions failed to save answerChecks.
+  for(let battle=1;battle<=3;battle++){
+   const exercise=`english_vocab_battle${battle}`,activity=byName[name][exercise],at=Number(activity?.live?.updatedAt)||Number(activity?.lastAt)||0;
+   if(activity?.dayKey!==dayKey||!at||activityPeriodKeys(at).dayKey!==dayKey)continue;
+   const done=Math.max(0,Math.min(30,Number(activity?.live?.done)||0));if(!done)continue;
+   const questions=BATTLES[battle-1]||[],prior=progress[exercise]||{count:0,mistakes:0,items:{},updatedAt:at},items={...(prior.items||{})};
+   for(let index=0;index<done;index++){
+    const q=questions[index],prompt=q?.prompt||q?.q||q?.word||`Vokabeln ${battle} · Aufgabe ${index+1}`,key=dailyAnswerItemKey(index,prompt),check=activity.answerChecks?.[String(index)],error=activity.errorItems?.[String(index)];
+    const wrongAt=Number(check?.lastWrongAt||error?.lastWrongAt)||0,wrongToday=wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey&&!isFalsePositiveResolvedLearningRecord(error);
+    const mistakes=check?.attempted===true?Number(wrongToday):Number(error?.attempted===true&&wrongToday);
+    items[key]=items[key]?{...items[key],mistakes:Math.max(Number(items[key].mistakes)||0,mistakes)}:{count:1,mistakes};
+   }
+   const values=Object.values(items);progress[exercise]={...prior,items,count:values.length,mistakes:values.reduce((sum,item)=>sum+(Number(item?.mistakes)||0),0),updatedAt:Math.max(Number(prior.updatedAt)||0,at),backfilledFromSavedProgress:true};
+  }
   if(!Object.keys(progress).length)continue;
   const eventAt=Math.max(Date.now(),...Object.values(progress).map(item=>Number(item.updatedAt)||0));
   const path=`learningDailyLeaderboard/${dayKey}/english/${name}/${uid}`;
