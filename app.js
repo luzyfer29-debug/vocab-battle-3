@@ -270,25 +270,47 @@ function dailyRowTotals(row){
 }
 async function repairDailyAnswerCounters(dayKey){
  if(!adminLoggedIn||uid!==ADMIN_UID)return;
- const [dailySnap,activitySnap]=await Promise.all([get(ref(db,"learningDailyLeaderboard/"+dayKey)),get(ref(db,"learningActivity"))]);
- const daily=dailySnap.val()||{},activity=activitySnap.val()||{};
+ const [dailySnap,activitySnap,progressSnap]=await Promise.all([get(ref(db,"learningDailyLeaderboard/"+dayKey)),get(ref(db,"learningActivity")),get(ref(db,"soloProgress"))]);
+ const daily=dailySnap.val()||{},activity=activitySnap.val()||{},soloProgress=progressSnap.val()||{};
  for(const subject of ["english","math"])for(const name of names){
   const existing=daily?.[subject]?.[name]||{};
   const childActivity=Object.values(activity).reduce((merged,user)=>{
    const source=user?.[name]||{};
    for(const [exercise,entry] of Object.entries(source)){
     if(!(subject==='english'?exercise.startsWith('english_'):exercise.startsWith('math_')))continue;
-    const prior=merged[exercise]||{};
+    const prior=merged[exercise]||{},priorAt=Math.max(Number(prior?.live?.updatedAt)||0,Number(prior?.lastAt)||0),entryAt=Math.max(Number(entry?.live?.updatedAt)||0,Number(entry?.lastAt)||0),newest=entryAt>=priorAt?entry:prior;
     const errors={...(prior.errorItems||{})};
     for(const [index,item] of Object.entries(entry?.errorItems||{})){
      const old=errors[index],at=Number(item?.resolvedAt||item?.lastWrongAt||0),oldAt=Number(old?.resolvedAt||old?.lastWrongAt||0);
      if(!old||at>=oldAt)errors[index]=item;
     }
-    merged[exercise]={...prior,...entry,errorItems:errors};
+    const checks={...(prior.answerChecks||{})};
+    for(const [index,item] of Object.entries(entry?.answerChecks||{})){
+     const old=checks[index];if(!old||Number(item?.checkedAt||0)>=Number(old?.checkedAt||0))checks[index]=item;
+    }
+    merged[exercise]={...prior,...newest,answerChecks:checks,errorItems:errors};
    }
    return merged;
   },{});
   const progress=dailyProgressFromActivity(childActivity,dayKey);
+  // Recover answers from today's saved solo battle when answer-check activity
+  // was missing. Keep error-rate data sourced from timestamped answer checks.
+  if(subject==='english')for(const device of Object.values(soloProgress)){
+   const saved=device?.[name]||{};
+   for(let battle=1;battle<=3;battle++){
+    const exercise=`english_vocab_battle${battle}`,record=saved?.[`battle${battle}`],at=Number(record?.updatedAt)||Number(record?.timestamp)||0;
+    if(!record||!at||activityPeriodKeys(at).dayKey!==dayKey)continue;
+    const done=Math.max(0,Math.min(30,Number(record.done)||0));if(!done)continue;
+    const activityEntry=childActivity[exercise]||{},questions=BATTLES[battle-1]||[],prior=progress[exercise]||{items:{}},items={...(prior.items||{})};
+    for(let index=0;index<done;index++){
+     const q=questions[index],check=activityEntry.answerChecks?.[String(index)],error=activityEntry.errorItems?.[String(index)],prompt=check?.prompt||q?.prompt||q?.q||q?.word||`Vokabeln ${battle} · Aufgabe ${index+1}`,key=dailyAnswerItemKey(index,prompt);
+     const wrongAt=Number(check?.lastWrongAt||error?.lastWrongAt)||0,wrongToday=wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey&&!isFalsePositiveResolvedLearningRecord(error);
+     const inferred={count:1,mistakes:wrongToday?1:0},old=items[key];
+     if(!old)items[key]=inferred;else if(inferred.mistakes>Number(old.mistakes||0))items[key]={...old,mistakes:1};
+    }
+    const values=Object.values(items);progress[exercise]={...prior,items,count:values.length,mistakes:values.reduce((sum,item)=>sum+(Number(item.mistakes)||0),0),updatedAt:Math.max(Number(prior.updatedAt)||0,at)};
+   }
+  }
   // Preserve auditable vocabulary answers recovered from this day's saved solo progress.
   for(const row of Object.values(existing))for(const [exercise,entry] of Object.entries(row?.progressByExercise||{})){
    if(entry?.backfilledFromSavedProgress!==true)continue;
@@ -431,8 +453,8 @@ async function showRefereeDailyWeekly(){
   const lucaDiagnosticHtml='<p class="muted" style="font-size:12px">Prüfung Luca · Datum '+esc(dayKey)+' · Datensätze '+lucaRows.length+' · Werte '+esc(JSON.stringify(lucaDiagnostics))+'</p>';
   const dailyHtml=subject=>{
    const data=today[subject]||{};
-   const rows=names.map(name=>{let attempts=0,checkedAttempts=0,mistakes=0;for(const row of Object.values(data[name]||{})){const totals=dailyRowTotals(row);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;}return {name,attempts,checkedAttempts,mistakes,manualDailyOverride:Object.values(data[name]||{}).some(row=>row?.manualDailyOverride),rate:checkedAttempts?mistakes/checkedAttempts:null};}).sort((a,b)=>b.attempts-a.attempts||(a.rate??Infinity)-(b.rate??Infinity)||names.indexOf(a.name)-names.indexOf(b.name));
-   const manual=Object.entries(data).flatMap(([name,devices])=>Object.values(devices||{}).filter(row=>row?.manualDailyOverride).map(row=>name+': heute ausnahmsweise '+Number(row.manualCount)+' gesetzt'));const unknown=Object.entries(data).flatMap(([name,devices])=>Object.values(devices||{}).filter(row=>Number(row?.unverifiedLegacyDailyCount)>0&&!row?.manualDailyOverride).map(row=>name+': '+Number(row.unverifiedLegacyDailyCount)+' alte Antworten'));const note=[...manual,...(unknown.length?['nicht prüfbare Altsummen werden nicht gewertet ('+unknown.join(', ')+')']:[])];return '<section class="solo-section"><h3>'+(subject==='english'?'🇬🇧 Englisch':'🔢 Mathe')+' · Heute</h3>'+(note.length?'<p class="muted">'+esc(note.join('; '))+'. Neue Antworten werden korrekt gezählt.</p>':'')+rows.map((row,index)=>'<div class="solo-game"><div class="row"><h3>'+(row.attempts?(index===0?'🥇':index===1?'🥈':index===2?'🥉':'👤'):'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.attempts+' Antworten</span></div><p>'+(row.checkedAttempts?(row.rate*100).toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1})+' % Fehler · '+row.mistakes+' falsch von '+row.checkedAttempts+' geprüften Antworten'+(row.manualDailyOverride?' · Grundwert ohne Fehlerquote':''):row.manualDailyOverride?'Fehlerquote für den Grundwert nicht verfügbar':'Noch keine geprüften Antworten')+'</p></div>').join('')+'</section>';
+  const rows=names.map(name=>{let attempts=0,checkedAttempts=0,mistakes=0;for(const row of Object.values(data[name]||{})){const totals=dailyRowTotals(row);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;}return {name,attempts,checkedAttempts,mistakes,manualDailyOverride:Object.values(data[name]||{}).some(row=>row?.manualDailyOverride),rate:checkedAttempts?mistakes/checkedAttempts:null};}).sort((a,b)=>b.attempts-a.attempts||(a.rate??Infinity)-(b.rate??Infinity)||names.indexOf(a.name)-names.indexOf(b.name));
+  const manual=Object.entries(data).flatMap(([name,devices])=>Object.values(devices||{}).filter(row=>row?.manualDailyOverride).map(row=>name+': heute ausnahmsweise '+Number(row.manualCount)+' gesetzt'));const unknown=Object.entries(data).flatMap(([name,devices])=>Object.values(devices||{}).filter(row=>Number(row?.unverifiedLegacyDailyCount)>0&&!row?.manualDailyOverride).map(row=>name+': '+Number(row.unverifiedLegacyDailyCount)+' alte Antworten'));const note=[...manual,...(unknown.length?['nicht prüfbare Altsummen werden nicht gewertet ('+unknown.join(', ')+')']:[])];return '<section class="solo-section"><h3>'+(subject==='english'?'🇬🇧 Englisch':'🔢 Mathe')+' · Heute</h3>'+(note.length?'<p class="muted">'+esc(note.join('; '))+'. Neue Antworten werden korrekt gezählt.</p>':'')+rows.map((row,index)=>'<div class="solo-game"><div class="row"><h3>'+(row.attempts?(index===0?'🥇':index===1?'🥈':index===2?'🥉':'👤'):'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.attempts+' Antworten</span></div><p>'+(row.checkedAttempts?(row.rate*100).toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1})+' % Fehler · '+row.mistakes+' falsch von '+row.checkedAttempts+' geprüften Antworten'+(row.manualDailyOverride?' · Grundwert ohne Fehlerquote':''):row.manualDailyOverride?'Fehlerquote für den Grundwert nicht verfügbar':'Noch keine geprüften Antworten')+'</p></div>').join('')+'</section>';
   };
   const weekRows=rankLearningDailyWins(weekDays,weekKey),learningDays=learningDailyBreakdown(weekDays,weekKey);
   const dayAudit=learningDays.length?'<details><summary>Lernantworten je Tag anzeigen</summary><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Datum</th><th>Kind</th><th>Antworten</th><th>Geprüft</th><th>Falsch</th></tr></thead><tbody>'+learningDays.flatMap(day=>day.rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate).map(row=>'<tr><td>'+esc(day.dayKey)+'</td><td>'+esc(row.name)+'</td><td>'+row.attempts+'</td><td>'+row.checkedAttempts+'</td><td>'+row.mistakes+'</td></tr>')).join('')+'</tbody></table></div></details>':'<p class="muted">Diese Woche noch keine Lernantworten erfasst.</p>';
