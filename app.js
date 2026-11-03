@@ -323,15 +323,18 @@ async function loadWeekLearningRows(weekKey){
   const snap=await get(ref(db,`learningDailyLeaderboard/${day}`));return snap.val()||{};
  }));
 }
+function isTuesdayBerlin(timestamp=Date.now()){
+ return new Intl.DateTimeFormat('en-US',{timeZone:'Europe/Berlin',weekday:'short'}).format(new Date(timestamp))==='Tue';
+}
 async function weeklyBonusAlreadyRecorded(weekKey,name){
  const [english,math]=await Promise.all([get(ref(db,'battleRankings/english')),get(ref(db,'battleRankings/math'))]);
- return [english.val()||{},math.val()||{}].some(data=>Object.entries(data).some(([key,byName])=>key.startsWith(`week_${weekKey}_`)&&Number(byName?.[name]?.weeklyBonusPoints)>0));
+ return [english.val()||{},math.val()||{}].some(data=>Object.entries(data).some(([key,byName])=>key.startsWith(`week_${weekKey}_`)&&Number(byName?.[name]?.weeklyBonusPoints)>0&&isTuesdayBerlin(Number(byName?.[name]?.updatedAt)||0)));
 }
 async function weeklyPrizePlan(weekKey){
  const sourceWeek=previousIsoWeek(weekKey);if(!sourceWeek)return {sourceWeek:'',rows:[],points:{}};
  const [learningRows,english,math]=await Promise.all([loadWeekLearningRows(sourceWeek),get(ref(db,'battleRankings/english')),get(ref(db,'battleRankings/math'))]);
  const rows=rankLearningDailyWins(learningRows,sourceWeek),data=[english.val()||{},math.val()||{}],points={};
- for(const row of rows)points[row.name]=data.some(subject=>Object.entries(subject).some(([key,byName])=>key.startsWith(`week_${weekKey}_`)&&Number(byName?.[row.name]?.weeklyBonusPoints)>0))?0:row.points;
+ for(const row of rows)points[row.name]=data.some(subject=>Object.entries(subject).some(([key,byName])=>key.startsWith(`week_${weekKey}_`)&&Number(byName?.[row.name]?.weeklyBonusPoints)>0&&isTuesdayBerlin(Number(byName?.[row.name]?.updatedAt)||0)))?0:row.points;
  return {sourceWeek,rows,points};
 }
 let weeklyBonusAuditHtml='';
@@ -359,10 +362,15 @@ async function repairWeeklyBattleBonuses(){
   const report=[];
   for(const winner of winners){
    const records=allResults.filter(x=>x.name===winner.name).sort((a,b)=>(Number(a.result.updatedAt)||0)-(Number(b.result.updatedAt)||0));
-   if(!records.length){report.push(`${winner.name}: ${winner.points} Bonuspunkte vorgemerkt; noch kein Battle diese Woche abgeschlossen.`);continue;}
-   const existing=records.find(x=>Number(x.result.weeklyBonusPoints)>0);
-   if(existing){report.push(`${winner.name}: +${Number(existing.result.weeklyBonusPoints)} Wochenbonus ist bereits in ${existing.result.label||'einem Battle'} gutgeschrieben.`);continue;}
-   const target=records[0],bonus=winner.points;
+   for(const misplaced of records.filter(x=>Number(x.result.weeklyBonusPoints)>0&&!isTuesdayBerlin(Number(x.result.updatedAt)||0))){
+    const misplacedRef=ref(db,`battleRankings/${misplaced.subject}/${misplaced.key}/${winner.name}`);
+    await runTransaction(misplacedRef,current=>current?.finished&&Number(current.weeklyBonusPoints)>0&&!isTuesdayBerlin(Number(current.updatedAt)||0)?{...current,weeklyBonusPoints:0,weeklyAwardWeek:''}:current);
+   }
+   const eligible=records.filter(x=>isTuesdayBerlin(Number(x.result.updatedAt)||0));
+   if(!eligible.length){report.push(`${winner.name}: ${winner.points} Bonuspunkte vorgemerkt; Gutschrift beim ersten Live-Battle am Dienstag.`);continue;}
+   const existing=eligible.find(x=>Number(x.result.weeklyBonusPoints)>0);
+   if(existing){report.push(`${winner.name}: +${Number(existing.result.weeklyBonusPoints)} Wochenbonus ist bereits in ${existing.result.label||'einem Dienstags-Battle'} gutgeschrieben.`);continue;}
+   const target=eligible[0],bonus=winner.points;
    const resultRef=ref(db,`battleRankings/${target.subject}/${target.key}/${winner.name}`);
    const tx=await runTransaction(resultRef,current=>{
     if(!current?.finished||Number(current.weeklyBonusPoints)>0)return current;
@@ -404,7 +412,7 @@ async function showRefereeDailyWeekly(){
  }catch(e){app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p class="error">Wertungen konnten nicht geladen werden: '+esc(e.message||e)+'</p>')+card(btn('Erneut laden','refereeDailyWeekly','alt'))+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));}
 }
 async function weeklyAwardStartFields(){const weekKey=activityDateKeys().weekKey;try{const plan=await weeklyPrizePlan(weekKey);return {weeklyAwardWeek:weekKey,weeklyAwards:plan.points};}catch(e){console.warn('Wochenbonus konnte nicht vorbereitet werden:',e);return {weeklyAwardWeek:weekKey,weeklyAwards:{}};}}
-async function claimWeeklyAward(m,p,activity,roomCode,runId){if(!p?.name||!SOLO_NAMES.includes(p.name)||!m?.weeklyAwardWeek)return 0;const weekKey=String(m.weeklyAwardWeek),points=Number(m.weeklyAwards?.[p.name])||0;if(!points)return 0;try{return await weeklyBonusAlreadyRecorded(weekKey,p.name)?0:points;}catch(e){console.warn(`Wochenpunkte für ${p.name} konnten nicht geprüft werden:`,e);return 0;}}
+async function claimWeeklyAward(m,p,activity,roomCode,runId){if(!p?.name||!SOLO_NAMES.includes(p.name)||!m?.weeklyAwardWeek||!isTuesdayBerlin(Number(m.finishedAt)||Date.now()))return 0;const weekKey=String(m.weeklyAwardWeek),points=Number(m.weeklyAwards?.[p.name])||0;if(!points)return 0;try{return await weeklyBonusAlreadyRecorded(weekKey,p.name)?0:points;}catch(e){console.warn(`Wochenpunkte für ${p.name} konnten nicht geprüft werden:`,e);return 0;}}
 function roster(){return rankByScore(players()).map(({row:p,place,tied})=>{const listening=room?.meta?.mode==='listening',points=Math.floor((Number(p.score)||0)/10),score=listening?`${points}/${LISTENING_TOTAL_POINTS} Punkte`:String(Number(p.score)||0),weekly=Number(room?.meta?.weeklyAwards?.[p.name])||0,award=room?.meta?.stage==='finished'?(listening?` · +${battleBonusPoints(place)} Battle-Punkte${tied?' (Gleichstand)':''}${weekly?` · +${weekly} Wochenbonus`:''}`:` · ${points} richtig · +${battleBonusPoints(place)} Battle-Punkte${tied?' (Gleichstand)':''}${weekly?` · +${weekly} Wochenbonus`:''}`):'';return `<div class="player row"><span>${place}. ${esc(p.name)}</span><span class="score">${score}${award}</span></div>`;}).join('')||'<p>Noch keine Spieler.</p>'; }
 function roomQuestionAt(m,index){const b=Number(m.battle||1)-1;if(m.mode==='math-exam')return MATH_PROPORTIONAL_CLASSWORKS[0].questions[index];if(m.mode==='fractions')return FRACTION_MODULES[b]?.questions[index];if(m.mode==='reading')return READING_QUIZ[index];if(m.mode==='listening')return LISTENING_QUESTIONS[index];return (m.subject==='math'?MATH_BATTLES:BATTLES)[b]?.[index%30];}
 function roomBattleResultTable(m){const total=roomQuestionCount(m),start=battleOffset(m),ranked=rankByScore(players());if(!ranked.length)return '';const rows=ranked.map(({row:p,place,tied})=>{let correct=0;for(let n=0;n<total;n++){const q=roomQuestionAt(m,start+n),answer=room?.answers?.[start+n]?.[p.uid];if(q&&answer&&(m.mode==='listening'?listeningIsCorrect(q,answer.choice):Number(answer.choice)===Number(q.correct)))correct++;}const errors=total-correct,weekly=Number(m.weeklyAwards?.[p.name])||0;return `<tr><td><strong>${place}.${tied?' · Gleichstand':''}</strong></td><td>${esc(p.name)}</td><td>${correct}/${total}</td><td>${errors}</td><td>${Number(p.score)||0}</td><td>+${battleBonusPoints(place)}</td><td>+${weekly}</td></tr>`;}).join('');return `<section class="card"><h3>🏆 Battle-Ergebnis</h3><div style="overflow-x:auto"><table style="width:100%;min-width:560px;border-collapse:collapse;text-align:left"><thead><tr><th>Platz</th><th>Kind</th><th>Richtig</th><th>Fehler</th><th>Punkte</th><th>Platzpunkte</th><th>Wochenbonus</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;}
