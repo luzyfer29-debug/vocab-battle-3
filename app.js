@@ -6,14 +6,19 @@ import {LISTENING_QUESTIONS,LISTENING_TOTAL_POINTS,listeningIsCorrect,listeningC
 import {firebaseConfig} from './firebase-config.js';
 import {BATTLES} from './questions.js';
 import {MATH_BATTLES,MATH_EXAM_BATTLE,MATH_RATIONAL_EXAM_BATTLE,MATH_PROPORTIONAL_EXAM_BATTLE,MATH_PROPORTIONAL_CLASSWORKS,MATH_PROPORTIONAL_PRACTICE_BLOCKS} from './math-questions.js?v=proportional-uebungsbloecke-20261015b';
+const VOCAB_WORK_SPORT_POOLS={
+ water:['swimming','canoeing','rafting','water polo','water-polo','waterball','water ball','sailing','surfing','windsurfing','rowing','kayaking','diving','water skiing','waterskiing'],
+ ball:['rugby','netball','basketball','tennis','football','soccer','volleyball','handball','cricket','baseball','table tennis','badminton','squash'],
+ winter:['skiing','snowboarding','ice skating','ice-skating','ice hockey','figure skating','bobsleigh','luge','curling','sledging','sledding']
+};
 const VOCAB_WORK_BATTLE_QUESTIONS=[
- {title:'Seite 1 · Aufgabe 1 · water sports',prompt:'Name the sports. Fill in the table. Water sports · 1.',accepted:['swimming']},
- {title:'Seite 1 · Aufgabe 1 · water sports',prompt:'Name the sports. Fill in the table. Water sports · 2.',accepted:['canoeing']},
- {title:'Seite 1 · Aufgabe 1 · water sports',prompt:'Name the sports. Fill in the table. Water sports · 3.',accepted:['rafting']},
- {title:'Seite 1 · Aufgabe 1 · ball sports',prompt:'Name the sports. Fill in the table. Ball sports · 1.',accepted:['rugby']},
- {title:'Seite 1 · Aufgabe 1 · ball sports',prompt:'Name the sports. Fill in the table. Ball sports · 2.',accepted:['netball']},
- {title:'Seite 1 · Aufgabe 1 · ball sports',prompt:'Name the sports. Fill in the table. Ball sports · 3.',accepted:['basketball']},
- {title:'Seite 1 · Aufgabe 1 · winter sport',prompt:'Name the sports. Fill in the table. Winter sport · 1.',accepted:['skiing']},
+ {title:'Seite 1 · Aufgabe 1 · water sports',prompt:'Name the sports. Fill in the table. Water sports · 1.',accepted:VOCAB_WORK_SPORT_POOLS.water},
+ {title:'Seite 1 · Aufgabe 1 · water sports',prompt:'Name the sports. Fill in the table. Water sports · 2.',accepted:VOCAB_WORK_SPORT_POOLS.water},
+ {title:'Seite 1 · Aufgabe 1 · water sports',prompt:'Name the sports. Fill in the table. Water sports · 3.',accepted:VOCAB_WORK_SPORT_POOLS.water},
+ {title:'Seite 1 · Aufgabe 1 · ball sports',prompt:'Name the sports. Fill in the table. Ball sports · 1.',accepted:VOCAB_WORK_SPORT_POOLS.ball},
+ {title:'Seite 1 · Aufgabe 1 · ball sports',prompt:'Name the sports. Fill in the table. Ball sports · 2.',accepted:VOCAB_WORK_SPORT_POOLS.ball},
+ {title:'Seite 1 · Aufgabe 1 · ball sports',prompt:'Name the sports. Fill in the table. Ball sports · 3.',accepted:VOCAB_WORK_SPORT_POOLS.ball},
+ {title:'Seite 1 · Aufgabe 1 · winter sport',prompt:'Name the sports. Fill in the table. Winter sport · 1.',accepted:VOCAB_WORK_SPORT_POOLS.winter},
  {title:'Seite 1 · Aufgabe 2 · Find the opposites',prompt:'Find the opposite of “big”.',accepted:['small']},
  {title:'Seite 1 · Aufgabe 2 · Find the opposites',prompt:'Find the opposite of “quiet”.',accepted:['loud']},
  {title:'Seite 1 · Aufgabe 2 · Find the opposites',prompt:'Find the opposite of “quick”.',accepted:['slow']},
