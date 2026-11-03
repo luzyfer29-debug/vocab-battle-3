@@ -359,7 +359,7 @@ async function backfillTodayEnglishVocab(dayKey){
     for(const [itemKey,item] of Object.entries(entry.items)){
      const old=items[itemKey];if(!old)items[itemKey]=item;else if(item.mistakes&&!Number(old.mistakes))items[itemKey]={...old,mistakes:1};
     }
-    prior.items=items;prior.count=Object.keys(items).length;prior.mistakes=Object.values(items).reduce((sum,item)=>sum+(Number(item.mistakes)||0),0);all[exercise]=prior;
+    prior.items=items;prior.count=Object.keys(items).length;prior.mistakes=Object.values(items).reduce((sum,item)=>sum+(Number(item.mistakes)||0),0);prior.backfilledFromSavedProgress=true;all[exercise]=prior;
    }
    const checked=dailyProgressCounts(all),submitted=dailySubmittedCount(value.submittedByExercise);
    value.name=name;value.progressByExercise=all;value.checkedAttempts=checked.checked;value.mistakes=checked.mistakes;
