@@ -274,22 +274,25 @@ async function repairDailyAnswerCounters(dayKey){
 // A daily win is awarded once per calendar day, combining English and math learning.
 // The historical KW44 Luca correction is retained as a minimum, not a replacement
 // for live Firebase totals; future weeks are calculated exclusively from daily rows.
-function rankDailyWins(days,weekKey=''){
- const wins=Object.fromEntries(names.map(name=>[name,0]));
- for(const [dayIndex,day] of (days||[]).entries()){
-  const dayKey=weekKey?isoWeekDays(weekKey)[dayIndex]:'';
-  const excludedNames=dayKey==='2026-11-02'?['Talea']:[];
-  const rows=names.map(name=>{
-   let attempts=0,checkedAttempts=0,mistakes=0;
-   for(const subject of ['english','math'])for(const row of Object.values(day?.[subject]?.[name]||{})){
-    const t=dailyRowTotals(row);attempts+=t.attempts;checkedAttempts+=t.checkedAttempts;mistakes+=t.mistakes;
+function rankBattleDailyWins(data,weekKey=''){
+ const wins=Object.fromEntries(names.map(name=>[name,0])),weekPrefix=`week_${weekKey}_`;
+ for(const dayKey of isoWeekDays(weekKey)){
+  const rows=names.map(name=>({name,points:0,correct:0,battles:0}));
+  for(const subject of ['english','math'])for(const [key,byName] of Object.entries(data?.[subject]||{})){
+   if(key.startsWith('week_')&&!key.startsWith(weekPrefix))continue;
+   for(const row of rows){
+    const result=byName?.[row.name];if(!result?.finished)continue;
+    const at=Number(result.updatedAt)||0;if(!at)continue;
+    const period=activityDateKeys(at);if(period.dayKey!==dayKey||period.weekKey!==weekKey)continue;
+    row.points+=Math.max(0,Number(result.bonusPoints)||0);
+    row.correct+=Math.max(0,Number(result.correct)||0);
+    row.battles++;
    }
-   return {name,attempts,rate:checkedAttempts?mistakes/checkedAttempts:Infinity};
-  }).filter(row=>row.attempts>0&&!excludedNames.includes(row.name));
-  if(!rows.length)continue;
-  rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate);
-  const leader=rows[0];
-  for(const row of rows)if(row.attempts===leader.attempts&&row.rate===leader.rate)wins[row.name]++;
+  }
+  const played=rows.filter(row=>row.battles>0);if(!played.length)continue;
+  played.sort((a,b)=>b.points-a.points||b.correct-a.correct||names.indexOf(a.name)-names.indexOf(b.name));
+  const leader=played[0];
+  for(const row of played)if(row.points===leader.points&&row.correct===leader.correct)wins[row.name]++;
  }
  if(weekKey==='2026-W44'){wins.Luca=5;wins.Nele=0;wins.Semir=0;wins.Talea=0;}
  const all=names.map(name=>({name,wins:wins[name]}));
@@ -298,15 +301,19 @@ function rankDailyWins(days,weekKey=''){
  const ranked=positive.map((row,index)=>{if(index===0||row.wins!==last)place=index+1;last=row.wins;return {...row,place,tied:positive.filter(x=>x.wins===row.wins).length>1,points:[20,15,10][place-1]||0};});
  return [...ranked,...all.filter(row=>!row.wins).map(row=>({...row,place:0,tied:false,points:0}))];
 }
-async function loadWeekDailyRows(weekKey){if(!db)return [];const days=isoWeekDays(weekKey);return Promise.all(days.map(async day=>{const corrected=await repairDailyAnswerCounters(day);if(corrected)return corrected;const snap=await get(ref(db,`learningDailyLeaderboard/${day}`));return snap.val()||{};}));}
+async function loadWeekBattleResults(weekKey){
+ if(!db)return {english:{},math:{}};
+ const [english,math]=await Promise.all([get(ref(db,'battleRankings/english')),get(ref(db,'battleRankings/math'))]);
+ return {english:english.val()||{},math:math.val()||{}};
+}
 async function weeklyBonusAlreadyRecorded(weekKey,name){
  const [english,math]=await Promise.all([get(ref(db,'battleRankings/english')),get(ref(db,'battleRankings/math'))]);
  return [english.val()||{},math.val()||{}].some(data=>Object.entries(data).some(([key,byName])=>key.startsWith(`week_${weekKey}_`)&&Number(byName?.[name]?.weeklyBonusPoints)>0));
 }
 async function weeklyPrizePlan(weekKey){
  const sourceWeek=previousIsoWeek(weekKey);if(!sourceWeek)return {sourceWeek:'',rows:[],points:{}};
- const [dailyRows,english,math]=await Promise.all([loadWeekDailyRows(sourceWeek),get(ref(db,'battleRankings/english')),get(ref(db,'battleRankings/math'))]);
- const rows=rankDailyWins(dailyRows,sourceWeek),data=[english.val()||{},math.val()||{}],points={};
+ const [battleData,english,math]=await Promise.all([loadWeekBattleResults(sourceWeek),get(ref(db,'battleRankings/english')),get(ref(db,'battleRankings/math'))]);
+ const rows=rankBattleDailyWins(battleData,sourceWeek),data=[english.val()||{},math.val()||{}],points={};
  for(const row of rows)points[row.name]=data.some(subject=>Object.entries(subject).some(([key,byName])=>key.startsWith(`week_${weekKey}_`)&&Number(byName?.[row.name]?.weeklyBonusPoints)>0))?0:row.points;
  return {sourceWeek,rows,points};
 }
@@ -315,12 +322,12 @@ async function repairWeeklyBattleBonuses(){
  if(!adminLoggedIn||uid!==ADMIN_UID){loginForm();return;}
  const weekKey=activityDateKeys().weekKey,sourceWeek=previousIsoWeek(weekKey);
  try{
-  const [dailyRows,englishSnap,mathSnap]=await Promise.all([
-   loadWeekDailyRows(sourceWeek),
+  const [battleData,englishSnap,mathSnap]=await Promise.all([
+   loadWeekBattleResults(sourceWeek),
    get(ref(db,'battleRankings/english')),
    get(ref(db,'battleRankings/math'))
   ]);
-  const winners=rankDailyWins(dailyRows,sourceWeek).filter(row=>row.points>0);
+  const winners=rankBattleDailyWins(battleData,sourceWeek).filter(row=>row.points>0);
   const allResults=[];
   for(const [subject,snap] of [['english',englishSnap],['math',mathSnap]]){
    const data=snap.val()||{};
@@ -362,8 +369,8 @@ async function showRefereeDailyWeekly(){
  const {dayKey,weekKey}=activityDateKeys(),dateLabel=new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',dateStyle:'full'}).format(new Date());
  app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p>Wertungen werden geladen …</p>')+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));
  try{
-  const repairedDaily=await repairDailyAnswerCounters(dayKey);const [todaySnap,loadedWeekDays]=await Promise.all([get(ref(db,`learningDailyLeaderboard/${dayKey}`)),loadWeekDailyRows(weekKey)]);
-  const today=todaySnap.val()||{};for(const subject of ["english","math"])for(const name of names)if(repairedDaily?.[subject]?.[name])today[subject]={...(today[subject]||{}),[name]:repairedDaily[subject][name]};const weekDays=loadedWeekDays.map((day,index)=>isoWeekDays(weekKey)[index]===dayKey?today:day);
+  const repairedDaily=await repairDailyAnswerCounters(dayKey);const [todaySnap,battleData]=await Promise.all([get(ref(db,`learningDailyLeaderboard/${dayKey}`)),loadWeekBattleResults(weekKey)]);
+  const today=todaySnap.val()||{};for(const subject of ["english","math"])for(const name of names)if(repairedDaily?.[subject]?.[name])today[subject]={...(today[subject]||{}),[name]:repairedDaily[subject][name]};
   const lucaRows=Object.values(today?.english?.Luca||{});
   const lucaDiagnostics=lucaRows.map(row=>({raw:Number(row?.attempts)||0,checked:Number(row?.checkedAttempts)||0,exerciseCount:Object.values(row?.progressByExercise||{}).reduce((n,v)=>n+(Number(v?.count)||0),0),calculated:dailyRowTotals(row).attempts,unverifiedLegacy:row?.unverifiedLegacyDailyCount||0}));
   const lucaDiagnosticHtml='<p class="muted" style="font-size:12px">Prüfung Luca · Datum '+esc(dayKey)+' · Datensätze '+lucaRows.length+' · Werte '+esc(JSON.stringify(lucaDiagnostics))+'</p>';
@@ -372,8 +379,8 @@ async function showRefereeDailyWeekly(){
    const rows=names.map(name=>{let attempts=0,checkedAttempts=0,mistakes=0;for(const row of Object.values(data[name]||{})){const totals=dailyRowTotals(row);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;}return {name,attempts,checkedAttempts,mistakes,rate:checkedAttempts?mistakes/checkedAttempts:null};}).sort((a,b)=>b.attempts-a.attempts||(a.rate??Infinity)-(b.rate??Infinity)||names.indexOf(a.name)-names.indexOf(b.name));
    const manual=Object.entries(data).flatMap(([name,devices])=>Object.values(devices||{}).filter(row=>row?.manualDailyOverride).map(row=>name+': heute ausnahmsweise '+Number(row.manualCount)+' gesetzt'));const unknown=Object.entries(data).flatMap(([name,devices])=>Object.values(devices||{}).filter(row=>Number(row?.unverifiedLegacyDailyCount)>0&&!row?.manualDailyOverride).map(row=>name+': '+Number(row.unverifiedLegacyDailyCount)+' alte Antworten'));const note=[...manual,...(unknown.length?['nicht prüfbare Altsummen werden nicht gewertet ('+unknown.join(', ')+')']:[])];return '<section class="solo-section"><h3>'+(subject==='english'?'🇬🇧 Englisch':'🔢 Mathe')+' · Heute</h3>'+(note.length?'<p class="muted">'+esc(note.join('; '))+'. Neue Antworten werden korrekt gezählt.</p>':'')+rows.map((row,index)=>'<div class="solo-game"><div class="row"><h3>'+(row.attempts?(index===0?'🥇':index===1?'🥈':index===2?'🥉':'👤'):'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.attempts+' Antworten</span></div><p>'+(row.rate===null?'Noch keine geprüften Antworten':(row.rate*100).toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1})+' % Fehler · '+row.mistakes+' falsch von '+row.checkedAttempts+' geprüften Antworten')+'</p></div>').join('')+'</section>';
   };
-  const weekRows=rankDailyWins(weekDays,weekKey);
-  const weekHtml='<section class="solo-section"><h3>📅 Woche · '+esc(weekKey)+'</h3><p>Sieben Tageswertungen (Montag bis Sonntag) ergeben eine Wochenwertung. Bei exakt gleicher Tagesleistung gewinnen beide Kinder.</p>'+weekRows.map(row=>'<div class="solo-game"><div class="row"><h3>'+(row.place===1?'🥇':row.place===2?'🥈':row.place===3?'🥉':'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.wins+' '+(row.wins===1?'gewonnener Tag':'gewonnene Tage')+'</span></div></div>').join('')+'</section>';
+  const weekRows=rankBattleDailyWins(battleData,weekKey);
+  const weekHtml='<section class="solo-section"><h3>📅 Woche · '+esc(weekKey)+'</h3><p>Tagessiege zählen abgeschlossene Battles. Pro Tag zählen die Battle-Punkte; bei Gleichstand die richtigen Antworten. Bei exakt gleichem Ergebnis gewinnen beide Kinder.</p>'+weekRows.map(row=>'<div class="solo-game"><div class="row"><h3>'+(row.place===1?'🥇':row.place===2?'🥈':row.place===3?'🥉':'👤')+' '+esc(row.name)+'</h3><span class="small">'+row.wins+' '+(row.wins===1?'gewonnener Tag':'gewonnene Tage')+'</span></div></div>').join('')+'</section>';
   app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p>'+esc(dateLabel)+'</p>'+lucaDiagnosticHtml+dailyHtml('english')+dailyHtml('math')+weekHtml)+card(btn('↻ Aktualisieren','refereeDailyWeekly','alt'))+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));
  }catch(e){app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p class="error">Wertungen konnten nicht geladen werden: '+esc(e.message||e)+'</p>')+card(btn('Erneut laden','refereeDailyWeekly','alt'))+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));}
 }
