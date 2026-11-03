@@ -214,10 +214,10 @@ function isFalsePositiveResolvedLearningRecord(item){const wrongAt=Number(item?.
 function dailyProgressFromActivity(activity,dayKey){
  const progress={};
  for(const [exercise,entry] of Object.entries(activity||{})){
-  const items={},checks=entry?.answerChecks&&typeof entry.answerChecks==="object"?entry.answerChecks:{};
+  let exerciseUpdatedAt=0;const items={},checks=entry?.answerChecks&&typeof entry.answerChecks==="object"?entry.answerChecks:{};
   for(const [index,item] of Object.entries(checks)){
    if(item?.attempted!==true)continue;
-   const checkedAt=Number(item.checkedAt)||0,wrongAt=Number(item.lastWrongAt)||0;
+   const checkedAt=Number(item.checkedAt)||0,wrongAt=Number(item.lastWrongAt)||0;exerciseUpdatedAt=Math.max(exerciseUpdatedAt,checkedAt);
    const touchedToday=item.dayKey===dayKey||(checkedAt>0&&activityPeriodKeys(checkedAt).dayKey===dayKey);
    if(!touchedToday)continue;
    const key=dailyAnswerItemKey(index,item.prompt||item.topic||"");
@@ -225,14 +225,14 @@ function dailyProgressFromActivity(activity,dayKey){
   }
   for(const [index,item] of Object.entries(entry?.errorItems||{})){
    if(checks[index]||item?.attempted!==true||item?.source==='battle'||item?.source==='live_battle'||isFalsePositiveResolvedLearningRecord(item))continue;
-   const wrongAt=Number(item.lastWrongAt)||0,resolvedAt=Number(item.resolvedAt)||0;
+   const wrongAt=Number(item.lastWrongAt)||0,resolvedAt=Number(item.resolvedAt)||0;exerciseUpdatedAt=Math.max(exerciseUpdatedAt,wrongAt,resolvedAt);
    const touchedToday=item.dayKey===dayKey||(wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey)||(resolvedAt>0&&activityPeriodKeys(resolvedAt).dayKey===dayKey);
    if(!touchedToday)continue;
    const key=dailyAnswerItemKey(index,item.prompt||item.topic||"");
    items[key]={count:1,mistakes:wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey?1:0};
   }
   const values=Object.values(items),count=values.length,mistakes=values.reduce((n,item)=>n+(Number(item.mistakes)||0),0);
-  if(count)progress[exercise]={count,mistakes,items};
+  if(count)progress[exercise]={count,mistakes,items,updatedAt:exerciseUpdatedAt||Date.now()};
  }
  return progress;
 }
@@ -284,7 +284,7 @@ async function repairDailyAnswerCounters(dayKey){
    for(const [key,item] of Object.entries(entry.items||{})){
     const old=items[key];if(!old)items[key]=item;else if(Number(item?.mistakes)>Number(old?.mistakes||0))items[key]={...old,mistakes:Number(item.mistakes)||0};
    }
-   prior.items=items;prior.count=Object.keys(items).length;prior.mistakes=Object.values(items).reduce((sum,item)=>sum+(Number(item.mistakes)||0),0);progress[exercise]=prior;
+   prior.items=items;prior.count=Object.keys(items).length;prior.mistakes=Object.values(items).reduce((sum,item)=>sum+(Number(item.mistakes)||0),0);prior.updatedAt=Math.max(Number(prior.updatedAt)||0,Number(entry.updatedAt)||Date.now());progress[exercise]=prior;
   }
   const totals=dailyProgressCounts(progress),submittedByExercise={};
   for(const row of Object.values(existing))for(const [exercise,entry] of Object.entries(row?.submittedByExercise||{})){
