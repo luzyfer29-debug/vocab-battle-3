@@ -331,25 +331,41 @@ async function backfillTodayLearningProgress(subject,dayKey){
 }
 async function backfillTodayEnglishVocab(dayKey){
  if(!db||!uid||!dayKey)return;
- // The daily comparison can be opened before a child is selected. Recover today's
- // saved vocab progress for every child on this device, not only soloName.
+ const snap=await get(ref(db,`soloProgress/${uid}`)),profiles=snap.val()||{};
  for(const name of SOLO_NAMES){
-  const snap=await get(ref(db,`soloProgress/${uid}/${name}`)),progress=snap.val()||{};
-  let attempts=0,mistakes=0,updatedAt=0;
+  const progress=profiles[name]||{},byExercise={};let updatedAt=0;
   for(let battle=1;battle<=3;battle++){
-   let local=null;
-   try{local=JSON.parse(localStorage.getItem(`${key}_${name}_battle_${battle}`)||'null');}catch{}
+   let local=null;try{local=JSON.parse(localStorage.getItem(`${key}_${name}_battle_${battle}`)||'null');}catch{}
    const online=progress[`battle${battle}`],localAt=Number(local?.updatedAt)||0,onlineAt=Number(online?.updatedAt)||0;
    const row=localAt>onlineAt?local:online,at=Math.max(localAt,onlineAt);
    if(!row||!at||activityPeriodKeys(at).dayKey!==dayKey)continue;
-   const done=Math.max(0,Math.min(30,Number(row.done??row.index)||0));
-   const wrong=Object.values(row.mistakes||{}).reduce((sum,count)=>sum+Math.max(0,Number(count)||0),0);
-   if(!done&&!wrong)continue;
-   attempts+=done+wrong;mistakes+=wrong;updatedAt=Math.max(updatedAt,at);
+   const done=Math.max(0,Math.min(30,Number(row.done??row.index)||0)),wrong=cleanMistakes(row.mistakes);
+   const questions=BATTLES[battle-1]||[],items={};
+   for(let index=0;index<done;index++){
+    const q=questions[index],prompt=q?.prompt||q?.q||q?.word||`Vokabeln ${battle} · Aufgabe ${index+1}`;
+    const answerKey=dailyAnswerItemKey(index,prompt),wasWrong=Number(wrong[index])>0;
+    items[answerKey]={count:1,mistakes:wasWrong?1:0};
+   }
+   if(done)byExercise[`english_vocab_battle${battle}`]={items,updatedAt:at};
+   updatedAt=Math.max(updatedAt,at);
   }
-  if(!attempts)continue;
+  if(!updatedAt)continue;
   const path=`learningDailyLeaderboard/${dayKey}/english/${name}/${uid}`;
-  await runTransaction(ref(db,path),current=>current||{name,attempts,mistakes,updatedAt});
+  await runTransaction(ref(db,path),current=>{
+   const value=current&&typeof current==='object'?{...current}:{name,attempts:0,mistakes:0,checkedAttempts:0,submittedAttempts:0,answerCounterVersion:3,progressByExercise:{},submittedByExercise:{},legacySubmittedAttempts:0};
+   const all={...(value.progressByExercise||{})};
+   for(const [exercise,entry] of Object.entries(byExercise)){
+    const prior={...(all[exercise]||{})},items={...(prior.items||{})};
+    for(const [itemKey,item] of Object.entries(entry.items)){
+     const old=items[itemKey];if(!old)items[itemKey]=item;else if(item.mistakes&&!Number(old.mistakes))items[itemKey]={...old,mistakes:1};
+    }
+    prior.items=items;prior.count=Object.keys(items).length;prior.mistakes=Object.values(items).reduce((sum,item)=>sum+(Number(item.mistakes)||0),0);all[exercise]=prior;
+   }
+   const checked=dailyProgressCounts(all),submitted=dailySubmittedCount(value.submittedByExercise);
+   value.name=name;value.progressByExercise=all;value.checkedAttempts=checked.checked;value.mistakes=checked.mistakes;
+   value.submittedAttempts=Math.max(0,Number(value.legacySubmittedAttempts)||0)+submitted;value.attempts=value.checkedAttempts+value.submittedAttempts;
+   value.answerCounterVersion=3;value.updatedAt=Math.max(Number(value.updatedAt)||0,updatedAt);return value;
+  });
  }
 }
 async function repairCorruptDailyEnglishSummary(dayKey){
@@ -379,6 +395,7 @@ async function showDailyLeaderboard(subject){
  app.innerHTML=card(`<h2>🏆 ${title} · Tagesvergleich</h2><p>Wer hat heute die meisten Antworten bearbeitet und wer hat die niedrigste Fehlerquote?</p><p class="muted">Es zählen geprüfte und ausdrücklich ausgewertete freie Antworten. Live-Eingaben zählen erst nach der Auswertung.</p><p>Lade Tageswerte …</p>`)+card(btn('Zurück zum Lernen',back,'alt'));
  try{
   const {dayKey}=activityPeriodKeys();
+  if(subject==='english')await backfillTodayEnglishVocab(dayKey);
   // Keine automatischen Änderungen an historischen Tagesdaten beim bloßen Anzeigen.
   // Do not turn exercise sessions or progress snapshots into answer counts.
   // Historical vocabulary progress is not an auditable per-answer log.
