@@ -107,6 +107,8 @@ function grammarClear(){if(grammarStation===null||grammarTask===null)return;gram
 const key='vb2solo';
 const SOLO_NAMES=['Luca','Semir','Talea','Nele','Frauke'];
 const RANKED_NAMES=['Luca','Semir','Talea','Nele']; // Frauke is a test-only profile.
+const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:50}}};
+function applyDailyCounterOverride(totals,dayKey,subject){for(const [name,count] of Object.entries(DAILY_COUNTER_OVERRIDES[dayKey]?.[subject]||{}))totals[name]={name,attempts:count,checkedAttempts:count,mistakes:0,manualAdjustment:true};}
 let activitySyncWarned=false;
 function activityPeriodKeys(timestamp=Date.now()){
 
@@ -233,7 +235,7 @@ async function updateDailySubmittedAnswers(name,subject,eventAt,exercise,answerK
  }catch(e){console.warn("Freie Antworten konnten nicht im Tagesvergleich gespeichert werden:",e);if(!dailyLeaderboardSyncWarned){dailyLeaderboardSyncWarned=true;msg("Tagesvergleich konnte nicht gespeichert werden. Bitte die Firebase-Regeln für learningDailyLeaderboard prüfen.",true);}}
 }
 async function dailyCrownNames(subject){
- try{const {dayKey}=activityPeriodKeys(),snapshot=await get(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}`)),totals={};for(const [name,byUid] of Object.entries(snapshot.val()||{})){if(!RANKED_NAMES.includes(name))continue;for(const row of Object.values(byUid||{})){const t=dailyRowTotals(row),v=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0});v.attempts+=t.attempts;v.checkedAttempts+=t.checkedAttempts;v.mistakes+=t.mistakes;}}const rows=Object.values(totals).filter(x=>x.attempts>0);if(!rows.length)return new Set();rows.forEach(x=>x.rate=x.checkedAttempts?x.mistakes/x.checkedAttempts:Infinity);rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate);const lead=rows[0];return new Set(rows.filter(x=>x.attempts===lead.attempts&&x.rate===lead.rate).map(x=>x.name));}catch{return new Set();}
+ try{const {dayKey}=activityPeriodKeys(),snapshot=await get(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}`)),totals={};for(const [name,byUid] of Object.entries(snapshot.val()||{})){if(!RANKED_NAMES.includes(name))continue;for(const row of Object.values(byUid||{})){const t=dailyRowTotals(row),v=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0});v.attempts+=t.attempts;v.checkedAttempts+=t.checkedAttempts;v.mistakes+=t.mistakes;}}applyDailyCounterOverride(totals,dayKey,subject);const rows=Object.values(totals).filter(x=>x.attempts>0);if(!rows.length)return new Set();rows.forEach(x=>x.rate=x.checkedAttempts?x.mistakes/x.checkedAttempts:Infinity);rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate);const lead=rows[0];return new Set(rows.filter(x=>x.attempts===lead.attempts&&x.rate===lead.rate).map(x=>x.name));}catch{return new Set();}
 }
 function applyDailyCrowns(subject,actionPrefix){void dailyCrownNames(subject).then(leaders=>{RANKED_NAMES.forEach((name,index)=>{const button=document.querySelector(`[data-action="${actionPrefix}${index}"]`);if(button)button.textContent=`${leaders.has(name)?'👑 ':''}${name}`;});});}
 function isoWeekDays(weekKey){const m=String(weekKey||'').match(/^(\d{4})-W(\d{2})$/);if(!m)return [];const year=Number(m[1]),week=Number(m[2]),jan4=new Date(Date.UTC(year,0,4)),weekday=jan4.getUTCDay()||7,monday=new Date(Date.UTC(year,0,4-(weekday-1)+(week-1)*7));return Array.from({length:7},(_,i)=>{const d=new Date(monday);d.setUTCDate(d.getUTCDate()+i);return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;});}
@@ -245,8 +247,7 @@ function dailyRowTotals(row){
   return {attempts:checked+legacy+mappedSubmitted,checkedAttempts:checked,mistakes:Math.min(checked,mistakes)};
  }
  const progress=entries.reduce((sum,item)=>sum+Math.max(0,Math.floor(Number(item?.count)||0)),0);
- if(stored>=1000&&entries.length)return {attempts:progress,checkedAttempts:progress,mistakes:Math.min(progress,Math.max(0,Number(row?.mistakes)||0))};
- if(stored>=1000)return {attempts:0,checkedAttempts:0,mistakes:0};
+ if(stored>=100&&Number(row?.answerCounterVersion)!==3)return {attempts:0,checkedAttempts:0,mistakes:0};
  const verified=Number(row?.answerCounterVersion)===2,hasChecked=Object.prototype.hasOwnProperty.call(row||{},"checkedAttempts")&&Number.isFinite(Number(row.checkedAttempts))&&Number(row.checkedAttempts)>=0,trusted=verified||hasChecked;
  const checkedAttempts=Math.max(0,Number(trusted?row?.checkedAttempts:row?.attempts)||0),submittedAttempts=verified?Math.max(0,Number(row?.submittedAttempts)||0):0,mistakes=Math.min(checkedAttempts,Math.max(0,Number(row?.mistakes)||0));
  return {attempts:checkedAttempts+submittedAttempts,checkedAttempts,mistakes};
@@ -262,6 +263,7 @@ function weeklyDailyWins(days,weekKey=''){
    for(const subject of ['english','math'])for(const row of Object.values(day?.[subject]?.[name]||{})){
     const t=dailyRowTotals(row);attempts+=t.attempts;checkedAttempts+=t.checkedAttempts;mistakes+=t.mistakes;
    }
+   const overrideKey=isoWeekDays(weekKey)[(days||[]).indexOf(day)];if(DAILY_COUNTER_OVERRIDES[overrideKey]?.english?.[name]!==undefined){attempts=DAILY_COUNTER_OVERRIDES[overrideKey].english[name];checkedAttempts=attempts;mistakes=0;}
    return {name,attempts,rate:checkedAttempts?mistakes/checkedAttempts:Infinity};
   }).filter(row=>row.attempts>0);
   if(!rows.length)continue;
@@ -370,7 +372,7 @@ async function showDailyLeaderboard(subject){
   // Historical vocabulary progress is not an auditable per-answer log.
   let snapshot=await get(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}`)),raw=snapshot.val()||{};for(let retry=0;retry<3&&!Object.keys(raw).length;retry++){await new Promise(resolve=>setTimeout(resolve,300));snapshot=await get(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}`));raw=snapshot.val()||{};}const totals={};
   for(const [name,byUid] of Object.entries(raw)){if(!RANKED_NAMES.includes(name))continue;for(const row of Object.values(byUid||{})){const t=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0});const values=dailyRowTotals(row);t.attempts+=values.attempts;t.checkedAttempts+=values.checkedAttempts;t.mistakes+=values.mistakes;}}
-  const rows=Object.values(totals).map(x=>({...x,rate:x.checkedAttempts?100*x.mistakes/x.checkedAttempts:null})),most=[...rows].filter(x=>x.attempts>0).sort((a,b)=>b.attempts-a.attempts||a.name.localeCompare(b.name)),fewest=[...rows].filter(x=>x.checkedAttempts>0).sort((a,b)=>a.rate-b.rate||b.attempts-a.attempts||a.name.localeCompare(b.name));
+  applyDailyCounterOverride(totals,dayKey,subject);const rows=Object.values(totals).map(x=>({...x,rate:x.checkedAttempts?100*x.mistakes/x.checkedAttempts:null})),most=[...rows].filter(x=>x.attempts>0).sort((a,b)=>b.attempts-a.attempts||a.name.localeCompare(b.name)),fewest=[...rows].filter(x=>x.checkedAttempts>0).sort((a,b)=>a.rate-b.rate||b.attempts-a.attempts||a.name.localeCompare(b.name));
   const renderRow=(x,i,metric)=>`<div class="solo-game"><div class="row"><h3>${i===0?'🥇':i===1?'🥈':i===2?'🥉':'👤'} ${esc(x.name)}</h3><span class="small">${metric==='attempts'?`${x.attempts} Antworten bearbeitet`:`${x.rate.toFixed(1).replace('.',',')} % Fehler`}</span></div><p>${x.mistakes} falsch von ${x.checkedAttempts} geprüften Antworten</p></div>`;
   const dateLabel=new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',dateStyle:'full'}).format(new Date());
   let weekHtml='';try{weekHtml=await weekLeaderboardHtml();}catch(error){console.warn('Wochenauswertung konnte nicht geladen werden:',error);weekHtml='<p class="muted">Die Wochenauswertung ist gerade nicht verfügbar.</p>';}
