@@ -250,7 +250,7 @@ function dailyRowTotals(row){
 async function repairDailyAnswerCounters(dayKey){
  if(!adminLoggedIn||uid!==ADMIN_UID)return;
  const [dailySnap,activitySnap]=await Promise.all([get(ref(db,"learningDailyLeaderboard/"+dayKey)),get(ref(db,"learningActivity"))]);
- const daily=dailySnap.val()||{},activity=activitySnap.val()||{};
+ const daily=dailySnap.val()||{},activity=activitySnap.val()||{};console.log("daily counter source",dayKey,Object.keys(activity).map(id=>({id,exercises:Object.keys(activity[id]?.Luca||{}),items:Object.values(activity[id]?.Luca||{}).reduce((sum,e)=>sum+Object.keys(e?.errorItems||{}).length,0)})));
  for(const subject of ["english","math"])for(const name of names){
   const devices=daily?.[subject]?.[name]||{};
   for(const [deviceId,row] of Object.entries(devices)){
