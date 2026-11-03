@@ -911,9 +911,10 @@ async function retroCorrectVocabWorkToday(){
  try{
   const rankingSnap=await get(ref(db,'battleRankings/english')),rankingData=rankingSnap.val()||{},activitySet=new Set(['vocab_work_station1','vocab_work_station2']),groups=new Map();
   for(const [key,byName] of Object.entries(rankingData))for(const [name,result] of Object.entries(byName||{})){
-   if(!result?.finished||!activitySet.has(String(result.originalActivity||''))||berlinDayKey(Number(result.updatedAt)||0)!==dayKey||!result.roomCode)continue;
-   const roomCode=String(result.roomCode),group=groups.get(roomCode)||{activity:String(result.originalActivity),resultKey:key,records:{}};
-   if(group.activity!==String(result.originalActivity))continue;group.resultKey=key;group.records[name]=result;groups.set(roomCode,group);
+   const activity=String(result?.originalActivity||result?.activity||(/^vocab_work_station[12]$/.test(key)?key:'')),roomCode=String(result?.roomCode||String(result?.runId||'').split(':')[0]||'');
+   if(!result?.finished||!activitySet.has(activity)||berlinDayKey(Number(result.updatedAt)||0)!==dayKey||!roomCode)continue;
+   const group=groups.get(roomCode)||{activity,resultKey:key,records:{}};
+   if(group.activity!==activity)continue;group.resultKey=key;group.records[name]=result;groups.set(roomCode,group);
   }
   if(!groups.size){retroVocabAuditHtml='<details open><summary>Rückwirkende Prüfung</summary><p>Für heute wurden keine abgeschlossenen Vokabelarbeit-Räume gefunden.</p></details>';await showBattleSeries('english');return;}
   const report=[];let roomsChecked=0,changedAnswers=0,roomsSkipped=0;
