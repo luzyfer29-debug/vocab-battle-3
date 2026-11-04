@@ -507,8 +507,9 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
  if(!db||!uid||!SOLO_NAMES.includes(name)||!exercise)return false;
  const eventAt=Number(occurredAt)||Date.now(),path=`learningActivity/${uid}/${name}/${exercise}`,sharedPath=`learningReview/${name}/${subject}/${exercise}/${index}`;
  // Save every checked answer for counting; only actual wrong answers enter the error list.
+ let activitySaved=false;
  try{
-  let changedItem=null,activitySaved=false;
+  let changedItem=null;
   await runTransaction(ref(db,path),current=>{
    const value=current&&typeof current==="object"?{...current}:{};
    const {dayKey,weekKey}=activityPeriodKeys(eventAt),key=String(index);
