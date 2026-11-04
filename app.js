@@ -344,7 +344,9 @@ async function repairDailyAnswerCounters(dayKey){
    const canonical=daily?.[subject]?.[name]?.["learning-activity"];
    if(canonical)writes.push(set(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}/${name}/${ADMIN_UID}`),canonical).catch(error=>console.warn("Kanonischer Tageswert konnte nicht gespeichert werden:",name,subject,error)));
   }
-  await Promise.all(writes);
+  const writeResults=await Promise.all(writes.map(write=>write.then(()=>null,error=>{console.warn("Kanonischer Tageswert konnte nicht gespeichert werden:",error);return String(error?.code||error?.message||error);})));
+  const writeErrors=writeResults.filter(Boolean);
+  status.textContent=writeErrors.length?("Tageswerte nicht synchronisiert: "+writeErrors.join("; ")):"Tageswerte synchronisiert.";
  }
  return daily;
 }
