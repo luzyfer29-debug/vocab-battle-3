@@ -499,13 +499,12 @@ async function cleanupFalsePositiveLearningErrors(name,subject){
    }
    return changed?{...current,errorItems:errors,answerChecks:checks}:current;
   });
-  await Promise.all(falseItems.map(([index,item])=>runTransaction(ref(db,`learningReview/${name}/${subject}/${exercise}/${index}`),current=>isFalsePositiveResolvedLearningRecord(current)?null:current)));
  }
  falsePositiveCleanupDone.add(cleanupKey);
 }
 async function recordLearningError(name,subject,exercise,index,topic,q,correct,occurredAt=Date.now()){
  if(!db||!uid||!SOLO_NAMES.includes(name)||!exercise)return false;
- const eventAt=Number(occurredAt)||Date.now(),path=`learningActivity/${uid}/${name}/${exercise}`,sharedPath=`learningReview/${name}/${subject}/${exercise}/${index}`;
+ const eventAt=Number(occurredAt)||Date.now(),path=`learningActivity/${uid}/${name}/${exercise}`;
  // Save every checked answer for counting; only actual wrong answers enter the error list.
  let activitySaved=false;
  try{
@@ -528,16 +527,8 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
    value.errorItems=errors;return value;
   });
   activitySaved=true;
-  if(changedItem){
-   await runTransaction(ref(db,sharedPath),current=>{
-    if(correct){if(isFalsePositiveResolvedLearningRecord(current))return null;if(!current)return current;return {...current,resolved:true,resolvedAt:Math.max(eventAt,Number(current.lastWrongAt)||0)+1};}
-    return learningErrorRecord(name,subject,topic,q,current,eventAt);
-   });
-  }else if(correct){
-   await runTransaction(ref(db,sharedPath),current=>isFalsePositiveResolvedLearningRecord(current)?null:current);
-  }
   activitySyncWarned=false;
- }catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg(`Fehler konnten nicht geräteübergreifend gespeichert werden (${e.code||e.message||'Firebase-Zugriff verweigert'}).`,true);}}
+ }catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg(`Lernantwort konnte nicht gespeichert werden (${e.code||e.message||'Firebase-Zugriff verweigert'}).`,true);}}
  await updateDailyLeaderboard(name,subject,eventAt,!correct,exercise,index,q?.prompt||q?.q||q?.word||topic);
  return activitySaved;
 }
@@ -552,28 +543,8 @@ async function mergeSharedLearningReview(name,subject,exercise,index,item){
  await runTransaction(ref(db,path),current=>!current||reviewItemAt(normalized)>=reviewItemAt(current)?normalized:current);
 }
 async function loadChildLearningActivity(name,subject){
- const ids=childLearningExercises(subject),[rows,sharedResult]=await Promise.all([
-  Promise.all(ids.map(async id=>[id,(await get(ref(db,`learningActivity/${uid}/${name}/${id}`))).val()])),
-  get(ref(db,`learningReview/${name}/${subject}`)).then(snapshot=>({shared:snapshot.val()||{}})).catch(error=>({error}))
- ]),data=Object.fromEntries(rows.filter(([,value])=>value));
- if(sharedResult.error)throw new Error('Fehlerliste nicht vollständig geladen: '+(sharedResult.error.code||sharedResult.error.message||'Firebase-Zugriff verweigert'));
- const shared=sharedResult.shared||{};
- const migrations=[];
- if(!sharedResult.error)for(const [exercise,entry] of Object.entries(data))for(const [index,item] of Object.entries(entry?.errorItems||{})){
-  const current=shared[exercise]?.[index];
-  if(!current||reviewItemAt(item)>reviewItemAt(current))migrations.push(mergeSharedLearningReview(name,subject,exercise,index,item));
- }
- if(migrations.length)void Promise.allSettled(migrations).then(results=>{
-  const failure=results.find(result=>result.status==='rejected');
-  if(failure&&!activitySyncWarned){activitySyncWarned=true;msg(`Alte Fehler sind geladen, konnten aber nicht alle auf andere Geräte übertragen werden (${failure.reason?.code||failure.reason?.message||'Firebase-Regelprüfung'}).`,true);}
- });
- for(const [exercise,errorItems] of Object.entries(shared)){
-  if(!data[exercise])data[exercise]={};
-  const merged={...(data[exercise].errorItems||{})};
-  for(const [index,item] of Object.entries(errorItems||{}))if(!merged[index]||reviewItemAt(item)>=reviewItemAt(merged[index]))merged[index]=item;
-  data[exercise].errorItems=merged;
- }
- return data;
+ const ids=childLearningExercises(subject),rows=await Promise.all(ids.map(async id=>[id,(await get(ref(db,`learningActivity/${uid}/${name}/${id}`))).val()]));
+ return Object.fromEntries(rows.filter(([,value])=>value));
 }
 async function importLegacyLearningErrors(subject,name){
  if(!db||!uid||!SOLO_NAMES.includes(name))return;
