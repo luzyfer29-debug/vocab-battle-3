@@ -16,6 +16,7 @@ const VOCAB_QUESTION_MS=8000,OTHER_QUESTION_MS=15000,REVEAL_MS=3000;
 const ADMIN_UID='M41x9WNoHAfqpSmyrztAgf2IZYC3';
 let resetUnsubscribe=null,resetState={},resetReady=false;
 let db,uid='',code='',role='',slot='',room=null,unsubscribe=null,solo=null,joinExpectedRoomType='';
+let auth=null,authSignInPromise=null,firebaseInitPromise=null;
 let gbCode='',gbSlot='',gbRoom=null,gbOff=null,gbTimer=null,gbDraft='',gbDraftKey='',wbDraft='',wbDraftKey='';
 let clock=null,busy=false,previousStageKey='',lastClockText='';
 let listeningRun=null,listeningSyncWarned=false,readingLearningSyncWarned=false,writingIndex=0,writingModelVisible=false,writingSyncTimer=null;
@@ -437,8 +438,10 @@ async function repairCorruptDailyEnglishSummary(dayKey){
 }
 async function showDailyLeaderboard(subject){
  const title=subject==='math'?'Mathe':'Englisch',back=subject==='math'?'mathChoose':'soloChangeName';
+ status.textContent='';
  app.innerHTML=card(`<h2>🏆 ${title} · Tagesvergleich</h2><p>Wer hat heute die meisten Antworten bearbeitet und wer hat die niedrigste Fehlerquote?</p><p class="muted">Es zählen geprüfte und ausdrücklich ausgewertete freie Antworten. Live-Eingaben zählen erst nach der Auswertung.</p><p>Lade Tageswerte …</p>`)+card(btn('Zurück zum Lernen',back,'alt'));
  try{
+  await ensureFirebaseAuth();
   const {dayKey}=activityPeriodKeys();
   if(subject==='english')await backfillTodayEnglishAnswers(dayKey);
   if(subject==='english')await backfillTodayEnglishVocabProgress(dayKey);
@@ -1636,7 +1639,15 @@ document.addEventListener('change',e=>{if(e.target.matches('[data-reading-match]
 document.addEventListener('focusout',e=>{if(e.target.matches('[data-grammar]'))grammarCollect();});
 window.addEventListener('pagehide',()=>grammarCollect());
 home();
-void initializeFirebase();
+firebaseInitPromise=initializeFirebase();
+
+async function ensureFirebaseAuth(){
+ if(!auth){if(firebaseInitPromise)await firebaseInitPromise;}
+ if(!auth||!db)throw new Error('Firebase ist noch nicht bereit. Bitte Seite neu laden.');
+ if(auth.currentUser){uid=auth.currentUser.uid;return uid;}
+ if(!authSignInPromise)authSignInPromise=signInAnonymously(auth).then(credential=>{uid=credential.user.uid;return uid;}).finally(()=>{authSignInPromise=null;});
+ return await authSignInPromise;
+}
 
 async function initializeFirebase(){
  try{
@@ -1648,8 +1659,8 @@ async function initializeFirebase(){
   initializeApp=appModule.initializeApp;
   ({getAuth,signInAnonymously,onAuthStateChanged}=authModule);
   ({getDatabase,ref,onValue,get,set,update,runTransaction,remove}=databaseModule);
-  const fb=initializeApp(firebaseConfig),auth=getAuth(fb);db=getDatabase(fb);
-  onAuthStateChanged(auth,u=>{if(u){uid=u.uid;watchResets();}else{uid='';resetReady=false;if(resetUnsubscribe){resetUnsubscribe();resetUnsubscribe=null;}signInAnonymously(auth).catch(e=>msg('Anmeldung fehlgeschlagen: '+e.message,true));}});
+  const fb=initializeApp(firebaseConfig);auth=getAuth(fb);db=getDatabase(fb);
+  onAuthStateChanged(auth,u=>{if(u){uid=u.uid;watchResets();}else{uid='';resetReady=false;if(resetUnsubscribe){resetUnsubscribe();resetUnsubscribe=null;}ensureFirebaseAuth().catch(e=>msg('Anmeldung fehlgeschlagen: '+e.message,true));}});
  }catch(e){
   resetReady=true;
   status.innerHTML='<p class="muted">Online-Funktionen sind derzeit nicht verfügbar. Der Lernbereich bleibt geöffnet.</p>';
