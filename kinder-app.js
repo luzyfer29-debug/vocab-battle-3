@@ -336,12 +336,12 @@ async function backfillTodayLearningProgress(subject,dayKey){
 }
 async function backfillTodayEnglishAnswers(dayKey){
  if(!db||!uid||!dayKey)return;
- const exercises=childLearningExercises('english'),byName=Object.fromEntries(SOLO_NAMES.map(name=>[name,{}]));
- await Promise.all(SOLO_NAMES.flatMap(name=>exercises.map(async exercise=>{
+ const exercises=childLearningExercises('english'),byName=Object.fromEntries(RANKED_NAMES.map(name=>[name,{}]));
+ await Promise.all(RANKED_NAMES.flatMap(name=>exercises.map(async exercise=>{
   try{const snap=await get(ref(db,`learningActivity/${uid}/${name}/${exercise}`)),value=snap.val();if(value)byName[name][exercise]=value;}
   catch(error){console.warn('Einzelantworten konnten nicht nachgetragen werden:',name,exercise,error);}
  })));
- for(const name of SOLO_NAMES){
+ for(const name of RANKED_NAMES){
   const progress=dailyProgressFromActivity(byName[name],dayKey);
   // Solo saves also carry today's completed question index in the activity row.
   // Recover answers even when older app versions failed to save answerChecks.
