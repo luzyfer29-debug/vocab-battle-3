@@ -805,7 +805,38 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
   return '<section class="live-topic-group"><h3>'+esc(name)+'</h3>'+cards+'</section>';
  }).join('');
  return livePanel('📚 '+title+' · Bearbeitungen und Fehler',content,'live-learning-activity-'+subject,subject==='math'?'#ffd166':'#62e2c2',true);
-}function renderDashboard(englishEntries,mathEntries,activityData={},seriesData={}){
+}function learningActivityOverview(activityData,names,seriesData={}){
+ const rows=[];
+ for(const name of names){
+  const byExercise={};
+  for(const device of Object.values(activityData||{}))for(const [id,entry] of Object.entries(device?.[name]||{}))if(id.startsWith('english_')||id.startsWith('math_'))byExercise[id]=mergeLearningActivityEntries(byExercise[id],entry);
+  for(let station=1;station<=2;station++){
+   const saved=latestEnglishSeriesResult(seriesData,name,'grammar'+station),savedTasks=Array.isArray(saved?.tasks)?saved.tasks:[];
+   for(let taskIndex=0;taskIndex<GRAMMAR[station-1].tasks.length;taskIndex++){
+    const task=GRAMMAR[station-1].tasks[taskIndex],result=savedTasks[taskIndex];if(!result)continue;
+    const answers=Array.isArray(result.draftAnswers)?result.draftAnswers:[],done=answers.filter(value=>String(value||'').trim()).length,total=task.items?.length||task.open?.length||answers.length,updatedAt=Number(result.updatedAt)||Number(saved.updatedAt)||0;
+    if(!done&&!result.finished)continue;
+    const id='english_grammar_'+station+'_task'+(taskIndex+1),live={taskTitle:task.title,done,total,status:result.finished?'Aufgabe geprüft':'In Bearbeitung',draftAnswers:answers,updatedAt},candidate={lastAt:updatedAt,live};
+    byExercise[id]=mergeLearningActivityEntries(byExercise[id],candidate);
+   }
+  }
+  const cutoff=Number(liveClearTimes()[name])||0;
+  for(const [id,entry] of Object.entries(byExercise)){
+   const live=entry.live||{},when=Number(entry.lastAt||live.updatedAt||0);if(when<=cutoff)continue;
+   const errors=Object.entries(entry.errorItems||{}).filter(([index,item])=>{const wrongAt=Number(item?.lastWrongAt)||0,resolvedAt=Number(item?.resolvedAt)||0,check=entry.answerChecks?.[index],correctFirst=check?.attempted===true&&check?.correct===true&&!wrongAt;return item?.source!=='live_battle'&&item?.source!=='battle'&&!correctFirst&&!(item?.resolved===true&&wrongAt>0&&resolvedAt===wrongAt+1);});
+   const unresolved=errors.filter(([,item])=>!item?.resolved).length,improved=errors.length-unresolved;
+   const errorText=errors.length?(unresolved?errors.length+' ('+unresolved+' offen)':errors.length+' behoben'):'Keine';
+   const improvedText=improved?'Ja · '+improved+' richtig wiederholt':unresolved?'Noch offen':'—';
+   const what=String(live.taskTitle||learningActivityTitle(id));
+   rows.push({name,id,what,when,errorText,improvedText});
+  }
+ }
+ rows.sort((a,b)=>b.when-a.when);
+ if(!rows.length)return '<p class="muted">Noch keine gespeicherten Lernaktivitäten.</p>';
+ return '<div class="live-simple-list"><div class="live-simple-head"><span>Was</span><span>Wann</span><span>Fehler</span><span>Verbessert?</span></div>'+rows.map(row=>'<div class="live-simple-row"><span class="live-simple-what" data-label="Was">'+esc(row.what)+'</span><span data-label="Wann">'+evaluationDate(row.when)+'</span><span data-label="Fehler">'+esc(row.errorText)+'</span><span data-label="Verbessert?">'+esc(row.improvedText)+'</span></div>').join('')+'</div>';
+}
+
+function renderDashboard(englishEntries,mathEntries,activityData={},seriesData={}){
  const visibleNames=liveChildFilter==='all'?SOLO_NAMES.filter(name=>name!=='Frauke'):SOLO_NAMES.includes(liveChildFilter)?[liveChildFilter]:SOLO_NAMES.filter(name=>name!=='Frauke');
  const liveScrollTop=window.scrollY||0;
  const liveOpenDetails=new Set([...app.querySelectorAll('details[open]')].map(el=>el.dataset.liveKey||el.id).filter(Boolean));
@@ -968,9 +999,23 @@ ffd166;font-weight:750}.activity-state.is-done{color:#8cebd8;font-weight:750}.ac
  const mathContent=mathTopicsOverview+classworkOverview+resetControls('math');
  const selectedName=SOLO_NAMES.includes(liveChildFilter)?liveChildFilter:'';
  const nameButtons=SOLO_NAMES.filter(name=>name!=='Frauke').map(name=>`<button type="button" data-dashboard-child="${esc(name)}" aria-pressed="${selectedName===name}">${esc(name)}</button>`).join('');
- const activityContent=selectedName?'<div class="dashboard-live-toolbar"><span class="dashboard-live-current">Live-Anzeige: '+esc(selectedName)+'</span><button type="button" class="live-clear-bright dashboard-live-reset" data-clear-child-live="'+esc(selectedName)+'">↻ Live zurücksetzen</button></div><p class="muted small dashboard-live-note">Nur diese Live-Anzeige auf diesem Schiedsrichtergerät wird geleert. Tages-, Wochen- und Battle-Wertungen bleiben unverändert.</p><div class="dashboard-tab-buttons" role="group" aria-label="Fach auswählen"><button type="button" data-dashboard-subject="english" aria-pressed="'+(liveDashboardSubject==='english')+'">🇬🇧 Englisch</button><button type="button" data-dashboard-subject="math" aria-pressed="'+(liveDashboardSubject==='math')+'">🔢 Mathe</button></div>'+`<section class="dashboard-tab-panel" data-dashboard-panel="english"${liveDashboardSubject==='english'?'':' hidden'}>${sections[0]}${englishOverview}${learningActivityPanel(activityData,[selectedName],'english',seriesData)}</section><section class="dashboard-tab-panel" data-dashboard-panel="math"${liveDashboardSubject==='math'?'':' hidden'}>${learningActivityPanel(activityData,[selectedName],'math',seriesData)}</section>`:'<p class="muted">Wähle ein Kind aus, um dessen Lernstand und Fehler zu sehen.</p>';
+ const activityContent=selectedName?'<div class="dashboard-live-toolbar"><span class="dashboard-live-current">Live-Anzeige: '+esc(selectedName)+'</span><button type="button" class="live-clear-bright dashboard-live-reset" data-clear-child-live="'+esc(selectedName)+'">↻ Live zurücksetzen</button></div><p class="muted small dashboard-live-note">Nur diese Live-Anzeige auf diesem Schiedsrichtergerät wird geleert. Tages-, Wochen- und Battle-Wertungen bleiben unverändert.</p><section class="dashboard-simple-activity"><h3>Lernaktivitäten</h3>'+learningActivityOverview(activityData,[selectedName],seriesData)+'</section>':'<p class="muted">Wähle ein Kind aus, um dessen Lernaktivitäten zu sehen.</p>'
  const pickerStyles=`<style>
-.dashboard-live-toolbar{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:8px 12px!important;margin:14px 0 8px!important}
+.dashboard-simple-activity{margin-top:16px!important}
+.dashboard-simple-activity h3{margin:0 0 12px!important}
+.live-simple-list{display:grid;gap:8px;overflow:hidden}
+.live-simple-head,.live-simple-row{display:grid;grid-template-columns:minmax(0,2fr) minmax(140px,1.3fr) minmax(100px,.8fr) minmax(160px,1.2fr);gap:12px;align-items:center}
+.live-simple-head{padding:9px 12px;color:#d9f4e2;font-size:13px;font-weight:800}
+.live-simple-row{padding:12px;border:1px solid #39805d;border-radius:12px;background:#12452f}
+.live-simple-row>span{min-width:0;overflow-wrap:anywhere}
+.live-simple-what{font-weight:750}
+@media(max-width:700px){
+ .live-simple-head{display:none}
+ .live-simple-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px 12px;padding:11px}
+ .live-simple-row>span{display:grid;grid-template-columns:minmax(78px,38%) minmax(0,1fr);gap:8px;align-items:start}
+ .live-simple-row>span:before{content:attr(data-label);font-size:12px;font-weight:750;color:#c4e3d1;line-height:1.35}
+ .live-simple-row>.live-simple-what{grid-column:1/-1}
+}.dashboard-live-toolbar{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:8px 12px!important;margin:14px 0 8px!important}
 .dashboard-live-current{font-size:15px;font-weight:750;color:#fff}
 .dashboard-live-reset{width:auto!important;min-width:0!important;min-height:42px!important;padding:8px 11px!important;font-size:13px!important}
 .dashboard-live-note{margin:4px 0 10px!important;font-size:13px!important;line-height:1.4!important}
