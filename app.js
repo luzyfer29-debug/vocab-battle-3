@@ -775,7 +775,7 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
     for(let taskIndex=0;taskIndex<GRAMMAR[station-1].tasks.length;taskIndex++){
      const task=GRAMMAR[station-1].tasks[taskIndex],result=savedTasks[taskIndex];if(!result)continue;
      const answers=Array.isArray(result.draftAnswers)?result.draftAnswers:[],done=answers.filter(value=>String(value||'').trim()).length,total=task.items?.length||task.open?.length||answers.length,updatedAt=Number(result.updatedAt)||Number(saved.updatedAt)||0;
-     if(!updatedAt&&!done&&!result.finished)continue;
+     if(!done&&!result.finished)continue;
      const exercise='english_grammar_'+station+'_task'+(taskIndex+1),live={taskTitle:task.title,done,total,status:result.finished?'Aufgabe geprüft · online gespeichert':done?'Eingaben live · online gespeichert':'Noch keine Online-Daten',draftAnswers:answers,updatedAt};
      const candidate={lastAt:updatedAt,live,sessions:updatedAt?[{startedAt:updatedAt,lastAt:updatedAt,live}]:[]};
      byExercise[exercise]=mergeLearningActivityEntries(byExercise[exercise],candidate);
