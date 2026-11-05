@@ -243,7 +243,7 @@ async function updateDailyLeaderboard(name,subject,eventAt,wrong,exercise,index,
    return value;
   });
   dailyLeaderboardSyncWarned=false;return true;
- }catch(e){console.warn("Tagesvergleich konnte nicht gespeichert werden:",e);if(!dailyLeaderboardSyncWarned){dailyLeaderboardSyncWarned=true;msg("Tagesvergleich konnte nicht gespeichert werden. Bitte die Firebase-Regeln für learningDailyLeaderboard prüfen.",true);}return false;
+ }catch(e){console.warn("Tagesvergleich konnte nicht gespeichert werden:",e);if(!dailyLeaderboardSyncWarned){dailyLeaderboardSyncWarned=true;msg("Tagesvergleich konnte nicht gespeichert werden. Bitte die Firebase-Regeln für learningDailyLeaderboard prüfen.",true);}return false;}
 }
 async function updateDailySubmittedAnswers(name,subject,eventAt,exercise,answerKeys){
  const keys=[...new Set((answerKeys||[]).map(String).map(value=>value.trim()).filter(Boolean))];
@@ -271,7 +271,7 @@ async function updateDailySubmittedAnswers(name,subject,eventAt,exercise,answerK
    return value;
   });
   dailyLeaderboardSyncWarned=false;return true;
- }catch(e){console.warn("Freie Antworten konnten nicht im Tagesvergleich gespeichert werden:",e);if(!dailyLeaderboardSyncWarned){dailyLeaderboardSyncWarned=true;msg("Tagesvergleich konnte nicht gespeichert werden. Bitte die Firebase-Regeln für learningDailyLeaderboard prüfen.",true);}return false;
+ }catch(e){console.warn("Freie Antworten konnten nicht im Tagesvergleich gespeichert werden:",e);if(!dailyLeaderboardSyncWarned){dailyLeaderboardSyncWarned=true;msg("Tagesvergleich konnte nicht gespeichert werden. Bitte die Firebase-Regeln für learningDailyLeaderboard prüfen.",true);}return false;}
 }
 async function dailyCrownNames(subject){
  try{const {dayKey}=activityPeriodKeys(),snapshot=await get(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}`)),totals={};for(const [name,byUid] of Object.entries(snapshot.val()||{})){if(!RANKED_NAMES.includes(name))continue;const canonical=byUid?.[ADMIN_UID],rows=canonical&&Number(canonical.dailyRepairVersion)>=8?[canonical]:Object.values(byUid||{});for(const row of rows){const t=dailyRowTotals(row),v=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0});v.attempts+=t.attempts;v.checkedAttempts+=t.checkedAttempts;v.mistakes+=t.mistakes;}}applyDailyCounterOverride(totals,dayKey,subject);const rows=Object.values(totals).filter(x=>x.attempts>0);if(!rows.length)return new Set();rows.forEach(x=>x.rate=x.checkedAttempts?x.mistakes/x.checkedAttempts:Infinity);rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate);const lead=rows[0];return new Set(rows.filter(x=>x.attempts===lead.attempts&&x.rate===lead.rate).map(x=>x.name));}catch{return new Set();}
