@@ -1001,20 +1001,30 @@ ffd166;font-weight:750}.activity-state.is-done{color:#8cebd8;font-weight:750}.ac
  const nameButtons=SOLO_NAMES.filter(name=>name!=='Frauke').map(name=>`<button type="button" data-dashboard-child="${esc(name)}" aria-pressed="${selectedName===name}">${esc(name)}</button>`).join('');
  const activityContent=selectedName?'<div class="dashboard-live-toolbar"><span class="dashboard-live-current">Live-Anzeige: '+esc(selectedName)+'</span><button type="button" class="live-clear-bright dashboard-live-reset" data-clear-child-live="'+esc(selectedName)+'">↻ Live zurücksetzen</button></div><p class="muted small dashboard-live-note">Nur diese Live-Anzeige auf diesem Schiedsrichtergerät wird geleert. Tages-, Wochen- und Battle-Wertungen bleiben unverändert.</p><section class="dashboard-simple-activity"><h3>Lernaktivitäten</h3>'+learningActivityOverview(activityData,[selectedName],seriesData)+'</section>':'<p class="muted">Wähle ein Kind aus, um dessen Lernaktivitäten zu sehen.</p>'
  const pickerStyles=`<style>
-.dashboard-simple-activity{margin-top:16px!important}
-.dashboard-simple-activity h3{margin:0 0 12px!important}
-.live-simple-list{display:grid;gap:8px;overflow:hidden}
-.live-simple-head,.live-simple-row{display:grid;grid-template-columns:minmax(0,2fr) minmax(140px,1.3fr) minmax(100px,.8fr) minmax(160px,1.2fr);gap:12px;align-items:center}
-.live-simple-head{padding:9px 12px;color:#d9f4e2;font-size:13px;font-weight:800}
-.live-simple-row{padding:12px;border:1px solid #39805d;border-radius:12px;background:#12452f}
-.live-simple-row>span{min-width:0;overflow-wrap:anywhere}
-.live-simple-what{font-weight:750}
+.dashboard-simple-activity{margin-top:18px!important;padding:18px!important;border:1px solid rgba(207,255,224,.24)!important;border-radius:18px!important;background:linear-gradient(145deg,rgba(7,54,36,.56),rgba(8,44,31,.3))!important}
+.dashboard-simple-activity h3{display:flex;align-items:center;gap:10px;margin:0 0 16px!important;font-size:20px!important}
+.dashboard-simple-activity h3:before{content:"";width:5px;height:24px;border-radius:9px;background:#8ff0b3;box-shadow:0 0 12px #6bdd9866}
+.live-simple-list{display:grid;gap:10px;overflow:hidden}
+.live-simple-head,.live-simple-row{display:grid;grid-template-columns:minmax(0,2.1fr) minmax(145px,1.15fr) minmax(110px,.85fr) minmax(175px,1.15fr);gap:14px;align-items:center}
+.live-simple-head{padding:0 16px 3px;color:#a9d9bd;font-size:12px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
+.live-simple-row{position:relative;padding:15px 16px;border:1px solid rgba(182,239,200,.28);border-radius:15px;background:linear-gradient(110deg,rgba(25,105,68,.8),rgba(13,70,48,.88));box-shadow:0 5px 14px rgba(0,0,0,.12);transition:transform .16s ease,border-color .16s ease,background .16s ease}
+.live-simple-row:hover{transform:translateY(-1px);border-color:rgba(213,255,226,.62);background:linear-gradient(110deg,rgba(31,121,77,.88),rgba(15,79,54,.92))}
+.live-simple-row>span{min-width:0;overflow-wrap:anywhere;color:#eefbf2;font-size:14px;line-height:1.4}
+.live-simple-what{font-weight:800!important;color:#fff!important;font-size:15px!important}
+.live-simple-row>span[data-label="Fehler"],.live-simple-row>span[data-label="Verbessert?"]{display:flex;align-items:center;gap:7px}
+.live-simple-row>span[data-label="Fehler"]:before,.live-simple-row>span[data-label="Verbessert?"]:before{content:"";flex:0 0 8px;width:8px;height:8px;border-radius:50%;background:#baf2cd;box-shadow:0 0 8px currentColor}
 @media(max-width:700px){
+ .dashboard-simple-activity{margin-top:14px!important;padding:14px!important}
+ .dashboard-simple-activity h3{font-size:18px!important;margin-bottom:12px!important}
  .live-simple-head{display:none}
- .live-simple-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px 12px;padding:11px}
- .live-simple-row>span{display:grid;grid-template-columns:minmax(78px,38%) minmax(0,1fr);gap:8px;align-items:start}
- .live-simple-row>span:before{content:attr(data-label);font-size:12px;font-weight:750;color:#c4e3d1;line-height:1.35}
- .live-simple-row>.live-simple-what{grid-column:1/-1}
+ .live-simple-list{gap:9px}
+ .live-simple-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:11px 12px;padding:13px;border-radius:14px}
+ .live-simple-row>span{display:grid;grid-template-columns:1fr;gap:4px;align-items:start;font-size:13px}
+ .live-simple-row>span:before{content:attr(data-label);font-size:10px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:#a9d9bd;line-height:1.3}
+ .live-simple-row>.live-simple-what{grid-column:1/-1;padding-bottom:9px;border-bottom:1px solid rgba(195,246,211,.17);font-size:15px!important}
+ .live-simple-row>.live-simple-what:before{color:#d2f4de}
+ .live-simple-row>span[data-label="Fehler"],.live-simple-row>span[data-label="Verbessert?"]{display:grid}
+ .live-simple-row>span[data-label="Fehler"]:before,.live-simple-row>span[data-label="Verbessert?"]:before{display:none}
 }.dashboard-live-toolbar{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:8px 12px!important;margin:14px 0 8px!important}
 .dashboard-live-current{font-size:15px;font-weight:750;color:#fff}
 .dashboard-live-reset{width:auto!important;min-width:0!important;min-height:42px!important;padding:8px 11px!important;font-size:13px!important}
