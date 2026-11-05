@@ -101,7 +101,32 @@ function grammarRender(st,task,checked=false,reveal=false){
  const worksheetImage=st===1&&task===0?'<figure style="margin:14px 0;text-align:center;background:#fff;padding:10px;border-radius:12px"><img src="./grammar2-linda.svg?v=1" alt="Linda als Ärztin im Gespräch mit einem Patienten" style="display:block;width:min(100%,260px);height:auto;margin:auto"></figure>':st===0&&task===2?'<figure style="margin:14px 0;padding:8px;background:#fff;border-radius:12px;overflow:hidden"><img src="./grammar1-task3.jpg?v=20261022-1" alt="Grammatik 1, Aufgabe 3: Reflexivpronomen" loading="lazy" style="display:block;width:100%;height:auto;max-width:100%;border-radius:8px"></figure>':st===0&&task===3?'<figure style="margin:14px 0;padding:8px;background:#fff;border-radius:12px;overflow:hidden"><img src="./grammar1-task4.jpg?v=20261022-1" alt="Grammatik 1, Aufgabe 4: Vier Sätze über Rugby mit Adjektiven und Adverbien" loading="lazy" style="display:block;width:100%;height:auto;max-width:100%;border-radius:8px"></figure>':st===1&&task===1?'<figure style="margin:14px -8px;padding:4px;background:#fff;border-radius:12px;overflow:hidden"><img src="./grammar2-task2.png?v=20261027-1" alt="Grammatik 2, Aufgabe 2: Megan works for the emergency services. Make sentences." loading="lazy" style="display:block;width:100%;height:auto;max-width:100%;min-height:250px;object-fit:contain;border-radius:8px"></figure>':st===1&&task===2?'<figure style="margin:14px 0;padding:8px;background:#fff;border-radius:12px;overflow:hidden"><img src="./grammar2-task3.png?v=20261027-1" alt="Grammatik 2, Aufgabe 3: What has happened? Write six sentences in the present perfect." loading="lazy" style="display:block;width:100%;height:auto;max-width:100%;border-radius:8px"></figure>':st===1&&task===3?'<figure style="margin:14px 0;padding:8px;background:#fff;border-radius:12px;overflow:hidden"><img src="./grammar2-task4.png?v=20261027-1" alt="Grammatik 2, Aufgabe 4: Complete the sentences using the present perfect." loading="lazy" style="display:block;width:100%;height:auto;max-width:100%;border-radius:8px"></figure>':'';
  app.innerHTML=(st===1?`<style id="grammar2-learning-theme">#grammar2-learning-panel{background:#eaf6ec!important;color:#193e2d!important;border:2px solid #8bc7a0!important;border-radius:16px;padding:12px} #grammar2-learning-panel .card,#grammar2-learning-panel article,#grammar2-learning-panel section{background:#f6fff7!important;color:#193e2d!important;border-color:#a4d4b2!important;box-shadow:none!important} #grammar2-learning-panel .muted{color:#426b53!important} #grammar2-learning-panel h2,#grammar2-learning-panel h3,#grammar2-learning-panel p,#grammar2-learning-panel label{color:#193e2d!important} #grammar2-learning-panel input,#grammar2-learning-panel textarea{background:#fff!important;color:#142d1e!important}</style><div id="grammar2-learning-panel">`:"")+card(`<div style="background:#168e7c;color:white;padding:10px 14px;border-radius:10px;font-weight:800;margin-bottom:14px">📖 Grammatik ${st+1} – Lernen</div><h2>📘 ${esc(GRAMMAR[st].title)}</h2><h3>${esc(t.title)}</h3>${t.intro?`<p>${esc(t.intro)}</p>`:''}${t.example?`<p class="muted">Example: ${esc(t.example)}</p>`:''}<p class="muted">${isOpen?'Schreibe eigene englische Sätze.':'Trage die richtige englische Form ein.'} Deine Eingaben werden sofort online übertragen. „Prüfen“ ist nur für die Rückmeldung und Punkteauswertung nötig.</p>${checked?`<p class="good"><strong>${isOpen?'Deine Sätze sind gespeichert.':`${correct} von ${total} richtig. Verbessere die roten Felder selbst.`}</strong></p>`:''}${worksheetImage}${content}${firstSummary('grammar',st+'_'+task,values,t.items?.map(x=>x[2])||null)}<div class="buttons">${btn(isOpen?'✅ Eingaben auswerten':'✅ Antworten auswerten','grammarCheck')}${btn('🔄 Eingaben leeren','grammarClear','alt')}</div>`).replace('<section class="card">',st===1?'<section class="card" style="background:#f6fff7!important;color:#193e2d!important;background-image:none!important">':'<section class="card">')+(st===1?'</div>':'')+card(btn('Zur Aufgabenübersicht','grammarBack','alt'));void syncGrammarDraft(st,task,values);
 }
-function grammarCheck(){if(grammarStation===null||grammarTask===null)return;grammarCollect();const st=grammarStation,taskIndex=grammarTask,t=GRAMMAR[st].tasks[taskIndex],exercise=`english_grammar_${st+1}_task${taskIndex+1}`,values=grammarRead(st,taskIndex),correct=t.items?t.items.filter((item,index)=>item[2].some(a=>grammarNormalize(a)===grammarNormalize(values[index]))).length:0,attempted=values.filter(value=>String(value||'').trim()).length,now=Date.now();if(t.items)t.items.forEach((item,index)=>{const submitted=String(values[index]||'').trim();if(!submitted)return;const topic=GRAMMAR[st].title+' · '+t.title,prompt=`${item[0]} _____ ${item[1]}`;void recordLearningError(soloName,'english',exercise,index,topic,{prompt,accepted:item[2]},item[2].some(a=>grammarNormalize(a)===grammarNormalize(submitted)));});else void updateDailySubmittedAnswers(soloName,'english',now,exercise,values.map((value,index)=>String(value||'').trim()?String(index):'').filter(Boolean));localStorage.setItem(grammarResultKey(st,taskIndex),JSON.stringify({score:correct,maxScore:t.items?.length||0,attempted,finished:true,updatedAt:now}));firstCapture('grammar',st+'_'+taskIndex,t.items?.map(x=>x[2])||null,values,GRAMMAR[st].title+' · '+t.title);grammarRender(st,taskIndex,true);void saveGrammarSeriesResult(st).then(result=>{if(result.complete)msg(`Grammatik ${st+1}: Ergebnis gespeichert (${result.result.correct} von ${result.result.maxScore} Punkten).`);else msg(`Grammatik ${st+1}: Aufgabe geprüft (${result.done} von ${result.total}). Die Gesamtwertung folgt nach allen Aufgaben.`);}).catch(error=>msg(`Grammatik-Ergebnis noch nicht online gespeichert: ${error.message}`,true));}
+async function grammarCheck(){
+ if(grammarStation===null||grammarTask===null)return;
+ grammarCollect();
+ const st=grammarStation,taskIndex=grammarTask,t=GRAMMAR[st].tasks[taskIndex],exercise=`english_grammar_${st+1}_task${taskIndex+1}`,values=grammarRead(st,taskIndex),correct=t.items?t.items.filter((item,index)=>item[2].some(a=>grammarNormalize(a)===grammarNormalize(values[index]))).length:0,attempted=values.filter(value=>String(value||'').trim()).length,now=Date.now();
+ if(!attempted){msg('Gib zuerst mindestens eine Antwort ein.',true);return;}
+ if(t.items){
+  const topic=GRAMMAR[st].title+' · '+t.title;
+  const saved=await Promise.all(t.items.map((item,index)=>{const submitted=String(values[index]||'').trim();if(!submitted)return true;const prompt=`${item[0]} _____ ${item[1]}`;return recordLearningError(soloName,'english',exercise,index,topic,{prompt,accepted:item[2]},item[2].some(a=>grammarNormalize(a)===grammarNormalize(submitted)));}));
+  if(saved.some(value=>value!==true)){msg('Die Antworten wurden nicht vollständig online gespeichert. Bitte Verbindung prüfen und erneut versuchen.',true);return;}
+ }else{
+  const saved=await updateDailySubmittedAnswers(soloName,'english',now,exercise,values.map((value,index)=>String(value||'').trim()?String(index):'').filter(Boolean));
+  if(!saved){msg('Die Antworten wurden nicht online gezählt. Bitte Verbindung prüfen und erneut versuchen.',true);return;}
+ }
+ const resultKey=grammarResultKey(st,taskIndex),previousResult=localStorage.getItem(resultKey);
+ localStorage.setItem(resultKey,JSON.stringify({score:correct,maxScore:t.items?.length||0,attempted,finished:true,updatedAt:now}));
+ firstCapture('grammar',st+'_'+taskIndex,t.items?.map(x=>x[2])||null,values,GRAMMAR[st].title+' · '+t.title);
+ try{
+  const result=await saveGrammarSeriesResult(st);
+  grammarRender(st,taskIndex,true);
+  msg(`Grammatik ${st+1}: Aufgabe geprüft (${result.done} von ${result.total}). Die Tageszählung ist online gespeichert.`);
+ }catch(error){
+  if(previousResult===null)localStorage.removeItem(resultKey);else localStorage.setItem(resultKey,previousResult);
+  grammarRender(st,taskIndex,false);
+  msg(`Grammatik-Ergebnis noch nicht online gespeichert: ${error.message}`,true);
+ }
+}
 function grammarReveal(){return;}
 function grammarClear(){if(grammarStation===null||grammarTask===null)return;grammarWrite(grammarStation,grammarTask,[]);grammarRender(grammarStation,grammarTask);}
 
@@ -191,7 +216,7 @@ async function prepareDailyCounterV3(name,subject,eventAt,path){
  });
 }
 async function updateDailyLeaderboard(name,subject,eventAt,wrong,exercise,index,prompt){
- if(!db||!uid||!RANKED_NAMES.includes(name)||!["english","math"].includes(subject)||!exercise)return;
+ if(!db||!uid||!RANKED_NAMES.includes(name)||!["english","math"].includes(subject)||!exercise)return false;
  const {dayKey}=activityPeriodKeys(eventAt),path="learningDailyLeaderboard/"+dayKey+"/"+subject+"/"+name+"/"+uid,key=dailyAnswerItemKey(index,prompt);
  try{
   await prepareDailyCounterV3(name,subject,eventAt,path);
@@ -217,12 +242,12 @@ async function updateDailyLeaderboard(name,subject,eventAt,wrong,exercise,index,
    value.updatedAt=eventAt;
    return value;
   });
-  dailyLeaderboardSyncWarned=false;
- }catch(e){console.warn("Tagesvergleich konnte nicht gespeichert werden:",e);if(!dailyLeaderboardSyncWarned){dailyLeaderboardSyncWarned=true;msg("Tagesvergleich konnte nicht gespeichert werden. Bitte die Firebase-Regeln für learningDailyLeaderboard prüfen.",true);}}
+  dailyLeaderboardSyncWarned=false;return true;
+ }catch(e){console.warn("Tagesvergleich konnte nicht gespeichert werden:",e);if(!dailyLeaderboardSyncWarned){dailyLeaderboardSyncWarned=true;msg("Tagesvergleich konnte nicht gespeichert werden. Bitte die Firebase-Regeln für learningDailyLeaderboard prüfen.",true);}return false;
 }
 async function updateDailySubmittedAnswers(name,subject,eventAt,exercise,answerKeys){
  const keys=[...new Set((answerKeys||[]).map(String).map(value=>value.trim()).filter(Boolean))];
- if(!keys.length||!db||!uid||!RANKED_NAMES.includes(name)||!["english","math"].includes(subject)||!exercise)return;
+ if(!keys.length||!db||!uid||!RANKED_NAMES.includes(name)||!["english","math"].includes(subject)||!exercise)return false;
  const {dayKey}=activityPeriodKeys(eventAt),path="learningDailyLeaderboard/"+dayKey+"/"+subject+"/"+name+"/"+uid;
  try{
   await prepareDailyCounterV3(name,subject,eventAt,path);
@@ -245,8 +270,8 @@ async function updateDailySubmittedAnswers(name,subject,eventAt,exercise,answerK
    value.updatedAt=Math.max(Number(value.updatedAt)||0,Number(eventAt)||Date.now());
    return value;
   });
-  dailyLeaderboardSyncWarned=false;
- }catch(e){console.warn("Freie Antworten konnten nicht im Tagesvergleich gespeichert werden:",e);if(!dailyLeaderboardSyncWarned){dailyLeaderboardSyncWarned=true;msg("Tagesvergleich konnte nicht gespeichert werden. Bitte die Firebase-Regeln für learningDailyLeaderboard prüfen.",true);}}
+  dailyLeaderboardSyncWarned=false;return true;
+ }catch(e){console.warn("Freie Antworten konnten nicht im Tagesvergleich gespeichert werden:",e);if(!dailyLeaderboardSyncWarned){dailyLeaderboardSyncWarned=true;msg("Tagesvergleich konnte nicht gespeichert werden. Bitte die Firebase-Regeln für learningDailyLeaderboard prüfen.",true);}return false;
 }
 async function dailyCrownNames(subject){
  try{const {dayKey}=activityPeriodKeys(),snapshot=await get(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}`)),totals={};for(const [name,byUid] of Object.entries(snapshot.val()||{})){if(!RANKED_NAMES.includes(name))continue;const canonical=byUid?.[ADMIN_UID],rows=canonical&&Number(canonical.dailyRepairVersion)>=8?[canonical]:Object.values(byUid||{});for(const row of rows){const t=dailyRowTotals(row),v=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0});v.attempts+=t.attempts;v.checkedAttempts+=t.checkedAttempts;v.mistakes+=t.mistakes;}}applyDailyCounterOverride(totals,dayKey,subject);const rows=Object.values(totals).filter(x=>x.attempts>0);if(!rows.length)return new Set();rows.forEach(x=>x.rate=x.checkedAttempts?x.mistakes/x.checkedAttempts:Infinity);rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate);const lead=rows[0];return new Set(rows.filter(x=>x.attempts===lead.attempts&&x.rate===lead.rate).map(x=>x.name));}catch{return new Set();}
@@ -532,8 +557,8 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
   activitySaved=true;
   activitySyncWarned=false;
  }catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg(`Lernantwort konnte nicht gespeichert werden (${e.code||e.message||'Firebase-Zugriff verweigert'}).`,true);}}
- await updateDailyLeaderboard(name,subject,eventAt,!correct,exercise,index,q?.prompt||q?.q||q?.word||topic);
- return activitySaved;
+ const dailySaved=await updateDailyLeaderboard(name,subject,eventAt,!correct,exercise,index,q?.prompt||q?.q||q?.word||topic);
+ return activitySaved&&dailySaved;
 }
 function childLearningExercises(subject){if(subject==='math')return ['math_rational_battle1','math_rational_battle2','math_rational_battle3','math_rational_cards','math_exam','math_rational_exam','math_proportional_practice','math_proportional_exam1','math_proportional_exam2','math_proportional_exam3',...MATH_PROPORTIONAL_PRACTICE_BLOCKS.map(b=>`math_proportional_practice_${b.id}`),'math_proportional_worksheet','math_proportional_flashcards',...FRACTION_MODULES.map(m=>`math_fraction_${m.id}`)];return ['english_vocab_battle1','english_vocab_battle2','english_vocab_battle3','english_vocab_work_page1','english_vocab_work_page2','english_vocab_work_station2_page1','english_vocab_work_station2_page2','english_listening','english_reading',...GRAMMAR.flatMap((station,s)=>station.tasks.map((_,i)=>`english_grammar_${s+1}_task${i+1}`)),...WRITING_TASKS.map((_,i)=>`english_writing_task${i+1}`)];}
 async function mergeSharedLearningReview(name,subject,exercise,index,item){
