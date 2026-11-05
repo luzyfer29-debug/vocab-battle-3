@@ -825,9 +825,9 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
    const live=entry.live||{},when=Number(entry.lastAt||live.updatedAt||0);if(when<=cutoff)continue;
    const errors=Object.entries(entry.errorItems||{}).filter(([index,item])=>{const wrongAt=Number(item?.lastWrongAt)||0,resolvedAt=Number(item?.resolvedAt)||0,check=entry.answerChecks?.[index],correctFirst=check?.attempted===true&&check?.correct===true&&!wrongAt;return item?.source!=='live_battle'&&item?.source!=='battle'&&!correctFirst&&!(item?.resolved===true&&wrongAt>0&&resolvedAt===wrongAt+1);});
    const unresolved=errors.filter(([,item])=>!item?.resolved).length,improved=errors.length-unresolved;
-   const errorText=errors.length?(unresolved?errors.length+' ('+unresolved+' offen)':errors.length+' behoben'):'Keine';
-   const improvedText=improved?'Ja · '+improved+' richtig wiederholt':unresolved?'Noch offen':'—';
-   const what=String(live.taskTitle||learningActivityTitle(id));
+   const errorText=errors.length?errors.length+' Aufgaben mit Fehlern · '+unresolved+' noch offen':'Keine Fehler';
+   const improvedText=errors.length?improved+' von '+errors.length+' danach richtig wiederholt':'Nicht nötig – fehlerfrei';
+   const what=id.startsWith('english_grammar_')?learningActivityTitle(id):String(live.taskTitle||learningActivityTitle(id));
    rows.push({name,id,what,when,errorText,improvedText});
   }
  }
@@ -1014,17 +1014,19 @@ ffd166;font-weight:750}.activity-state.is-done{color:#8cebd8;font-weight:750}.ac
 .live-simple-row>span[data-label="Fehler"],.live-simple-row>span[data-label="Verbessert?"]{display:flex;align-items:center;gap:7px}
 .live-simple-row>span[data-label="Fehler"]:before,.live-simple-row>span[data-label="Verbessert?"]:before{content:"";flex:0 0 8px;width:8px;height:8px;border-radius:50%;background:#baf2cd;box-shadow:0 0 8px currentColor}
 @media(max-width:700px){
- .dashboard-simple-activity{margin-top:14px!important;padding:14px!important}
+ .dashboard-simple-activity{margin-top:14px!important;padding:13px!important}
  .dashboard-simple-activity h3{font-size:18px!important;margin-bottom:12px!important}
  .live-simple-head{display:none}
- .live-simple-list{gap:9px}
- .live-simple-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:11px 12px;padding:13px;border-radius:14px}
- .live-simple-row>span{display:grid;grid-template-columns:1fr;gap:4px;align-items:start;font-size:13px}
- .live-simple-row>span:before{content:attr(data-label);font-size:10px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:#a9d9bd;line-height:1.3}
- .live-simple-row>.live-simple-what{grid-column:1/-1;padding-bottom:9px;border-bottom:1px solid rgba(195,246,211,.17);font-size:15px!important}
+ .live-simple-list{gap:10px}
+ .live-simple-row{grid-template-columns:minmax(0,1fr);gap:0;padding:13px 14px;border-radius:14px}
+ .live-simple-row>span{display:grid;grid-template-columns:minmax(78px,30%) minmax(0,1fr);gap:9px;align-items:center;padding:8px 0;font-size:13px}
+ .live-simple-row>span+span{border-top:1px solid rgba(195,246,211,.14)}
+ .live-simple-row>span:before{content:attr(data-label);font-size:11px;font-weight:800;letter-spacing:.02em;color:#b9e6c8;line-height:1.35}
+ .live-simple-row>.live-simple-what{grid-column:auto;padding:5px 0 10px;border-bottom:1px solid rgba(195,246,211,.23);font-size:15px!important}
  .live-simple-row>.live-simple-what:before{color:#d2f4de}
  .live-simple-row>span[data-label="Fehler"],.live-simple-row>span[data-label="Verbessert?"]{display:grid}
- .live-simple-row>span[data-label="Fehler"]:before,.live-simple-row>span[data-label="Verbessert?"]:before{display:none}
+ .live-simple-row>span[data-label="Wann"]{font-variant-numeric:tabular-nums}
+ .live-simple-row>span[data-label="Wann"] span{white-space:nowrap}
 }.dashboard-live-toolbar{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:8px 12px!important;margin:14px 0 8px!important}
 .dashboard-live-current{font-size:15px;font-weight:750;color:#fff}
 .dashboard-live-reset{width:auto!important;min-width:0!important;min-height:42px!important;padding:8px 11px!important;font-size:13px!important}
