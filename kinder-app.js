@@ -334,37 +334,22 @@ function weeklyDailyWins(days,weekKey=''){
   const rows=RANKED_NAMES.map(name=>{
    let attempts=0,checkedAttempts=0,mistakes=0;
    for(const subject of ['english','math'])for(const row of Object.values(day?.[subject]?.[name]||{})){
-    const t=dailyRowTotals(row);attempts+=t.attempts;checkedAttempts+=t.checkedAttempts;mistakes+=t.mistakes;
+    const totals=dailyRowTotals(row);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;
    }
-   if(DAILY_COUNTER_OVERRIDES[dayKey]?.english?.[name]!==undefined){const setting=DAILY_COUNTER_OVERRIDES[dayKey].english[name],base=Number(typeof setting==='number'?setting:setting?.count)||0,baseline=Number(typeof setting==='number'?0:setting?.baselineAnswers)||0;attempts=base+Math.max(0,attempts-baseline);}
+   const setting=DAILY_COUNTER_OVERRIDES[dayKey]?.english?.[name];
+   if(setting!==undefined){
+    const count=Number(typeof setting==='number'?setting:setting?.count)||0;
+    const baselineAnswers=Number(typeof setting==='number'?0:setting?.baselineAnswers)||0;
+    attempts=count+Math.max(0,attempts-baselineAnswers);
+   }
    return {name,attempts,rate:checkedAttempts?mistakes/checkedAttempts:Infinity};
   }).filter(row=>row.attempts>0);
   if(!rows.length)continue;
-  rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate);
+  rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate||RANKED_NAMES.indexOf(a.name)-RANKED_NAMES.indexOf(b.name));
   const leader=rows[0];
   for(const row of rows)if(row.attempts===leader.attempts&&row.rate===leader.rate)wins[row.name]++;
  }
  for(const [dayKey,awards] of Object.entries(DAILY_WINNER_OVERRIDES))if(dayKeys.includes(dayKey))for(const [name,count] of Object.entries(awards))if(Object.hasOwn(wins,name))wins[name]+=Math.max(0,Math.floor(Number(count)||0));
- // Keep the confirmed Week 45 result through Friday aligned with the referee page.
- // Wins from the remaining days are calculated normally.
- if(weekKey==='2026-W45'){
-  const cutoff='2026-11-06',baseline={Luca:5,Semir:0,Talea:0,Nele:0},future=Object.fromEntries(RANKED_NAMES.map(name=>[name,0]));
-  for(const [dayIndex,day] of (days||[]).entries()){
-   const dayKey=dayKeys[dayIndex]||'';if(dayKey<=cutoff||DAILY_WIN_EXCLUDED_DAYS[dayKey])continue;
-   const rows=RANKED_NAMES.map(name=>{
-    let attempts=0,checkedAttempts=0,mistakes=0;
-    for(const subject of ['english','math'])for(const row of Object.values(day?.[subject]?.[name]||{})){const totals=dailyRowTotals(row);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;}
-    const setting=DAILY_COUNTER_OVERRIDES[dayKey]?.english?.[name];if(setting!==undefined){const base=Number(typeof setting==='number'?setting:setting?.count)||0,threshold=Number(typeof setting==='number'?0:setting?.baselineAnswers)||0;attempts=base+Math.max(0,attempts-threshold);}
-    return {name,attempts,rate:checkedAttempts?mistakes/checkedAttempts:Infinity};
-   }).filter(row=>row.attempts>0);
-   if(!rows.length)continue;
-   rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate||RANKED_NAMES.indexOf(a.name)-RANKED_NAMES.indexOf(b.name));
-   const leader=rows[0];for(const row of rows)if(row.attempts===leader.attempts&&row.rate===leader.rate)future[row.name]++;
-  }
-  for(const [dayKey,awards] of Object.entries(DAILY_WINNER_OVERRIDES))if(dayKey>cutoff&&dayKeys.includes(dayKey))for(const [name,count] of Object.entries(awards))if(Object.hasOwn(future,name))future[name]+=Math.max(0,Math.floor(Number(count)||0));
-  for(const name of RANKED_NAMES)wins[name]=(baseline[name]||0)+(future[name]||0);
- }
- if(weekKey==='2026-W44'){wins.Luca=5;wins.Nele=0;wins.Semir=0;wins.Talea=0;}
  const all=RANKED_NAMES.map(name=>({name,wins:wins[name]}));
  const positive=all.filter(row=>row.wins>0).sort((a,b)=>b.wins-a.wins||RANKED_NAMES.indexOf(a.name)-RANKED_NAMES.indexOf(b.name));
  let last=null,place=0;
