@@ -352,6 +352,22 @@ async function repairDailyAnswerCounters(dayKey){
    }
    prior.items=items;prior.count=Object.keys(items).length;prior.mistakes=Object.values(items).reduce((sum,item)=>sum+(Number(item.mistakes)||0),0);prior.updatedAt=Math.max(Number(prior.updatedAt)||0,Number(entry.updatedAt)||Date.now());progress[exercise]=prior;
   }
+  // If an older lesson saved wrong/repeated attempts in errorItems but missed answerChecks,
+  // reconstruct today's answered question indices from the timestamped error history.
+  for(const [exercise,entry] of Object.entries(childActivity)){
+   if(exercise.includes('_battle')||exercise.includes('battle'))continue;
+   const prior=progress[exercise]||{items:{}},items={...(prior.items||{})};let changed=false;
+   for(const [index,error] of Object.entries(entry?.errorItems||{})){
+    if(error?.source==='live_battle'||error?.source==='battle')continue;
+    const wrongAt=Number(error?.lastWrongAt)||0,resolvedAt=Number(error?.resolvedAt)||0,wrongToday=wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey&&!isFalsePositiveResolvedLearningRecord(error),attemptAt=wrongToday?wrongAt:(resolvedAt>0&&activityPeriodKeys(resolvedAt).dayKey===dayKey?resolvedAt:0);
+    if(!attemptAt)continue;
+    const answerIndex=String(index),existingItem=Object.entries(items).find(([key,item])=>String(item?.answerIndex??(key.includes('_')?key.slice(0,key.lastIndexOf('_')):key))===answerIndex);
+    if(existingItem){const [key,item]=existingItem;items[key]={...item,count:1,answerIndex,mistakes:Math.max(Number(item?.mistakes)||0,wrongToday?1:0)};}
+    else{const key=dailyAnswerItemKey(index,error?.prompt||error?.topic||exercise);items[key]={count:1,mistakes:wrongToday?1:0,answerIndex,updatedAt:attemptAt};}
+    changed=true;
+   }
+   if(changed){prior.items=items;prior.count=Object.values(items).filter(item=>Number(item?.count)>0).length;prior.mistakes=Object.values(items).reduce((sum,item)=>sum+(Number(item?.mistakes)||0),0);prior.updatedAt=Math.max(Number(prior.updatedAt)||0,...Object.values(items).map(item=>Number(item?.updatedAt)||0));progress[exercise]=prior;}
+  }
   const totals=dailyProgressCounts(progress),submittedByExercise={};
   for(const row of Object.values(existing))for(const [exercise,entry] of Object.entries(row?.submittedByExercise||{})){
    const merged=submittedByExercise[exercise]||{items:{}},items={...(merged.items||{})};
