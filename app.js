@@ -316,11 +316,11 @@ async function repairDailyAnswerCounters(dayKey){
      const definition=GRAMMAR[station-1]?.tasks?.[taskIndex],answers=Array.isArray(task.draftAnswers)?task.draftAnswers:[],draftCount=Math.max(answers.filter(value=>String(value||'').trim()).length,Number(task.attempted)||0),taskAt=Number(task.updatedAt)||Number(series.updatedAt)||0;
      if(!taskAt||activityPeriodKeys(taskAt).dayKey!==dayKey)continue;
      const exercise='english_grammar_'+station+'_task'+(taskIndex+1),prior=childActivity[exercise]||{},priorLive=prior.live||{},priorAt=Number(priorLive.updatedAt)||0;
-     if(priorAt>taskAt&&Array.isArray(priorLive.draftAnswers))continue;
+     const priorAnswers=Array.isArray(priorLive.draftAnswers)?priorLive.draftAnswers:[],mergedAnswers=answers.map((value,index)=>String(value||'').trim()?value:(priorAnswers[index]||'')),mergedCount=Math.max(draftCount,mergedAnswers.filter(value=>String(value||'').trim()).length,Number(priorLive.draftCount)||0,Number(priorLive.done)||0);
      const prompts=definition?.items?definition.items.map(item=>String(item[0])+' _____ '+String(item[1])):(definition?.prompts||[]);
-     const updated=Array.isArray(task.draftUpdatedAt)?task.draftUpdatedAt:answers.map(()=>taskAt);
-     const timestamps=answers.map((_,index)=>Number(updated[index])||taskAt);
-     childActivity[exercise]={...prior,dayKey,lastAt:Math.max(Number(prior.lastAt)||0,taskAt),live:{...priorLive,taskTitle:definition?.title||('Aufgabe '+(taskIndex+1)),done:answers.filter(value=>String(value||'').trim()).length,total:definition?.items?.length||definition?.open?.length||answers.length,status:task.finished?'Aufgabe geprüft':'In Bearbeitung',draftAnswers:answers,draftUpdatedAt:timestamps,draftPrompts:prompts,draftCount,updatedAt:Math.max(priorAt,taskAt)}};
+     const updated=Array.isArray(task.draftUpdatedAt)?task.draftUpdatedAt:answers.map(()=>taskAt),priorUpdated=Array.isArray(priorLive.draftUpdatedAt)?priorLive.draftUpdatedAt:[];
+     const timestamps=mergedAnswers.map((_,index)=>Math.max(Number(updated[index])||taskAt,Number(priorUpdated[index])||0));
+     childActivity[exercise]={...prior,dayKey,lastAt:Math.max(Number(prior.lastAt)||0,taskAt,priorAt),live:{...priorLive,taskTitle:definition?.title||('Aufgabe '+(taskIndex+1)),done:mergedAnswers.filter(value=>String(value||'').trim()).length,total:definition?.items?.length||definition?.open?.length||mergedAnswers.length,status:task.finished?'Aufgabe geprüft':'In Bearbeitung',draftAnswers:mergedAnswers,draftUpdatedAt:timestamps,draftPrompts:prompts,draftCount:mergedCount,updatedAt:Math.max(priorAt,taskAt)}};
     }
    }
   }
@@ -395,7 +395,7 @@ async function repairDailyAnswerCounters(dayKey){
   }
   const submitted=dailySubmittedCount(submittedByExercise,progress),unverified=Math.max(0,...Object.values(existing).map(row=>Number(row?.unverifiedLegacyDailyCount)||0));
   daily[subject]=daily[subject]||{};
-  daily[subject][name]={"learning-activity":{name,attempts:totals.checked+submitted,checkedAttempts:totals.checked,mistakes:totals.mistakes,submittedAttempts:submitted,answerCounterVersion:3,dailyRepairVersion:10,progressByExercise:progress,submittedByExercise,unverifiedLegacyDailyCount:unverified}};
+  daily[subject][name]={"learning-activity":{name,attempts:totals.checked+submitted,checkedAttempts:totals.checked,mistakes:totals.mistakes,submittedAttempts:submitted,answerCounterVersion:3,dailyRepairVersion:11,progressByExercise:progress,submittedByExercise,unverifiedLegacyDailyCount:unverified}};
  }
  const manual=DAILY_COUNTER_OVERRIDES[dayKey]||{};
  for(const [subject,children] of Object.entries(manual))for(const [name,setting] of Object.entries(children)){
