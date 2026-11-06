@@ -459,7 +459,7 @@ function rankLearningDailyWins(days,weekKey=''){
  // Preserve the confirmed Week 45 tally through Friday, then keep later days dynamic.
  // Keep later days in this week dynamic by adding only winners from after the audited cutoff.
  if(weekKey==='2026-W45'){
-  const cutoff='2026-11-06',baseline={Luca:4,Semir:0,Talea:0,Nele:0},future=Object.fromEntries(names.map(name=>[name,0]));
+  const cutoff='2026-11-06',baseline={Luca:5,Semir:0,Talea:0,Nele:0},future=Object.fromEntries(names.map(name=>[name,0]));
   for(const day of learningDailyBreakdown(days,weekKey).filter(item=>item.dayKey>cutoff)){
    if(DAILY_WIN_EXCLUDED_DAYS[day.dayKey])continue;
    day.rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate||names.indexOf(a.name)-names.indexOf(b.name));
