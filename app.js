@@ -393,9 +393,27 @@ async function repairDailyAnswerCounters(dayKey){
    }
    if(Object.keys(items).length){target.items=items;target.count=Object.values(items).filter(item=>Number(item?.count)>0).length;target.updatedAt=Date.now();submittedByExercise[exercise]=target;}
   }
+  // Recover distinct same-day answer indices from legacy live activity records, even when
+  // older clients saved the error/retry history without a full draftAnswers array.
+  for(const [exercise,entry] of Object.entries(childActivity)){
+   if(exercise.toLowerCase().includes('battle'))continue;
+   const live=entry?.live||{},liveAt=Math.max(Number(live.updatedAt)||0,Number(entry.lastAt)||0),liveIsToday=entry.dayKey===dayKey||Boolean(liveAt&&activityPeriodKeys(liveAt).dayKey===dayKey);
+   if(!liveIsToday)continue;
+   const indices=new Set([...Object.keys(entry.answerChecks||{}),...Object.keys(entry.errorItems||{})].filter(index=>/^\d+$/.test(String(index))));
+   const answers=Array.isArray(live.draftAnswers)?live.draftAnswers:[];
+   for(let index=0;index<answers.length;index++)if(String(answers[index]||'').trim())indices.add(String(index));
+   const target=submittedByExercise[exercise]||{items:{}},items={...(target.items||{})};
+   let count=Math.max(indices.size,Number(live.draftCount)||0,Number(live.done)||0);
+   for(let index=0;index<count;index++)indices.add(String(index));
+   for(const index of indices){
+    const check=entry.answerChecks?.[index]||{},error=entry.errorItems?.[index]||{},key=dailyAnswerItemKey(index,'draft'),prior=items[key];
+    if(!prior||Number(prior.count)<=0)items[key]={count:1,answerIndex:String(index),answer:String(answers[Number(index)]||check.submittedAnswer||error.submittedAnswer||''),prompt:String(live.draftPrompts?.[Number(index)]||check.prompt||error.prompt||''),updatedAt:Number(live.draftUpdatedAt?.[Number(index)])||liveAt||Date.now()};
+   }
+   if(Object.keys(items).length){target.items=items;target.count=Object.values(items).filter(item=>Number(item?.count)>0).length;target.updatedAt=Math.max(Number(target.updatedAt)||0,liveAt);submittedByExercise[exercise]=target;}
+  }
   const submitted=dailySubmittedCount(submittedByExercise,progress),unverified=Math.max(0,...Object.values(existing).map(row=>Number(row?.unverifiedLegacyDailyCount)||0));
   daily[subject]=daily[subject]||{};
-  daily[subject][name]={"learning-activity":{name,attempts:totals.checked+submitted,checkedAttempts:totals.checked,mistakes:totals.mistakes,submittedAttempts:submitted,answerCounterVersion:3,dailyRepairVersion:11,progressByExercise:progress,submittedByExercise,unverifiedLegacyDailyCount:unverified}};
+  daily[subject][name]={"learning-activity":{name,attempts:totals.checked+submitted,checkedAttempts:totals.checked,mistakes:totals.mistakes,submittedAttempts:submitted,answerCounterVersion:3,dailyRepairVersion:12,progressByExercise:progress,submittedByExercise,unverifiedLegacyDailyCount:unverified}};
  }
  const manual=DAILY_COUNTER_OVERRIDES[dayKey]||{};
  for(const [subject,children] of Object.entries(manual))for(const [name,setting] of Object.entries(children)){
