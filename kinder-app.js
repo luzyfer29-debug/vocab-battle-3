@@ -151,7 +151,7 @@ function grammarClear(){if(grammarStation===null||grammarTask===null)return;gram
 const key='vb2solo';
 const SOLO_NAMES=['Luca','Semir','Talea','Nele','Frauke'];
 const RANKED_NAMES=['Luca','Semir','Talea','Nele']; // Frauke is a test-only profile.
-const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:{count:50,baselineAnswers:36},Semir:{count:30,baselineAnswers:30},Talea:{count:6,baselineAnswers:4}}},'2026-11-05':{english:{Luca:{count:111,baselineAnswers:66}}}};
+const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:{count:50,baselineAnswers:36},Semir:{count:30,baselineAnswers:30},Talea:{count:6,baselineAnswers:4}}},'2026-11-05':{english:{Luca:{count:111,baselineAnswers:66}}},'2026-11-06':{english:{Luca:{count:26,baselineAnswers:26}}}};
 const DAILY_WIN_EXCLUDED_DAYS={'2026-11-02':'Lern- und Battle-Antworten sind an diesem Tag nicht verlässlich getrennt; der Tagessieg wurde manuell Luca gutgeschrieben.'};
 const DAILY_WINNER_OVERRIDES={'2026-11-02':{Luca:1}};
 function applyDailyCounterOverride(totals,dayKey,subject){for(const [name,setting] of Object.entries(DAILY_COUNTER_OVERRIDES[dayKey]?.[subject]||{})){const row=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0}),count=Number(typeof setting==='number'?setting:setting?.count)||0,baselineAnswers=Number(typeof setting==='number'?0:setting?.baselineAnswers)||0,current=Number(row.attempts)||0;row.attempts=count+Math.max(0,current-baselineAnswers);row.manualAdjustment=true;}}
@@ -345,6 +345,25 @@ function weeklyDailyWins(days,weekKey=''){
   for(const row of rows)if(row.attempts===leader.attempts&&row.rate===leader.rate)wins[row.name]++;
  }
  for(const [dayKey,awards] of Object.entries(DAILY_WINNER_OVERRIDES))if(dayKeys.includes(dayKey))for(const [name,count] of Object.entries(awards))if(Object.hasOwn(wins,name))wins[name]+=Math.max(0,Math.floor(Number(count)||0));
+ // Keep the confirmed Week 45 result through Friday aligned with the referee page.
+ // Wins from the remaining days are calculated normally.
+ if(weekKey==='2026-W45'){
+  const cutoff='2026-11-06',baseline={Luca:4,Semir:0,Talea:0,Nele:0},future=Object.fromEntries(RANKED_NAMES.map(name=>[name,0]));
+  for(const [dayIndex,day] of (days||[]).entries()){
+   const dayKey=dayKeys[dayIndex]||'';if(dayKey<=cutoff||DAILY_WIN_EXCLUDED_DAYS[dayKey])continue;
+   const rows=RANKED_NAMES.map(name=>{
+    let attempts=0,checkedAttempts=0,mistakes=0;
+    for(const subject of ['english','math'])for(const row of Object.values(day?.[subject]?.[name]||{})){const totals=dailyRowTotals(row);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;}
+    const setting=DAILY_COUNTER_OVERRIDES[dayKey]?.english?.[name];if(setting!==undefined){const base=Number(typeof setting==='number'?setting:setting?.count)||0,threshold=Number(typeof setting==='number'?0:setting?.baselineAnswers)||0;attempts=base+Math.max(0,attempts-threshold);}
+    return {name,attempts,rate:checkedAttempts?mistakes/checkedAttempts:Infinity};
+   }).filter(row=>row.attempts>0);
+   if(!rows.length)continue;
+   rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate||RANKED_NAMES.indexOf(a.name)-RANKED_NAMES.indexOf(b.name));
+   const leader=rows[0];for(const row of rows)if(row.attempts===leader.attempts&&row.rate===leader.rate)future[row.name]++;
+  }
+  for(const [dayKey,awards] of Object.entries(DAILY_WINNER_OVERRIDES))if(dayKey>cutoff&&dayKeys.includes(dayKey))for(const [name,count] of Object.entries(awards))if(Object.hasOwn(future,name))future[name]+=Math.max(0,Math.floor(Number(count)||0));
+  for(const name of RANKED_NAMES)wins[name]=(baseline[name]||0)+(future[name]||0);
+ }
  if(weekKey==='2026-W44'){wins.Luca=5;wins.Nele=0;wins.Semir=0;wins.Talea=0;}
  const all=RANKED_NAMES.map(name=>({name,wins:wins[name]}));
  const positive=all.filter(row=>row.wins>0).sort((a,b)=>b.wins-a.wins||RANKED_NAMES.indexOf(a.name)-RANKED_NAMES.indexOf(b.name));
@@ -534,8 +553,8 @@ async function showDailyLeaderboard(subject){
   const totals={},ownRecordSeen=new Set();
   for(const [name,byUid] of Object.entries(raw)){if(!RANKED_NAMES.includes(name))continue;const canonical=byUid?.[ADMIN_UID],hasCanonical=canonical&&Number(canonical.dailyRepairVersion)>=8,selectedRows=hasCanonical?[[name===soloName?uid:ADMIN_UID,canonical]]:Object.entries(byUid||{});for(const [rowUid,row] of selectedRows){const t=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0});const values=dailyRowTotals(row);let attempts=values.attempts,checked=values.checkedAttempts,mistakes=values.mistakes;if(name===soloName&&rowUid===uid){attempts=Math.max(attempts,ownChecked.checked+ownChecked.submitted+Math.max(0,values.attempts-values.checkedAttempts));checked=Math.max(checked,ownChecked.checked);mistakes=Math.max(mistakes,ownChecked.mistakes);ownRecordSeen.add(name);}t.attempts+=attempts;t.checkedAttempts+=checked;t.mistakes+=mistakes;}}
   if(soloName&&RANKED_NAMES.includes(soloName)&&!ownRecordSeen.has(soloName)&&(ownChecked.checked||ownChecked.submitted)){const t=totals[soloName]||(totals[soloName]={name:soloName,attempts:0,checkedAttempts:0,mistakes:0});t.attempts+=ownChecked.checked+ownChecked.submitted;t.checkedAttempts+=ownChecked.checked;t.mistakes+=ownChecked.mistakes;}
-  applyDailyCounterOverride(totals,dayKey,subject);const rows=Object.values(totals).map(x=>({...x,rate:x.checkedAttempts?100*x.mistakes/x.checkedAttempts:null})),most=[...rows].filter(x=>x.attempts>0).sort((a,b)=>b.attempts-a.attempts||a.name.localeCompare(b.name)),fewest=[...rows].filter(x=>x.checkedAttempts>0).sort((a,b)=>a.rate-b.rate||b.attempts-a.attempts||a.name.localeCompare(b.name));
-  const renderRow=(x,i,metric)=>`<div class="solo-game"><div class="row"><h3>${i===0?'🥇':i===1?'🥈':i===2?'🥉':'👤'} ${esc(x.name)}</h3><span class="small">${metric==='attempts'?`${x.attempts} Antworten bearbeitet`:`${x.rate.toFixed(1).replace('.',',')} % Fehler`}</span></div><p>${x.checkedAttempts?`${x.mistakes} falsch von ${x.checkedAttempts} geprüften Antworten${x.manualAdjustment?' · Grundwert ohne Fehlerquote':''}`:x.manualAdjustment?'Fehlerquote für den Grundwert nicht verfügbar':'Noch keine geprüften Antworten'}</p></div>`;
+  applyDailyCounterOverride(totals,dayKey,subject);const rows=RANKED_NAMES.map(name=>{const value=totals[name]||{name,attempts:0,checkedAttempts:0,mistakes:0};return {...value,rate:value.checkedAttempts?100*value.mistakes/value.checkedAttempts:null};}),most=[...rows].sort((a,b)=>b.attempts-a.attempts||a.name.localeCompare(b.name)),fewest=[...rows].sort((a,b)=>Number(!a.checkedAttempts)-Number(!b.checkedAttempts)||(a.rate??Infinity)-(b.rate??Infinity)||b.attempts-a.attempts||a.name.localeCompare(b.name));
+  const renderRow=(x,i,metric)=>{const ranked=metric==='attempts'?x.attempts>0:x.checkedAttempts>0,medal=ranked?(i===0?'🥇':i===1?'🥈':i===2?'🥉':'👤'):'👤',metricText=metric==='attempts'?`${x.attempts} Antworten bearbeitet`:(x.rate===null?'— Fehlerquote':`${x.rate.toFixed(1).replace('.',',')} % Fehler`);return `<div class="solo-game"><div class="row"><h3>${medal} ${esc(x.name)}</h3><span class="small">${metricText}</span></div><p>${x.checkedAttempts?`${x.mistakes} falsch von ${x.checkedAttempts} geprüften Antworten${x.manualAdjustment?' · Grundwert ohne Fehlerquote':''}`:x.manualAdjustment?'Fehlerquote für den Grundwert nicht verfügbar':'Noch keine geprüften Antworten'}</p></div>`;};
   const dateLabel=new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',dateStyle:'full'}).format(new Date());const manualNote=Object.entries(DAILY_COUNTER_OVERRIDES[dayKey]?.[subject]||{}).map(([name,setting])=>name+': heute ausnahmsweise '+(typeof setting==='number'?setting:Number(setting?.count)||0)+' gesetzt').join('; ');
   let weekHtml='';try{weekHtml=await weekLeaderboardHtml();}catch(error){console.warn('Wochenauswertung konnte nicht geladen werden:',error);weekHtml='<p class="muted">Die Wochenauswertung ist gerade nicht verfügbar.</p>';}
   app.innerHTML=card(`<h2>🏆 ${title} · Tagesvergleich</h2><p>${esc(dateLabel)}</p>${manualNote?`<p class="muted">${esc(manualNote)}. Neue Antworten werden korrekt gezählt.</p>`:''}<section class="solo-section"><h3>Meiste Aufgaben</h3>${most.length?most.map((x,i)=>renderRow(x,i,'attempts')).join(''):'<p>Heute noch keine Antworten erfasst.</p>'}</section><section class="solo-section"><h3>Niedrigste Fehlerquote</h3>${fewest.length?fewest.map((x,i)=>renderRow(x,i,'rate')).join(''):'<p>Für die Fehlerquote sind heute noch keine Antworten erfasst.</p>'}</section><p class="muted">Gleichstände werden gemeinsam angezeigt. Entwürfe und geprüfte Antworten werden gezählt; eine geprüfte Antwort zählt dabei nicht doppelt. Die Fehlerquote berücksichtigt geprüfte Antworten.</p>${weekHtml}`)+card(btn('Zurück zum Lernen',back,'alt'));
