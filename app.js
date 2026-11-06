@@ -442,6 +442,12 @@ function learningDailyBreakdown(days,weekKey=''){
    for(const subject of ['english','math'])for(const row of Object.values(data?.[subject]?.[name]||{})){
     const totals=dailyRowTotals(row);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;
    }
+   const setting=DAILY_COUNTER_OVERRIDES[dayKey]?.english?.[name];
+   if(setting!==undefined){
+    const count=Number(typeof setting==='number'?setting:setting?.count)||0;
+    const baselineAnswers=Number(typeof setting==='number'?0:setting?.baselineAnswers)||0;
+    attempts=count+Math.max(0,attempts-baselineAnswers);
+   }
    return {name,attempts,checkedAttempts,mistakes,rate:checkedAttempts?mistakes/checkedAttempts:Infinity};
   }).filter(row=>row.attempts>0);
   return {dayKey,rows};
@@ -456,20 +462,6 @@ function rankLearningDailyWins(days,weekKey=''){
   for(const row of day.rows)if(row.attempts===leader.attempts&&row.rate===leader.rate)wins[row.name]++;
  }
  for(const [dayKey,awards] of Object.entries(DAILY_WINNER_OVERRIDES))if(isoWeekDays(weekKey).includes(dayKey))for(const [name,count] of Object.entries(awards))if(Object.hasOwn(wins,name))wins[name]+=Math.max(0,Math.floor(Number(count)||0));
- // Preserve the confirmed Week 45 tally through Friday, then keep later days dynamic.
- // Keep later days in this week dynamic by adding only winners from after the audited cutoff.
- if(weekKey==='2026-W45'){
-  const cutoff='2026-11-06',baseline={Luca:5,Semir:0,Talea:0,Nele:0},future=Object.fromEntries(names.map(name=>[name,0]));
-  for(const day of learningDailyBreakdown(days,weekKey).filter(item=>item.dayKey>cutoff)){
-   if(DAILY_WIN_EXCLUDED_DAYS[day.dayKey])continue;
-   day.rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate||names.indexOf(a.name)-names.indexOf(b.name));
-   const leader=day.rows[0];
-   for(const row of day.rows)if(row.attempts===leader.attempts&&row.rate===leader.rate)future[row.name]++;
-  }
-  for(const [dayKey,awards] of Object.entries(DAILY_WINNER_OVERRIDES))if(dayKey>cutoff&&isoWeekDays(weekKey).includes(dayKey))for(const [name,count] of Object.entries(awards))if(Object.hasOwn(future,name))future[name]+=Math.max(0,Math.floor(Number(count)||0));
-  for(const name of names)wins[name]=(baseline[name]||0)+(future[name]||0);
- }
- if(weekKey==='2026-W44'){wins.Luca=5;wins.Nele=0;wins.Semir=0;wins.Talea=0;}
  const all=names.map(name=>({name,wins:wins[name]}));
  const positive=all.filter(row=>row.wins>0).sort((a,b)=>b.wins-a.wins||names.indexOf(a.name)-names.indexOf(b.name));
  let last=null,place=0;
