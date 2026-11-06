@@ -73,17 +73,34 @@ function grammarNormalize(v){return String(v||'').trim().toLowerCase().replace(/
 function grammarMenu(){grammarCollect();if(!soloName){soloChooseName();return;}grammarStation=null;grammarTask=null;app.innerHTML=card(`<h2>📘 Grammatik · ${esc(soloName)}</h2><p>Wähle Station 1 oder 2. Die Aufgaben stehen in der Reihenfolge des Arbeitsblatts. Ohne Diff corner.</p><div class="buttons">${btn('Station 1 · Aufgaben 1–4','grammarStation0')}${btn('Station 2 · Aufgaben 1–7','grammarStation1')}</div>`)+card(btn('Zur Englisch-Auswahl','soloHome','alt'));}
 function grammarStationMenu(st){grammarCollect();grammarStation=st;grammarTask=null;const s=GRAMMAR[st],progress=grammarStationProgress(st);app.innerHTML=card(`<h2>📘 ${esc(s.title)}</h2><p>Tippe die englischen Antworten selbst ein. Deine Eingaben erscheinen sofort live. Freie Sätze werden anhand von Beispielen selbst kontrolliert.</p><p class="muted">Di
 e Live-Ansicht zeigt auch ungeprüfte Zwischenstände. „Prüfen“ ist nur für die Rückmeldung und Punkteauswertung nötig. Freie Schreibaufgaben zählen als bearbeitet; gewertet werden die automatisch prüfbaren Antworten.</p>${s.tasks.map((t,i)=>{const done=!!grammarReadResult(st,i)?.finished;return `<div class="player"><strong>${esc(t.title)}</strong><div class="buttons">${btn(done?'✅ Aufgabe geprüft · erneut öffnen':'Aufgabe öffnen',`grammarTask${i}`)}</div></div>`;}).join('')}`)+card(btn('Zur Grammatik-Auswahl','grammarMenu','alt'));}
-function grammarCollect(){if(grammarStation===null||grammarTask===null)return;const fields=Array.from(document.querySelectorAll('[data-grammar]'));if(!fields.length)return;const answers=fields.map(el=>el.value);grammarWrite(grammarStation,grammarTask,answers);void syncGrammarDraft(grammarStation,grammarTask,answers);}
-async function syncGrammarDraft(st,task,answers=grammarRead(st,task)){
- if(!db||!uid||!soloName)return;
- const activity=`grammar${st+1}`,path=`englishSeriesResults/${uid}/${soloName}/${activity}`,now=Date.now();
- const tasks=GRAMMAR[st].tasks.map((_,i)=>{const result=grammarReadResult(st,i);return {task:i+1,finished:!!result?.finished,score:Number(result?.score)||0,maxScore:Number(result?.maxScore)||0,attempted:Number(result?.attempted)||0,updatedAt:Number(result?.updatedAt)||now,draftAnswers:i===task?answers:grammarRead(st,i)};});
- const completed=tasks.filter(x=>x.finished).length,maxScore=GRAMMAR[st].tasks.reduce((sum,x)=>sum+(x.items?.length||0),0),correct=tasks.reduce((sum,x)=>sum+x.score,0);
- touchLearningActivity(soloName,`english_grammar_${st+1}_task${task+1}`,{taskTitle:GRAMMAR[st].tasks[task]?.title||'',done:answers.filter(value=>String(value||'').trim()).length,total:answers.length,status:'Eingaben live',draftAnswers:answers.map(value=>String(value||''))});
- try{await set(ref(db,path),{name:soloName,activity,done:completed,total:tasks.length,completedTasks:completed,taskCount:tasks.length,correct,score:correct,maxScore,finished:completed===tasks.length,updatedAt:now,timestamp:now,tasks});instantSyncOk();}
- catch(e){instantSyncError('Grammatik-Zwischenstand noch nicht online: '+e.message);}
+function grammarDraftTimesKey(st,task){return 'vb2grammar_times_'+soloName+'_station'+(st+1)+'_task'+(task+1);}
+function grammarDraftTimesRead(st,task){try{const values=JSON.parse(localStorage.getItem(grammarDraftTimesKey(st,task))||'[]');return Array.isArray(values)?values:[];}catch{return [];}}
+function grammarCollect(){
+ if(grammarStation===null||grammarTask===null)return;
+ const fields=Array.from(document.querySelectorAll('[data-grammar]'));if(!fields.length)return;
+ const previous=grammarRead(grammarStation,grammarTask),answers=fields.map(el=>el.value),times=grammarDraftTimesRead(grammarStation,grammarTask),now=Date.now();
+ answers.forEach((answer,index)=>{if(String(answer||'')!==String(previous[index]||''))times[index]=now;});
+ grammarWrite(grammarStation,grammarTask,answers);try{localStorage.setItem(grammarDraftTimesKey(grammarStation,grammarTask),JSON.stringify(times));}catch{}
+ void syncGrammarDraft(grammarStation,grammarTask,answers,times);
 }
-function grammarRender(st,task,checked=false,reveal=false){
+const grammarDraftQueues=[Promise.resolve(),Promise.resolve()];
+function syncGrammarDraft(st,task,answers=grammarRead(st,task),draftUpdatedAt=grammarDraftTimesRead(st,task)){
+ const snapshot=answers.map(value=>String(value||'')),times=[...draftUpdatedAt],previous=grammarDraftQueues[st]||Promise.resolve();
+ const next=previous.catch(()=>{}).then(()=>saveGrammarDraft(st,task,snapshot,times));grammarDraftQueues[st]=next.catch(()=>{});return next;
+}
+async function saveGrammarDraft(st,task,answers,draftUpdatedAt){
+ if(!db||!uid||!soloName)return false;
+ const activity='grammar'+(st+1),path='englishSeriesResults/'+uid+'/'+soloName+'/'+activity,now=Date.now(),definition=GRAMMAR[st].tasks[task];
+ const tasks=GRAMMAR[st].tasks.map((_,i)=>{const result=grammarReadResult(st,i),values=i===task?answers:grammarRead(st,i),times=i===task?draftUpdatedAt:grammarDraftTimesRead(st,i);return {task:i+1,finished:!!result?.finished,score:Number(result?.score)||0,maxScore:Number(result?.maxScore)||0,attempted:Number(result?.attempted)||0,updatedAt:Number(result?.updatedAt)||now,draftAnswers:values,draftUpdatedAt:times};});
+ const completed=tasks.filter(x=>x.finished).length,maxScore=GRAMMAR[st].tasks.reduce((sum,item)=>sum+(item.items?.length||0),0),correct=tasks.reduce((sum,item)=>sum+item.score,0);
+ try{
+  await set(ref(db,path),{name:soloName,activity,done:completed,total:tasks.length,completedTasks:completed,taskCount:tasks.length,correct,score:correct,maxScore,finished:completed===tasks.length,updatedAt:now,timestamp:now,tasks});
+  const prompts=definition.items?definition.items.map(item=>String(item[0])+' _____ '+String(item[1])):(definition.prompts||[]);
+  touchLearningActivity(soloName,'english_grammar_'+(st+1)+'_task'+(task+1),{taskTitle:definition.title||('Aufgabe '+(task+1)),done:answers.filter(value=>String(value||'').trim()).length,total:answers.length,status:'Eingaben automatisch gespeichert',draftAnswers:answers,draftUpdatedAt:draftUpdatedAt,draftPrompts:prompts});
+  instantSyncOk();return true;
+ }catch(e){instantSyncError('Grammatik-Zwischenstand noch nicht online: '+e.message);return false;}
+}
+function grammarRender(st,task,checked=false,reveal=false)function grammarRender(st,task,checked=false,reveal=false){
  if(!soloName){soloChooseName();return;}grammarStation=st;grammarTask=task;
  if(!checked&&!reveal&&!grammarRead(st,task).length)grammarWrite(st,task,[]);
   const t=GRAMMAR[st].tasks[task],values=grammarRead(st,task),isOpen=!!t.open;
@@ -104,6 +121,7 @@ function grammarRender(st,task,checked=false,reveal=false){
 async function grammarCheck(){
  if(grammarStation===null||grammarTask===null)return;
  grammarCollect();
+ await syncGrammarDraft(grammarStation,grammarTask,grammarRead(grammarStation,grammarTask),grammarDraftTimesRead(grammarStation,grammarTask));
  const st=grammarStation,taskIndex=grammarTask,t=GRAMMAR[st].tasks[taskIndex],exercise=`english_grammar_${st+1}_task${taskIndex+1}`,values=grammarRead(st,taskIndex),correct=t.items?t.items.filter((item,index)=>item[2].some(a=>grammarNormalize(a)===grammarNormalize(values[index]))).length:0,attempted=values.filter(value=>String(value||'').trim()).length,now=Date.now();
  if(!attempted){msg('Gib zuerst mindestens eine Antwort ein.',true);return;}
  if(t.items){
@@ -186,10 +204,24 @@ function dailyProgressCounts(progress){
  for(const item of Object.values(progress||{})){checked+=Math.max(0,Math.floor(Number(item?.count)||0));mistakes+=Math.max(0,Math.floor(Number(item?.mistakes)||0));}
  return {checked,mistakes:Math.min(checked,mistakes)};
 }
-function dailySubmittedCount(progress){
- return Object.values(progress||{}).reduce((sum,item)=>sum+Math.max(0,Math.floor(Number(item?.count)||0)),0);
+function dailySubmittedCount(progress,checkedProgress={}){
+ let total=0;
+ for(const [exercise,entry] of Object.entries(progress||{})){
+  const checked=new Set(Object.values(checkedProgress?.[exercise]?.items||{}).map(item=>String(item?.answerIndex??'')));
+  const items=entry?.items&&typeof entry.items==='object'?entry.items:null;
+  if(!items){total+=Math.max(0,Math.floor(Number(entry?.count)||0));continue;}
+  const counted=new Set();
+  for(const [key,item] of Object.entries(items)){
+   if(Math.max(0,Math.floor(Number(item?.count)||0))<=0)continue;
+   const separator=key.lastIndexOf('_'),answerIndex=String(item?.answerIndex??(separator>0?key.slice(0,separator):key));
+   if(checked.has(answerIndex)||counted.has(answerIndex))continue;
+   counted.add(answerIndex);
+  }
+  total+=counted.size;
+ }
+ return total;
 }
-async function prepareDailyCounterV3(name,subject,eventAt,path){
+async function prepareDailyCounterV3async function prepareDailyCounterV3(name,subject,eventAt,path){
  const dayKey=activityPeriodKeys(eventAt).dayKey,currentSnap=await get(ref(db,path)),current=currentSnap.val()||{};
  if(Number(current.answerCounterVersion)===3)return;
  const activitySnap=await get(ref(db,"learningActivity/"+uid+"/"+name));
@@ -207,7 +239,7 @@ async function prepareDailyCounterV3(name,subject,eventAt,path){
   value.dailyRepairVersion=9;
   value.checkedAttempts=summary.checked;
   value.mistakes=summary.mistakes;
-  value.submittedAttempts=value.legacySubmittedAttempts+dailySubmittedCount(value.submittedByExercise);
+  value.submittedAttempts=value.legacySubmittedAttempts+dailySubmittedCount(value.submittedByExercise,value.progressByExercise);
   value.attempts=value.checkedAttempts+value.submittedAttempts;
   value.name=name;
   // Firebase validates the whole daily row on every transaction. The v2→v3 migration must carry the required row timestamp.
@@ -231,7 +263,7 @@ async function updateDailyLeaderboard(name,subject,eventAt,wrong,exercise,index,
    exerciseValue.count=values.length;
    exerciseValue.mistakes=values.reduce((sum,item)=>sum+(Number(item.mistakes)||0),0);
    progress[exercise]=exerciseValue;
-   const totals=dailyProgressCounts(progress),submitted=dailySubmittedCount(value.submittedByExercise);
+   const totals=dailyProgressCounts(progress),submitted=dailySubmittedCount(value.submittedByExercise,value.progressByExercise);
    value.progressByExercise=progress;
    value.checkedAttempts=totals.checked;
    value.mistakes=totals.mistakes;
@@ -328,11 +360,34 @@ function learningProgressCount(state){
  return Math.max(0,done+writingDone,started,finished);
 }
 async function updateDailyActivityProgress(name,subject,exercise,eventAt,state){
- // Progress is for the live activity display only. Never add a started/completed
- // exercise or its cumulative progress to the number of submitted answers.
- return;
+ if(!Array.isArray(state?.draftAnswers)||!Array.isArray(state?.draftUpdatedAt))return;
+ const dayKey=activityPeriodKeys(eventAt).dayKey,answers=state.draftAnswers.map((answer,index)=>({index,answer:String(answer||''),updatedAt:Number(state.draftUpdatedAt[index])||0})).filter(item=>item.updatedAt>0&&activityPeriodKeys(item.updatedAt).dayKey===dayKey);
+ if(answers.length)await updateDailyDraftAnswers(name,subject,eventAt,exercise,answers);
 }
-function learningActivityIds(subject){
+async function updateDailyDraftAnswers(name,subject,eventAt,exercise,answers){
+ if(!answers?.length||!db||!uid||!RANKED_NAMES.includes(name)||!['english','math'].includes(subject)||!exercise)return false;
+ const {dayKey}=activityPeriodKeys(eventAt),path='learningDailyLeaderboard/'+dayKey+'/'+subject+'/'+name+'/'+uid;
+ try{
+  await prepareDailyCounterV3(name,subject,eventAt,path);
+  await runTransaction(ref(db,path),current=>{
+   const value=current&&typeof current==='object'?{...current}:{name,attempts:0,mistakes:0,checkedAttempts:0,submittedAttempts:0,answerCounterVersion:3,progressByExercise:{},submittedByExercise:{},legacySubmittedAttempts:0};
+   if(Number(value.answerCounterVersion)!==3)return current;
+   const checkedProgress=Object.fromEntries(Object.entries(value.progressByExercise||{}).map(([id,item])=>[id,{...item,updatedAt:Number(item?.updatedAt)||eventAt}]));
+   const submittedProgress={...(value.submittedByExercise||{})},exerciseValue={...(submittedProgress[exercise]||{})},items={...(exerciseValue.items||{})};
+   for(const entry of answers){
+    const index=String(entry.index),key=dailyAnswerItemKey(index,'draft');
+    items[key]={count:String(entry.answer||'').trim()?1:0,answerIndex:index,answer:String(entry.answer||''),updatedAt:Number(entry.updatedAt)||eventAt};
+   }
+   exerciseValue.items=items;exerciseValue.count=Object.values(items).filter(item=>Number(item?.count)>0).length;exerciseValue.updatedAt=eventAt;submittedProgress[exercise]=exerciseValue;
+   const checked=dailyProgressCounts(checkedProgress),submitted=dailySubmittedCount(submittedProgress,checkedProgress);
+   value.progressByExercise=checkedProgress;value.submittedByExercise=submittedProgress;value.checkedAttempts=checked.checked;value.mistakes=checked.mistakes;
+   value.submittedAttempts=Math.max(0,Number(value.legacySubmittedAttempts)||0)+submitted;value.attempts=value.checkedAttempts+value.submittedAttempts;
+   value.answerCounterVersion=3;value.name=name;value.updatedAt=eventAt;return value;
+  });
+  return true;
+ }catch(e){console.warn('Live-Antwort konnte nicht in die Tageswertung übernommen werden:',e);return false;}
+}
+function learningActivityIds(subject)function learningActivityIds(subject){
  if(subject==='english')return [
   ...[1,2,3].map(n=>`english_vocab_battle${n}`),'english_gap1','english_gap2',
   ...[1,2].map(n=>`english_vocab_work_page${n}`),...[1,2].map(n=>`english_vocab_work_station2_page${n}`),
