@@ -376,7 +376,7 @@ async function repairDailyAnswerCounters(dayKey){
   }
   // Restore today's typed drafts from saved live activity when a child device's daily write was delayed.
   for(const [exercise,entry] of Object.entries(childActivity)){
-   const live=entry?.live||{},answers=Array.isArray(live.draftAnswers)?live.draftAnswers:[],updated=Array.isArray(live.draftUpdatedAt)?live.draftUpdatedAt:[],prompts=Array.isArray(live.draftPrompts)?live.draftPrompts:[],liveAt=Number(live.updatedAt)||Number(entry.lastAt)||0,liveIsToday=entry.dayKey===dayKey||Boolean(liveAt&&activityPeriodKeys(liveAt).dayKey===dayKey),draftCount=liveIsToday?Math.max(answers.filter(value=>String(value||'').trim()).length,Number(live.draftCount)||0):0;
+   const live=entry?.live||{},answers=Array.isArray(live.draftAnswers)?live.draftAnswers:[],updated=Array.isArray(live.draftUpdatedAt)?live.draftUpdatedAt:[],prompts=Array.isArray(live.draftPrompts)?live.draftPrompts:[],liveAt=Number(live.updatedAt)||Number(entry.lastAt)||0,liveIsToday=entry.dayKey===dayKey||Boolean(liveAt&&activityPeriodKeys(liveAt).dayKey===dayKey),draftCount=liveIsToday&&!exercise.toLowerCase().includes('battle')?Math.max(answers.filter(value=>String(value||'').trim()).length,Number(live.draftCount)||0,Number(live.done)||0):0;
    const drafts=answers.map((answer,index)=>({index,answer:String(answer||''),updatedAt:Number(updated[index])||(liveIsToday?liveAt:0)})).filter(item=>item.updatedAt>0&&activityPeriodKeys(item.updatedAt).dayKey===dayKey);
    const target=submittedByExercise[exercise]||{items:{}},items={...(target.items||{})};
    for(const draft of drafts){
@@ -395,7 +395,7 @@ async function repairDailyAnswerCounters(dayKey){
   }
   const submitted=dailySubmittedCount(submittedByExercise,progress),unverified=Math.max(0,...Object.values(existing).map(row=>Number(row?.unverifiedLegacyDailyCount)||0));
   daily[subject]=daily[subject]||{};
-  daily[subject][name]={"learning-activity":{name,attempts:totals.checked+submitted,checkedAttempts:totals.checked,mistakes:totals.mistakes,submittedAttempts:submitted,answerCounterVersion:3,dailyRepairVersion:9,progressByExercise:progress,submittedByExercise,unverifiedLegacyDailyCount:unverified}};
+  daily[subject][name]={"learning-activity":{name,attempts:totals.checked+submitted,checkedAttempts:totals.checked,mistakes:totals.mistakes,submittedAttempts:submitted,answerCounterVersion:3,dailyRepairVersion:10,progressByExercise:progress,submittedByExercise,unverifiedLegacyDailyCount:unverified}};
  }
  const manual=DAILY_COUNTER_OVERRIDES[dayKey]||{};
  for(const [subject,children] of Object.entries(manual))for(const [name,setting] of Object.entries(children)){
