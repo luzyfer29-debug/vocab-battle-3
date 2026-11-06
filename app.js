@@ -285,8 +285,8 @@ function dailyRowTotals(row){
 }
 async function repairDailyAnswerCounters(dayKey){
  if(!adminLoggedIn||uid!==ADMIN_UID)return;
- const [dailySnap,activitySnap,progressSnap]=await Promise.all([get(ref(db,"learningDailyLeaderboard/"+dayKey)),get(ref(db,"learningActivity")),get(ref(db,"soloProgress"))]);
- const daily=dailySnap.val()||{},activity=activitySnap.val()||{},soloProgress=progressSnap.val()||{};
+ const [dailySnap,activitySnap,progressSnap,seriesSnap]=await Promise.all([get(ref(db,"learningDailyLeaderboard/"+dayKey)),get(ref(db,"learningActivity")),get(ref(db,"soloProgress")),get(ref(db,"englishSeriesResults"))]);
+ const daily=dailySnap.val()||{},activity=activitySnap.val()||{},soloProgress=progressSnap.val()||{},englishSeries=seriesSnap.val()||{};
  for(const subject of ["english","math"])for(const name of names){
   const existing=daily?.[subject]?.[name]||{};
   const childActivity=Object.values(activity).reduce((merged,user)=>{
@@ -307,6 +307,23 @@ async function repairDailyAnswerCounters(dayKey){
    }
    return merged;
   },{});
+  if(subject==='english')for(const device of Object.values(englishSeries)){
+   const saved=device?.[name]||{};
+   for(let station=1;station<=2;station++){
+    const series=saved['grammar'+station],tasks=Array.isArray(series?.tasks)?series.tasks:[];
+    for(let taskIndex=0;taskIndex<tasks.length;taskIndex++){
+     const task=tasks[taskIndex];if(!task)continue;
+     const definition=GRAMMAR[station-1]?.tasks?.[taskIndex],answers=Array.isArray(task.draftAnswers)?task.draftAnswers:[],taskAt=Number(task.updatedAt)||Number(series.updatedAt)||0;
+     if(!taskAt||activityPeriodKeys(taskAt).dayKey!==dayKey)continue;
+     const exercise='english_grammar_'+station+'_task'+(taskIndex+1),prior=childActivity[exercise]||{},priorLive=prior.live||{},priorAt=Number(priorLive.updatedAt)||0;
+     if(priorAt>taskAt&&Array.isArray(priorLive.draftAnswers))continue;
+     const prompts=definition?.items?definition.items.map(item=>String(item[0])+' _____ '+String(item[1])):(definition?.prompts||[]);
+     const updated=Array.isArray(task.draftUpdatedAt)?task.draftUpdatedAt:answers.map(()=>taskAt);
+     const timestamps=answers.map((_,index)=>Number(updated[index])||taskAt);
+     childActivity[exercise]={...prior,dayKey,lastAt:Math.max(Number(prior.lastAt)||0,taskAt),live:{...priorLive,taskTitle:definition?.title||('Aufgabe '+(taskIndex+1)),done:answers.filter(value=>String(value||'').trim()).length,total:definition?.items?.length||definition?.open?.length||answers.length,status:task.finished?'Aufgabe geprüft':'In Bearbeitung',draftAnswers:answers,draftUpdatedAt:timestamps,draftPrompts:prompts,updatedAt:Math.max(priorAt,taskAt)}};
+    }
+   }
+  }
   const progress=dailyProgressFromActivity(childActivity,dayKey);
   // Recover answers from today's saved solo battle when answer-check activity
   // was missing. Keep error-rate data sourced from timestamped answer checks.
