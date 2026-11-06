@@ -313,14 +313,14 @@ async function repairDailyAnswerCounters(dayKey){
     const series=saved['grammar'+station],tasks=Array.isArray(series?.tasks)?series.tasks:[];
     for(let taskIndex=0;taskIndex<tasks.length;taskIndex++){
      const task=tasks[taskIndex];if(!task)continue;
-     const definition=GRAMMAR[station-1]?.tasks?.[taskIndex],answers=Array.isArray(task.draftAnswers)?task.draftAnswers:[],taskAt=Number(task.updatedAt)||Number(series.updatedAt)||0;
+     const definition=GRAMMAR[station-1]?.tasks?.[taskIndex],answers=Array.isArray(task.draftAnswers)?task.draftAnswers:[],draftCount=Math.max(answers.filter(value=>String(value||'').trim()).length,Number(task.attempted)||0),taskAt=Number(task.updatedAt)||Number(series.updatedAt)||0;
      if(!taskAt||activityPeriodKeys(taskAt).dayKey!==dayKey)continue;
      const exercise='english_grammar_'+station+'_task'+(taskIndex+1),prior=childActivity[exercise]||{},priorLive=prior.live||{},priorAt=Number(priorLive.updatedAt)||0;
      if(priorAt>taskAt&&Array.isArray(priorLive.draftAnswers))continue;
      const prompts=definition?.items?definition.items.map(item=>String(item[0])+' _____ '+String(item[1])):(definition?.prompts||[]);
      const updated=Array.isArray(task.draftUpdatedAt)?task.draftUpdatedAt:answers.map(()=>taskAt);
      const timestamps=answers.map((_,index)=>Number(updated[index])||taskAt);
-     childActivity[exercise]={...prior,dayKey,lastAt:Math.max(Number(prior.lastAt)||0,taskAt),live:{...priorLive,taskTitle:definition?.title||('Aufgabe '+(taskIndex+1)),done:answers.filter(value=>String(value||'').trim()).length,total:definition?.items?.length||definition?.open?.length||answers.length,status:task.finished?'Aufgabe geprüft':'In Bearbeitung',draftAnswers:answers,draftUpdatedAt:timestamps,draftPrompts:prompts,updatedAt:Math.max(priorAt,taskAt)}};
+     childActivity[exercise]={...prior,dayKey,lastAt:Math.max(Number(prior.lastAt)||0,taskAt),live:{...priorLive,taskTitle:definition?.title||('Aufgabe '+(taskIndex+1)),done:answers.filter(value=>String(value||'').trim()).length,total:definition?.items?.length||definition?.open?.length||answers.length,status:task.finished?'Aufgabe geprüft':'In Bearbeitung',draftAnswers:answers,draftUpdatedAt:timestamps,draftPrompts:prompts,draftCount,updatedAt:Math.max(priorAt,taskAt)}};
     }
    }
   }
@@ -360,21 +360,26 @@ async function repairDailyAnswerCounters(dayKey){
   }
   // Restore today's typed drafts from saved live activity when a child device's daily write was delayed.
   for(const [exercise,entry] of Object.entries(childActivity)){
-   const answers=Array.isArray(entry?.live?.draftAnswers)?entry.live.draftAnswers:[];
-   const updated=Array.isArray(entry?.live?.draftUpdatedAt)?entry.live.draftUpdatedAt:[];
-   const prompts=Array.isArray(entry?.live?.draftPrompts)?entry.live.draftPrompts:[];
-   const drafts=answers.map((answer,index)=>({index,answer:String(answer||''),updatedAt:Number(updated[index])||0})).filter(item=>item.updatedAt>0&&activityPeriodKeys(item.updatedAt).dayKey===dayKey);
-   if(!drafts.length)continue;
+   const live=entry?.live||{},answers=Array.isArray(live.draftAnswers)?live.draftAnswers:[],updated=Array.isArray(live.draftUpdatedAt)?live.draftUpdatedAt:[],prompts=Array.isArray(live.draftPrompts)?live.draftPrompts:[],liveAt=Number(live.updatedAt)||Number(entry.lastAt)||0,liveIsToday=entry.dayKey===dayKey||Boolean(liveAt&&activityPeriodKeys(liveAt).dayKey===dayKey),draftCount=liveIsToday?Math.max(answers.filter(value=>String(value||'').trim()).length,Number(live.draftCount)||0):0;
+   const drafts=answers.map((answer,index)=>({index,answer:String(answer||''),updatedAt:Number(updated[index])||(liveIsToday?liveAt:0)})).filter(item=>item.updatedAt>0&&activityPeriodKeys(item.updatedAt).dayKey===dayKey);
    const target=submittedByExercise[exercise]||{items:{}},items={...(target.items||{})};
    for(const draft of drafts){
     const index=String(draft.index),key=dailyAnswerItemKey(index,'draft'),prior=items[key];
     if(!prior||draft.updatedAt>=Number(prior.updatedAt||0))items[key]={count:draft.answer.trim()?1:0,answerIndex:index,answer:draft.answer,prompt:String(prompts[draft.index]||''),updatedAt:draft.updatedAt};
    }
-   target.items=items;target.count=Object.values(items).filter(item=>Number(item?.count)>0).length;target.updatedAt=Date.now();submittedByExercise[exercise]=target;
+   if(liveIsToday&&draftCount>0){
+    let added=0;
+    for(let index=0;index<Math.max(draftCount,answers.length)&&added<draftCount;index++){
+     if(String(answers[index]||'').trim())continue;
+     const key=dailyAnswerItemKey(index,'draft'),prior=items[key];if(prior&&Number(prior.count)>0)continue;
+     items[key]={count:1,answerIndex:String(index),answer:'',prompt:String(prompts[index]||''),updatedAt:liveAt||Date.now()};added++;
+    }
+   }
+   if(Object.keys(items).length){target.items=items;target.count=Object.values(items).filter(item=>Number(item?.count)>0).length;target.updatedAt=Date.now();submittedByExercise[exercise]=target;}
   }
   const submitted=dailySubmittedCount(submittedByExercise,progress),unverified=Math.max(0,...Object.values(existing).map(row=>Number(row?.unverifiedLegacyDailyCount)||0));
   daily[subject]=daily[subject]||{};
-  daily[subject][name]={"learning-activity":{name,attempts:totals.checked+submitted,checkedAttempts:totals.checked,mistakes:totals.mistakes,submittedAttempts:submitted,answerCounterVersion:3,dailyRepairVersion:8,progressByExercise:progress,submittedByExercise,unverifiedLegacyDailyCount:unverified}};
+  daily[subject][name]={"learning-activity":{name,attempts:totals.checked+submitted,checkedAttempts:totals.checked,mistakes:totals.mistakes,submittedAttempts:submitted,answerCounterVersion:3,dailyRepairVersion:9,progressByExercise:progress,submittedByExercise,unverifiedLegacyDailyCount:unverified}};
  }
  const manual=DAILY_COUNTER_OVERRIDES[dayKey]||{};
  for(const [subject,children] of Object.entries(manual))for(const [name,setting] of Object.entries(children)){
