@@ -348,7 +348,7 @@ function weeklyDailyWins(days,weekKey=''){
  // Keep the confirmed Week 45 result through Friday aligned with the referee page.
  // Wins from the remaining days are calculated normally.
  if(weekKey==='2026-W45'){
-  const cutoff='2026-11-06',baseline={Luca:4,Semir:0,Talea:0,Nele:0},future=Object.fromEntries(RANKED_NAMES.map(name=>[name,0]));
+  const cutoff='2026-11-06',baseline={Luca:5,Semir:0,Talea:0,Nele:0},future=Object.fromEntries(RANKED_NAMES.map(name=>[name,0]));
   for(const [dayIndex,day] of (days||[]).entries()){
    const dayKey=dayKeys[dayIndex]||'';if(dayKey<=cutoff||DAILY_WIN_EXCLUDED_DAYS[dayKey])continue;
    const rows=RANKED_NAMES.map(name=>{
