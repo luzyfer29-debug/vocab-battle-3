@@ -100,7 +100,7 @@ async function saveGrammarDraft(st,task,answers,draftUpdatedAt){
   instantSyncOk();return true;
  }catch(e){instantSyncError('Grammatik-Zwischenstand noch nicht online: '+e.message);return false;}
 }
-function grammarRender(st,task,checked=false,reveal=false)function grammarRender(st,task,checked=false,reveal=false){
+function grammarRender(st,task,checked=false,reveal=false){
  if(!soloName){soloChooseName();return;}grammarStation=st;grammarTask=task;
  if(!checked&&!reveal&&!grammarRead(st,task).length)grammarWrite(st,task,[]);
   const t=GRAMMAR[st].tasks[task],values=grammarRead(st,task),isOpen=!!t.open;
@@ -126,7 +126,7 @@ async function grammarCheck(){
  if(!attempted){msg('Gib zuerst mindestens eine Antwort ein.',true);return;}
  if(t.items){
   const topic=GRAMMAR[st].title+' · '+t.title;
-  const saved=await Promise.all(t.items.map((item,index)=>{const submitted=String(values[index]||'').trim();if(!submitted)return true;const prompt=`${item[0]} _____ ${item[1]}`;return recordLearningError(soloName,'english',exercise,index,topic,{prompt,accepted:item[2]},item[2].some(a=>grammarNormalize(a)===grammarNormalize(submitted)));}));
+  const saved=await Promise.all(t.items.map((item,index)=>{const submitted=String(values[index]||'').trim();if(!submitted)return true;const prompt=`${item[0]} _____ ${item[1]}`;return recordLearningError(soloName,'english',exercise,index,topic,{prompt,accepted:item[2],submittedAnswer:submitted},item[2].some(a=>grammarNormalize(a)===grammarNormalize(submitted)));}));
   if(saved.some(value=>value!==true)){msg('Die Antworten wurden nicht vollständig online gespeichert. Bitte Verbindung prüfen und erneut versuchen.',true);return;}
  }else{
   const saved=await updateDailySubmittedAnswers(soloName,'english',now,exercise,values.map((value,index)=>String(value||'').trim()?String(index):'').filter(Boolean));
@@ -207,7 +207,7 @@ function dailyProgressCounts(progress){
 function dailySubmittedCount(progress,checkedProgress={}){
  let total=0;
  for(const [exercise,entry] of Object.entries(progress||{})){
-  const checked=new Set(Object.values(checkedProgress?.[exercise]?.items||{}).map(item=>String(item?.answerIndex??'')));
+  const checked=new Set(Object.entries(checkedProgress?.[exercise]?.items||{}).map(([key,item])=>String(item?.answerIndex??(key.includes('_')?key.slice(0,key.lastIndexOf('_')):key))));
   const items=entry?.items&&typeof entry.items==='object'?entry.items:null;
   if(!items){total+=Math.max(0,Math.floor(Number(entry?.count)||0));continue;}
   const counted=new Set();
@@ -221,7 +221,7 @@ function dailySubmittedCount(progress,checkedProgress={}){
  }
  return total;
 }
-async function prepareDailyCounterV3async function prepareDailyCounterV3(name,subject,eventAt,path){
+async function prepareDailyCounterV3(name,subject,eventAt,path){
  const dayKey=activityPeriodKeys(eventAt).dayKey,currentSnap=await get(ref(db,path)),current=currentSnap.val()||{};
  if(Number(current.answerCounterVersion)===3)return;
  const activitySnap=await get(ref(db,"learningActivity/"+uid+"/"+name));
@@ -256,7 +256,7 @@ async function updateDailyLeaderboard(name,subject,eventAt,wrong,exercise,index,
    const value=current&&typeof current==="object"?{...current}:{name,attempts:0,mistakes:0,checkedAttempts:0,submittedAttempts:0,answerCounterVersion:3,progressByExercise:{},submittedByExercise:{},legacySubmittedAttempts:0};
    if(Number(value.answerCounterVersion)!==3)return current;
    const progress=Object.fromEntries(Object.entries(value.progressByExercise||{}).map(([id,item])=>[id,{...item,updatedAt:Number(item?.updatedAt)||eventAt}])),exerciseValue={...(progress[exercise]||{}),updatedAt:eventAt},items={...(exerciseValue.items||{})},old=items[key];
-   if(!old)items[key]={count:1,mistakes:wrong?1:0};
+   if(!old)items[key]={count:1,mistakes:wrong?1:0,answerIndex:String(index)};
    else if(wrong&&!Number(old.mistakes))items[key]={...old,mistakes:1};
    exerciseValue.items=items;
    const values=Object.values(items);
@@ -287,11 +287,11 @@ async function updateDailySubmittedAnswers(name,subject,eventAt,exercise,answerK
    const value=current&&typeof current==="object"?{...current}:{name,attempts:0,mistakes:0,checkedAttempts:0,submittedAttempts:0,answerCounterVersion:3,progressByExercise:{},submittedByExercise:{},legacySubmittedAttempts:0};
    if(Number(value.answerCounterVersion)!==3)return current;
    value.progressByExercise=Object.fromEntries(Object.entries(value.progressByExercise||{}).map(([id,item])=>[id,{...item,updatedAt:Number(item?.updatedAt)||eventAt}]));const progress={...(value.submittedByExercise||{})},exerciseValue={...(progress[exercise]||{})},items={...(exerciseValue.items||{})};
-   for(const answerKey of keys){const key=dailyAnswerItemKey(answerKey,"submitted");if(!items[key])items[key]={count:1};}
+   for(const answerKey of keys){const key=dailyAnswerItemKey(answerKey,"submitted");if(!items[key])items[key]={count:1,answerIndex:String(answerKey)};}
    exerciseValue.items=items;
    exerciseValue.count=Object.keys(items).length;
    progress[exercise]=exerciseValue;
-   const submitted=dailySubmittedCount(progress),checked=dailyProgressCounts(value.progressByExercise);
+   const submitted=dailySubmittedCount(progress,value.progressByExercise),checked=dailyProgressCounts(value.progressByExercise);
    value.submittedByExercise=progress;
    value.checkedAttempts=checked.checked;
    value.mistakes=checked.mistakes;
@@ -314,7 +314,7 @@ function previousIsoWeek(weekKey){const first=isoWeekDays(weekKey)[0];if(!first)
 function dailyRowTotals(row){
  const entries=Object.values(row?.progressByExercise||{}),stored=Math.max(Number(row?.attempts)||0,(Number(row?.checkedAttempts)||0)+(Number(row?.submittedAttempts)||0));
  if(Number(row?.answerCounterVersion)===3){
-  const checked=entries.reduce((sum,item)=>sum+Math.max(0,Math.floor(Number(item?.count)||0)),0),mistakes=entries.reduce((sum,item)=>sum+Math.max(0,Math.floor(Number(item?.mistakes)||0)),0),mappedSubmitted=dailySubmittedCount(row?.submittedByExercise),legacy=Math.max(0,Number(row?.legacySubmittedAttempts)||0);
+  const checked=entries.reduce((sum,item)=>sum+Math.max(0,Math.floor(Number(item?.count)||0)),0),mistakes=entries.reduce((sum,item)=>sum+Math.max(0,Math.floor(Number(item?.mistakes)||0)),0),mappedSubmitted=dailySubmittedCount(row?.submittedByExercise,row?.progressByExercise),legacy=Math.max(0,Number(row?.legacySubmittedAttempts)||0);
   return {attempts:checked+legacy+mappedSubmitted,checkedAttempts:checked,mistakes:Math.min(checked,mistakes)};
  }
  const progress=entries.reduce((sum,item)=>sum+Math.max(0,Math.floor(Number(item?.count)||0)),0);
@@ -387,7 +387,7 @@ async function updateDailyDraftAnswers(name,subject,eventAt,exercise,answers){
   return true;
  }catch(e){console.warn('Live-Antwort konnte nicht in die Tageswertung übernommen werden:',e);return false;}
 }
-function learningActivityIds(subject)function learningActivityIds(subject){
+function learningActivityIds(subject){
  if(subject==='english')return [
   ...[1,2,3].map(n=>`english_vocab_battle${n}`),'english_gap1','english_gap2',
   ...[1,2].map(n=>`english_vocab_work_page${n}`),...[1,2].map(n=>`english_vocab_work_station2_page${n}`),
@@ -452,7 +452,7 @@ async function backfillTodayEnglishAnswers(dayKey){
     prior.items=items;prior.count=Object.keys(items).length;prior.mistakes=Object.values(items).reduce((sum,item)=>sum+(Number(item.mistakes)||0),0);prior.backfilledFromSavedProgress=true;all[exercise]=prior;
    }
    const submittedByExercise=value.submittedByExercise&&typeof value.submittedByExercise==='object'?value.submittedByExercise:{};
-   const checked=dailyProgressCounts(all),submitted=dailySubmittedCount(submittedByExercise);
+   const checked=dailyProgressCounts(all),submitted=dailySubmittedCount(submittedByExercise,all);
    if(Number(value.answerCounterVersion)!==3)value.legacySubmittedAttempts=Math.max(Number(value.legacySubmittedAttempts)||0,Number(value.submittedAttempts)||0);
    value.name=name;value.progressByExercise=all;value.submittedByExercise=submittedByExercise;value.checkedAttempts=checked.checked;value.mistakes=checked.mistakes;
    value.submittedAttempts=Math.max(0,Number(value.legacySubmittedAttempts)||0)+submitted;value.attempts=value.checkedAttempts+value.submittedAttempts;
@@ -487,7 +487,7 @@ async function backfillTodayEnglishVocabProgress(dayKey){
      for(const [itemKey,item] of Object.entries(entry.items)){const old=items[itemKey];if(!old)items[itemKey]=item;else if(item.mistakes&&!Number(old.mistakes))items[itemKey]={...old,mistakes:1};}
      prior.items=items;prior.count=Object.keys(items).length;prior.mistakes=Object.values(items).reduce((sum,item)=>sum+(Number(item?.mistakes)||0),0);all[exercise]=prior;
     }
-    const checked=dailyProgressCounts(all),submittedByExercise=row.submittedByExercise&&typeof row.submittedByExercise==='object'?row.submittedByExercise:{},submitted=dailySubmittedCount(submittedByExercise);
+    const checked=dailyProgressCounts(all),submittedByExercise=row.submittedByExercise&&typeof row.submittedByExercise==='object'?row.submittedByExercise:{},submitted=dailySubmittedCount(submittedByExercise,all);
     if(Number(row.answerCounterVersion)!==3)row.legacySubmittedAttempts=Math.max(Number(row.legacySubmittedAttempts)||0,Number(row.submittedAttempts)||0);
     row.name=name;row.progressByExercise=all;row.submittedByExercise=submittedByExercise;row.checkedAttempts=checked.checked;row.mistakes=checked.mistakes;row.submittedAttempts=Math.max(0,Number(row.legacySubmittedAttempts)||0)+submitted;row.attempts=row.checkedAttempts+row.submittedAttempts;row.answerCounterVersion=3;row.updatedAt=Math.max(Number(row.updatedAt)||0,latest);return row;
    });
@@ -519,7 +519,7 @@ async function repairCorruptDailyEnglishSummary(dayKey){
 async function showDailyLeaderboard(subject){
  const title=subject==='math'?'Mathe':'Englisch',back=subject==='math'?'mathChoose':'soloChangeName';
  status.textContent='';
- app.innerHTML=card(`<h2>🏆 ${title} · Tagesvergleich</h2><p>Wer hat heute die meisten Antworten bearbeitet und wer hat die niedrigste Fehlerquote?</p><p class="muted">Es zählen geprüfte und ausdrücklich ausgewertete freie Antworten. Live-Eingaben zählen erst nach der Auswertung.</p><p>Lade Tageswerte …</p>`)+card(btn('Zurück zum Lernen',back,'alt'));
+ app.innerHTML=card(`<h2>🏆 ${title} · Tagesvergleich</h2><p>Wer hat heute die meisten Antworten bearbeitet und wer hat die niedrigste Fehlerquote?</p><p class="muted">Jede Eingabe wird sofort gespeichert und zählt direkt mit. „Prüfen“ zeigt die Rückmeldung und übernimmt Fehler in „Das muss ich noch lernen“.</p><p>Lade Tageswerte …</p>`)+card(btn('Zurück zum Lernen',back,'alt'));
  try{
   await ensureFirebaseAuth();
   const {dayKey}=activityPeriodKeys();
@@ -537,7 +537,7 @@ async function showDailyLeaderboard(subject){
   const renderRow=(x,i,metric)=>`<div class="solo-game"><div class="row"><h3>${i===0?'🥇':i===1?'🥈':i===2?'🥉':'👤'} ${esc(x.name)}</h3><span class="small">${metric==='attempts'?`${x.attempts} Antworten bearbeitet`:`${x.rate.toFixed(1).replace('.',',')} % Fehler`}</span></div><p>${x.checkedAttempts?`${x.mistakes} falsch von ${x.checkedAttempts} geprüften Antworten${x.manualAdjustment?' · Grundwert ohne Fehlerquote':''}`:x.manualAdjustment?'Fehlerquote für den Grundwert nicht verfügbar':'Noch keine geprüften Antworten'}</p></div>`;
   const dateLabel=new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',dateStyle:'full'}).format(new Date());const manualNote=Object.entries(DAILY_COUNTER_OVERRIDES[dayKey]?.[subject]||{}).map(([name,setting])=>name+': heute ausnahmsweise '+(typeof setting==='number'?setting:Number(setting?.count)||0)+' gesetzt').join('; ');
   let weekHtml='';try{weekHtml=await weekLeaderboardHtml();}catch(error){console.warn('Wochenauswertung konnte nicht geladen werden:',error);weekHtml='<p class="muted">Die Wochenauswertung ist gerade nicht verfügbar.</p>';}
-  app.innerHTML=card(`<h2>🏆 ${title} · Tagesvergleich</h2><p>${esc(dateLabel)}</p>${manualNote?`<p class="muted">${esc(manualNote)}. Neue Antworten werden korrekt gezählt.</p>`:''}<section class="solo-section"><h3>Meiste Aufgaben</h3>${most.length?most.map((x,i)=>renderRow(x,i,'attempts')).join(''):'<p>Heute noch keine Antworten erfasst.</p>'}</section><section class="solo-section"><h3>Niedrigste Fehlerquote</h3>${fewest.length?fewest.map((x,i)=>renderRow(x,i,'rate')).join(''):'<p>Für die Fehlerquote sind heute noch keine Antworten erfasst.</p>'}</section><p class="muted">Gleichstände werden gemeinsam angezeigt. Gezählt werden geprüfte und ausgewertete Antworten von heute.</p>${weekHtml}`)+card(btn('Zurück zum Lernen',back,'alt'));
+  app.innerHTML=card(`<h2>🏆 ${title} · Tagesvergleich</h2><p>${esc(dateLabel)}</p>${manualNote?`<p class="muted">${esc(manualNote)}. Neue Antworten werden korrekt gezählt.</p>`:''}<section class="solo-section"><h3>Meiste Aufgaben</h3>${most.length?most.map((x,i)=>renderRow(x,i,'attempts')).join(''):'<p>Heute noch keine Antworten erfasst.</p>'}</section><section class="solo-section"><h3>Niedrigste Fehlerquote</h3>${fewest.length?fewest.map((x,i)=>renderRow(x,i,'rate')).join(''):'<p>Für die Fehlerquote sind heute noch keine Antworten erfasst.</p>'}</section><p class="muted">Gleichstände werden gemeinsam angezeigt. Entwürfe und geprüfte Antworten werden gezählt; eine geprüfte Antwort zählt dabei nicht doppelt. Die Fehlerquote berücksichtigt geprüfte Antworten.</p>${weekHtml}`)+card(btn('Zurück zum Lernen',back,'alt'));
  }catch(e){console.error('Tagesvergleich konnte nicht geladen werden:',e);const detail=String(e?.code||e?.message||e||'Unbekannter Fehler');app.innerHTML=card(`<h2>🏆 ${title} · Tagesvergleich</h2><p class="error">Tageswerte konnten nicht geladen werden: ${esc(detail)}</p><p>Bitte Verbindung und Firebase-Berechtigungen prüfen.</p>`)+card(btn('Zurück zum Lernen',back,'alt'));}
 }
 async function recordLearningActivity(name,exercise,increment=true,liveState=null){
@@ -613,7 +613,7 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
   activitySyncWarned=false;
  }catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg(`Lernantwort konnte nicht gespeichert werden (${e.code||e.message||'Firebase-Zugriff verweigert'}).`,true);}}
  const dailySaved=await updateDailyLeaderboard(name,subject,eventAt,!correct,exercise,index,q?.prompt||q?.q||q?.word||topic);
- return activitySaved&&dailySaved;
+ return activitySaved;
 }
 function childLearningExercises(subject){if(subject==='math')return ['math_rational_battle1','math_rational_battle2','math_rational_battle3','math_rational_cards','math_exam','math_rational_exam','math_proportional_practice','math_proportional_exam1','math_proportional_exam2','math_proportional_exam3',...MATH_PROPORTIONAL_PRACTICE_BLOCKS.map(b=>`math_proportional_practice_${b.id}`),'math_proportional_worksheet','math_proportional_flashcards',...FRACTION_MODULES.map(m=>`math_fraction_${m.id}`)];return ['english_vocab_battle1','english_vocab_battle2','english_vocab_battle3','english_vocab_work_page1','english_vocab_work_page2','english_vocab_work_station2_page1','english_vocab_work_station2_page2','english_listening','english_reading',...GRAMMAR.flatMap((station,s)=>station.tasks.map((_,i)=>`english_grammar_${s+1}_task${i+1}`)),...WRITING_TASKS.map((_,i)=>`english_writing_task${i+1}`)];}
 async function mergeSharedLearningReview(name,subject,exercise,index,item){
@@ -791,7 +791,7 @@ async function errorPracticeAnswer(value){
  else if(practiceItem.type==='open'){const required=Array.isArray(practiceItem.required)&&practiceItem.required.length?practiceItem.required:accepted;correct=required.length>0&&required.every(term=>grammarNormalize(typed).includes(grammarNormalize(term)));}
  else correct=accepted.some(x=>grammarNormalize(x)===grammarNormalize(typed));
  const subject=errorEvalSubject==='math'||errorEvalSubject==='english'?errorEvalSubject:(item.subject||(entry.exercise.startsWith('math_')?'math':'english'));
- const saved=await recordLearningError(errorEvalName,subject,entry.exercise,entry.index,item.topic,item,correct);
+ const saved=await recordLearningError(errorEvalName,subject,entry.exercise,entry.index,item.topic,{...item,submittedAnswer:Array.isArray(value)?value.join(', '):typed},correct);
  if(!saved){const fb=document.querySelector('#error-feedback');if(fb)fb.innerHTML='<p class="error">Der Lernstand konnte nicht gespeichert werden. Bitte Verbindung prüfen und erneut versuchen.</p>';return;}
  if(correct){
   item.resolved=true;errorEvalQueue.shift();
@@ -1170,7 +1170,7 @@ async function syncVocabWorkDraft(station,page){
   instantSyncOk();
  }catch(e){instantSyncError('Zwischenstand konnte nicht online gespeichert werden: '+e.message);}
 }
-function vocabWorkPage(page,checked=false,resultText='')function vocabWorkPage(page,checked=false,resultText=''){
+function vocabWorkPage(page,checked=false,resultText=''){
  if(!soloName){soloChooseName();return;}
  if(!checked){const saved=vocabWorkSavedResult(page);if(saved&&Number.isFinite(Number(saved.correct))){checked=true;resultText=`${saved.correct} von ${saved.total} richtig · Ergebnis gespeichert`;}}
  vocabWorkCheckedPage=page;
@@ -1272,7 +1272,7 @@ function vocabWorkReviewData(exercise,index){
  if(station1){const page=Number(station1[1]);return {prompt:VOCAB_WORK_REVIEW_PROMPTS[page]?.[i]||`Vokabelarbeit · Station 1 · Seite ${page} · Aufgabe ${i+1}`,instruction:page===2?'Complete Julie’s message with the right words.':'Complete the vocabulary exercise.'};}
  return null;
 }
-async function recordVocabWorkErrors(exercise,topic,answers,values){const saved=await Promise.all(answers.map((accepted,index)=>{const answer=String(values[index]||'').trim();if(!answer)return true;const correct=accepted.some(value=>grammarNormalize(value)===grammarNormalize(answer)),review=vocabWorkReviewData(exercise,index);return recordLearningError(soloName,'english',exercise,index,topic,{prompt:review?.prompt||`${topic} · Aufgabe ${index+1}`,instruction:review?.instruction||'Complete the vocabulary exercise.',accepted},correct);}));return saved.every(Boolean);}
+async function recordVocabWorkErrors(exercise,topic,answers,values){const saved=await Promise.all(answers.map((accepted,index)=>{const answer=String(values[index]||'').trim();if(!answer)return true;const correct=accepted.some(value=>grammarNormalize(value)===grammarNormalize(answer)),review=vocabWorkReviewData(exercise,index);return recordLearningError(soloName,'english',exercise,index,topic,{prompt:review?.prompt||`${topic} · Aufgabe ${index+1}`,instruction:review?.instruction||'Complete the vocabulary exercise.',accepted,submittedAnswer:answer},correct);}));return saved.every(Boolean);}
 async function vocabWorkCheck(){
  const page=vocabWorkCheckedPage;if(!page||!soloName)return;vocabWorkCollect(false);
  const values=vocabWorkLoad(page),answers=VOCAB_WORK_ANSWERS[page],allFilled=answers.every((_,i)=>String(values[i]||'').trim());
@@ -1389,7 +1389,7 @@ async function syncListeningProgress(){if(!db||!uid||!soloName||!listeningRun)re
 function listenStart(){const old=listenLoad();listeningRun={index:0,score:0,finished:false,mistakes:cleanMistakes(old?.mistakes),runId:`solo-${Date.now()}`};void recordLearningActivity(soloName,'english_listening');listenSave();listenQuestion();}
 function listenResume(){listeningRun=listenLoad();if(!listeningRun){listenStart();return;}void recordLearningActivity(soloName,'english_listening');if(listeningRun.finished){listenFinish();return;}listenQuestion();}
 function listenQuestion(){if(!listeningRun)return;if(listeningRun.index>=LISTENING_QUESTIONS.length){listenFinish();return;}const q=LISTENING_QUESTIONS[listeningRun.index];app.innerHTML=card(`<h2>🎧 ${esc(soloName)} · Listening · Aufgabe ${q.task}</h2><p>Activity weekend in Cardiff · Teil ${listeningRun.index+1} von ${LISTENING_QUESTIONS.length} · ${(listeningRun.score||0)/10} von ${LISTENING_TOTAL_POINTS} Punkten</p><audio controls preload="none" style="width:100%"><source src="./rl3_track3.mp3" type="audio/mpeg">Dein Browser unterstützt die Audiowiedergabe nicht.</audio><p class="muted">Höre dir den Beitrag an. Du kannst die Aufnahme erneut starten.</p><p class="muted">${esc(q.instruction||'')}</p>${listeningTaskImage(q.task)}<h3>${esc(q.q)}</h3>${listeningControls(q,'solo',false)}<button data-listening-submit="solo">Antwort prüfen</button>`)+card(btn('Zur Englisch-Auswahl','soloHome','alt'));}
-function listenAnswer(value){if(!listeningRun||listeningRun.finished)return;const q=LISTENING_QUESTIONS[listeningRun.index];if(!q)return;const ok=listeningIsCorrect(q,value);void recordLearningError(soloName,'english','english_listening',listeningRun.index,'Listening · Activity weekend in Cardiff',q,ok);if(ok)listeningRun.score+=10*q.points;else listeningRun.mistakes[listeningRun.index]=(listeningRun.mistakes[listeningRun.index]||0)+1;listeningRun.index++;listenSave();app.innerHTML=card(`<h2>${ok?'✅ Richtig!':'❌ Leider falsch'}</h2><p>${ok?'Gut gemacht!':'Die Lösung findest du im Fehlertraining unter „Das muss ich noch lernen“.'}</p><p>${listeningRun.score/10} von ${LISTENING_TOTAL_POINTS} Punkten</p>${btn('Weiter ➜','listenNext')}`);}
+function listenAnswer(value){if(!listeningRun||listeningRun.finished)return;const q=LISTENING_QUESTIONS[listeningRun.index];if(!q)return;const ok=listeningIsCorrect(q,value);void recordLearningError(soloName,'english','english_listening',listeningRun.index,'Listening · Activity weekend in Cardiff',{...q,submittedAnswer:typeof value==='string'?value:JSON.stringify(value)},ok);if(ok)listeningRun.score+=10*q.points;else listeningRun.mistakes[listeningRun.index]=(listeningRun.mistakes[listeningRun.index]||0)+1;listeningRun.index++;listenSave();app.innerHTML=card(`<h2>${ok?'✅ Richtig!':'❌ Leider falsch'}</h2><p>${ok?'Gut gemacht!':'Die Lösung findest du im Fehlertraining unter „Das muss ich noch lernen“.'}</p><p>${listeningRun.score/10} von ${LISTENING_TOTAL_POINTS} Punkten</p>${btn('Weiter ➜','listenNext')}`);}
 function listenFinish(){if(!listeningRun)return;listeningRun.finished=true;listeningRun.index=LISTENING_QUESTIONS.length;listenSave();app.innerHTML=card(`<h2>🏆 Listening geschafft!</h2><p>Activity weekend in Cardiff</p><p class="score">${listeningRun.score/10} von ${LISTENING_TOTAL_POINTS} Punkten</p>${btn('Listening wiederholen','listenStart')}`)+card(btn('Zur Englisch-Auswahl','soloHome','alt'));}
 function listenNext(){listenQuestion();}
 
@@ -1424,7 +1424,7 @@ async function syncReadingLearningProgress(s){
   readingLearningSyncWarned=false;instantSyncOk();
  }catch(e){instantSyncError('Reading konnte gerade nicht live übertragen werden: '+e.message);}
 }
-function readingLearn()function readingLearn(){if(!soloName){soloNameReturn='reading';soloChooseName();return;}readingLearnHome();}
+function readingLearn(){if(!soloName){soloNameReturn='reading';soloChooseName();return;}readingLearnHome();}
 function readingLearnHome(){if(!soloName){readingLearn();return;}solo=null;void recordLearningActivity(soloName,'english_reading');readingSave(readingLoad());readingRender();}
 function readingRender(){
  const s=readingLoad(),matches=READING_HEADINGS.map((h,i)=>`<div class="solo-game"><div class="row"><strong>${esc(h.text)}</strong><label style="min-width:130px">Paragraph<select data-reading-match="${i}" style="margin:4px 0 0;padding:9px"><option value="">Choose …</option>${['1','2','3','4','-'].map(n=>`<option value="${n}" ${s.matches?.[
@@ -1439,8 +1439,6 @@ function readingOpenScore(text,index){const value=String(text||'').toLowerCase()
 function readingResult(s){const matches=READING_HEADINGS.reduce((n,h,i)=>n+(h.correct!=='-'&&s.matches?.[i]===h.correct?1:0),0),truth=READING_STATEMENTS.reduce((n,q,i)=>n+(s.truth?.[i]===q[1]?1:0),0),open=READING_HEADINGS.length?((readingOpenScore(s.answers?.[0],0)?2:0)+(readingOpenScore(s.answers?.[1],1)?2:0)):0,own4=Math.max(0,Math.min(4,Number(s.own4)||0));return {matches,truth,open,own4,total:matches+truth+open+own4};}
 function readingCheck(){readingInputSave();const s=readingLoad();s.checked=true;readingSave(s);void syncReadingLearningProgress(s);const manualAnswers=[...(s.answers||[]),s.guestbook||''].filter(value=>String(value||'').trim()).length;const manualAnswerKeys=[...(s.answers||[]).map((value,index)=>String(value||'').trim()?'reading_answer_'+index:''),String(s.guestbook||'').trim()?'reading_guestbook':''].filter(Boolean);void updateDailySubmittedAnswers(soloName,'english',Date.now(),'english_reading',manualAnswerKeys);const paragraphOptions=['1','2','3','4','-'];READING_HEADINGS.forEach((question,index)=>{if(question.correct==='-')return;const selected=String(s.matches?.[index]||'').trim();if(!selected)return;void recordLearningError(soloName,'english','english_reading',index,'Reading · Cardiff Castle · Überschriften',{prompt:question.text,options:paragraphOptions,correct:paragraphOptions.indexOf(question.correct),type:'tf'},selected===question.correct);});const truthOptions=['Right','Wrong','Not in the text'],truthValues={right:'Right',wrong:'Wrong',not:'Not in the text'};READING_STATEMENTS.forEach(([prompt,correct],index)=>{const selected=String(s.truth?.[index]||'').trim();if(!selected)return;void recordLearningError(soloName,'english','english_reading',READING_HEADINGS.length+index,'Reading · Cardiff Castle · Aussagen',{prompt,options:truthOptions,correct:truthOptions.indexOf(truthValues[correct]),type:'tf'},selected===correct);});readingRender();}
 function readingSamples(){readingInputSave();const s=readingLoad();s.showSamples=!s.showSamples;readingSave(s);readingRender();}
-function readingDraftAnswers(s){return [...(s.matches||[]).map(String),...(s.truth||[]).map(String),...(s.answers||[]).map(String),String(s.guestbook||'')];}
-function readingDraftPrompts(){return [...READING_HEADINGS.map(item=>item.text),...READING_STATEMENTS.map(item=>item[0]),'Reading · Antwort 1','Reading · Antwort 2','Reading · Antwort 3','Reading · Gästebucheintrag'];}
 function readingInputSave(){
  const s=readingLoad(),previous=readingDraftAnswers(s),times=Array.isArray(s.draftUpdatedAt)?[...s.draftUpdatedAt]:[],now=Date.now();
  document.querySelectorAll('[data-reading-match]').forEach(el=>s.matches[Number(el.dataset.readingMatch)]=el.value);
