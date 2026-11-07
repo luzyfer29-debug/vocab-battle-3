@@ -93,7 +93,7 @@ function waitForBattleAuth(action){pendingBattleStart=action;status.textContent=
 async function adminLogin(){const email=document.querySelector('#admin-email')?.value.trim(),password=document.querySelector('#admin-password')?.value;if(!email||!password){msg('Bitte E-Mail und Passwort eingeben.',true);return;}manualAuthSubmit=true;try{await setPersistence(authClient,browserLocalPersistence);const cred=await signInWithEmailAndPassword(authClient,email,password);if(cred.user.uid!==ADMIN_UID){await signOut(authClient);adminLoggedIn=false;manualAuthSubmit=false;msg('Dieses Konto ist nicht als Schiedsrichter berechtigt.',true);return;}uid=cred.user.uid;adminLoggedIn=true;authStateReady=true;const pending=pendingBattleStart;pendingBattleStart='';if(!launchPendingBattleStart(pending)){home();msg('Schiedsrichter erfolgreich angemeldet.');}manualAuthSubmit=false;}catch(e){manualAuthSubmit=false;msg('Anmeldung fehlgeschlagen. Bitte E-Mail und Passwort prüfen. '+e.code,true);}}
 async function adminLogout(){try{await signOut(authClient);adminLoggedIn=false;uid='';home();}catch(e){msg('Abmeldung fehlgeschlagen: '+e.message,true);}}
 
-const SOLO_NAMES=['Luca','Talea','Nele','Frauke'];
+const SOLO_NAMES=['Luca','Talea','Nele'];
 let activitySyncWarned=false;
 function activityPeriodKeys(timestamp=Date.now()){
  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(timestamp)).map(x=>[x.type,x.value]));
@@ -934,7 +934,7 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
 }
 
 function renderDashboard(englishEntries,mathEntries,activityData={},seriesData={}){
- const visibleNames=liveChildFilter==='all'?SOLO_NAMES.filter(name=>name!=='Frauke'):SOLO_NAMES.includes(liveChildFilter)?[liveChildFilter]:SOLO_NAMES.filter(name=>name!=='Frauke');
+ const visibleNames=liveChildFilter==='all'?SOLO_NAMES:SOLO_NAMES.includes(liveChildFilter)?[liveChildFilter]:SOLO_NAMES;
  const liveScrollTop=window.scrollY||0;
  const liveOpenDetails=new Set([...app.querySelectorAll('details[open]')].map(el=>el.dataset.liveKey||el.id).filter(Boolean));
  const newest=(entries,includeFourth=false)=>{const latest={};for(const perDevice of Object.values(entries||{}))for(const [name,perBattle] of Object.entries(perDevice||{}))if(SOLO_NAMES.includes(name))for(const [battle,v] of Object.entries(perBattle||{})){if(!/^battle[123]$/.test(battle)&&!(includeFourth&&['battle4','battle5','battle6'].includes(battle)))continue;if(!v||typeof v!=='object')continue;const k=name+':'+battle;if(!latest[k]||Number(v.updatedAt)>Number(latest[k].updatedAt))latest[k]=v;}return latest;};
@@ -1095,7 +1095,7 @@ ffd166;font-weight:750}.activity-state.is-done{color:#8cebd8;font-weight:750}.ac
  const classworkOverview='<div class="live-classworks"><h3>📝 Klassenarbeiten</h3><p class="muted small">Alle Arbeiten stehen hier einzeln untereinander.</p>'+examProgress+rationalExamProgress+proportionalClassworkProgress+'</div>';
  const mathContent=mathTopicsOverview+classworkOverview+resetControls('math');
  const selectedName=SOLO_NAMES.includes(liveChildFilter)?liveChildFilter:'';
- const nameButtons=SOLO_NAMES.filter(name=>name!=='Frauke').map(name=>`<button type="button" data-dashboard-child="${esc(name)}" aria-pressed="${selectedName===name}">${esc(name)}</button>`).join('');
+ const nameButtons=SOLO_NAMES.map(name=>`<button type="button" data-dashboard-child="${esc(name)}" aria-pressed="${selectedName===name}">${esc(name)}</button>`).join('');
  const activityContent=selectedName?'<div class="dashboard-live-toolbar"><span class="dashboard-live-current">Live-Anzeige: '+esc(selectedName)+'</span><button type="button" class="live-clear-bright dashboard-live-reset" data-clear-child-live="'+esc(selectedName)+'">↻ Live zurücksetzen</button></div><p class="muted small dashboard-live-note">Nur diese Live-Anzeige auf diesem Schiedsrichtergerät wird geleert. Tages-, Wochen- und Battle-Wertungen bleiben unverändert.</p><section class="dashboard-simple-activity"><h3>Lernaktivitäten</h3>'+learningActivityOverview(activityData,[selectedName],seriesData,englishEntries)+'</section>':'<p class="muted">Wähle ein Kind aus, um dessen Lernaktivitäten zu sehen.</p>'
  const pickerStyles=`<style>
 .dashboard-simple-activity{margin-top:18px!important;padding:18px!important;border:1px solid rgba(207,255,224,.24)!important;border-radius:18px!important;background:linear-gradient(145deg,rgba(7,54,36,.56),rgba(8,44,31,.3))!important}
