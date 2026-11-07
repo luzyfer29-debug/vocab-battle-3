@@ -11,7 +11,7 @@ let getDatabase,ref,onValue,get,set,update,runTransaction,remove;
 const RATIONAL_MATH_TITLES=['Rationale Zahlen · Aufgabe 1','Rationale Zahlen · Aufgabe 2','Rationale Zahlen · Aufgabe 3','Rationale Zahlen · Aufgabe 4'];
 
 const app=document.querySelector('#app'),status=document.querySelector('#status');function disableChildTextAssist(){app.querySelectorAll('input,textarea').forEach(field=>{field.setAttribute('autocomplete','off');field.setAttribute('autocorrect','off');field.setAttribute('autocapitalize','off');field.setAttribute('spellcheck','false');});}new MutationObserver(disableChildTextAssist).observe(app,{childList:true,subtree:true});disableChildTextAssist();
-const names=['Luca','Semir','Talea','Nele'];
+const names=['Luca','Talea','Nele'];
 const VOCAB_QUESTION_MS=8000,OTHER_QUESTION_MS=15000,REVEAL_MS=3000;
 const ADMIN_UID='M41x9WNoHAfqpSmyrztAgf2IZYC3';
 let resetUnsubscribe=null,resetState={},resetReady=false;
@@ -149,9 +149,9 @@ function grammarReveal(){return;}
 function grammarClear(){if(grammarStation===null||grammarTask===null)return;grammarWrite(grammarStation,grammarTask,[]);grammarRender(grammarStation,grammarTask);}
 
 const key='vb2solo';
-const SOLO_NAMES=['Luca','Semir','Talea','Nele','Frauke'];
-const RANKED_NAMES=['Luca','Semir','Talea','Nele']; // Frauke is a test-only profile.
-const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:{count:50,baselineAnswers:36},Semir:{count:30,baselineAnswers:30},Talea:{count:6,baselineAnswers:4}}},'2026-11-05':{english:{Luca:{count:111,baselineAnswers:66}}},'2026-11-06':{english:{Luca:{count:26,baselineAnswers:26}}}};
+const SOLO_NAMES=['Luca','Talea','Nele','Frauke'];
+const RANKED_NAMES=['Luca','Talea','Nele']; // Frauke is a test-only profile.
+const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:{count:50,baselineAnswers:36},Talea:{count:6,baselineAnswers:4}}},'2026-11-05':{english:{Luca:{count:111,baselineAnswers:66}}},'2026-11-06':{english:{Luca:{count:26,baselineAnswers:26}}}};
 const DAILY_WIN_EXCLUDED_DAYS={'2026-11-02':'Lern- und Battle-Antworten sind an diesem Tag nicht verlässlich getrennt; der Tagessieg wurde manuell Luca gutgeschrieben.'};
 const DAILY_WINNER_OVERRIDES={'2026-11-02':{Luca:1}}; const DAILY_WINNER_DAY_OVERRIDES={'2026-11-02':['Luca'],'2026-11-03':['Luca'],'2026-11-04':['Luca'],'2026-11-05':['Luca'],'2026-11-06':['Luca'],'2026-11-07':['Talea']};
 function applyDailyCounterOverride(totals,dayKey,subject){for(const [name,setting] of Object.entries(DAILY_COUNTER_OVERRIDES[dayKey]?.[subject]||{})){const row=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0}),count=Number(typeof setting==='number'?setting:setting?.count)||0,baselineAnswers=Number(typeof setting==='number'?0:setting?.baselineAnswers)||0,current=Number(row.attempts)||0;row.attempts=count+Math.max(0,current-baselineAnswers);row.manualAdjustment=true;}}
@@ -1011,7 +1011,7 @@ function roomTitle(m=room?.meta||{}){const n=Number(m.battle||1);return m.mode==
 function questionDurationMs(m=room?.meta||{}){return m.mode==='listening'?60000:m.mode==='vocab'||(!m.mode&&m.subject!=='math')?VOCAB_QUESTION_MS:OTHER_QUESTION_MS;}
 function questionDurationSeconds(m=room?.meta||{}){return Math.round(questionDurationMs(m
 )/1000);}
-function players(){return Object.entries(room?.slots||{}).map(([id,p])=>({id,...p})).sort((a,b)=>(Number(b.score)||0)-(Number(a.score)||0));}
+function players(){return Object.entries(room?.slots||{}).map(([id,p])=>({id,...p})).filter(p=>SOLO_NAMES.includes(p.name)).sort((a,b)=>(Number(b.score)||0)-(Number(a.score)||0));}
 function rankByScore(entries,scoreOf=row=>Number(row.score)||0){const sorted=[...entries].sort((a,b)=>scoreOf(b)-scoreOf(a)||String(a.name||'').localeCompare(String(b.name||''),'de'));let place=0,lastScore;return sorted.map((row,index)=>{const score=scoreOf(row);if(index===0||score!==lastScore)place=index+1;lastScore=score;const tied=(index>0&&scoreOf(sorted[index-1])===score)||(index+1<sorted.length&&scoreOf(sorted[index+1])===score);return {row,place,tied,points:pointsForRank(place,tied)};});}
 function battleBonusPoints(place){return [10,8,5,3][Number(place)-1]||0;}
 function pointsForRank(place,tied=false){return battleBonusPoints(place);}
@@ -1045,7 +1045,7 @@ function tick(){if(!room)return;const m=room.meta||{},stage=m.stage;if(stage!=='
 async function makeRoom(){const battle=Number(document.querySelector('#battle-choice')?.value||1);if(!uid){msg('Verbindung wird hergestellt. Bitte kurz warten.',true);return;}code=String(Math.floor(100000+Math.random()*900000));role='host';slot='';try{await set(ref(db,`rooms/${code}/meta`),{hostUid:uid,stage:'lobby',battle,index:(battle-1)*30,createdAt:Date.now()});listen();}catch(e){msg('Raum konnte nicht erstellt werden: '+e.message,true);}}
 function joinForm(label='Spiel beitreten',expectedRoomType=''){joinExpectedRoomType=expectedRoomType;app.innerHTML=card(`<h2>${esc(label)}</h2><label>Raumcode<input id="roomcode" inputmode="numeric" maxlength="6" placeholder="6-stelliger Code"></label><label>Dein Name<select id="playername">${names.map(n=>`<option>${n}</option>`).join('')}</select></label>${btn('Beitreten','enter')}`)+card(btn('Zurück','home','alt'));}
 async function enter(){
- const c=document.querySelector('#roomcode').value.trim(),name=document.querySelector('#playername').value;
+ const c=document.querySelector('#roomcode').value.trim(),name=document.querySelector('#playername').value; if(!names.includes(name)){msg('Dieser Spielername ist nicht verfügbar.',true);return;}
  if(!uid){msg('Anmeldung läuft. Bitte kurz warten.',true);return;}
  if(!/^\d{6}$/.test(c)){msg('Bitte sechsstelligen Code eingeben.',true);return;}
  try{
