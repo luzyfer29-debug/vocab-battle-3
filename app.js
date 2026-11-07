@@ -72,7 +72,7 @@ import {WRITING_TASKS,WRITING_BATTLE} from './writing-data.js';
 const app=document.querySelector('#app'),status=document.querySelector('#status');
 const names=['Luca','Semir','Talea','Nele'];
 const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:{count:50,baselineAnswers:36},Semir:{count:30,baselineAnswers:30},Talea:{count:6,baselineAnswers:4}}},'2026-11-05':{english:{Luca:{count:111,baselineAnswers:66}}},'2026-11-06':{english:{Luca:{count:26,baselineAnswers:26}}}};
-const DAILY_WIN_EXCLUDED_DAYS={'2026-11-02':'Lern- und Battle-Antworten sind an diesem Tag nicht verlässlich getrennt; der Tagessieg wurde manuell Luca gutgeschrieben.'};
+const DAILY_WIN_EXCLUDED_DAYS={'2026-11-02':'Lern- und Battle-Antworten sind an diesem Tag nicht verlässlich getrennt; der Tagessieg wurde manuell Luca gutgeschrieben.','2026-11-04':'Die Tageszähler für Nele sind nicht verlässlich; dieser Tag wird nicht für Tagessiege gewertet.'};
 const DAILY_WINNER_OVERRIDES={'2026-11-02':{Luca:1}};
 const VOCAB_QUESTION_MS=20000,OTHER_QUESTION_MS=15000,REVEAL_MS=3000;
 let db,uid='',code='',role='',slot='',room=null,unsubscribe=null,solo=null;
