@@ -72,8 +72,8 @@ import {WRITING_TASKS,WRITING_BATTLE} from './writing-data.js';
 const app=document.querySelector('#app'),status=document.querySelector('#status');
 const names=['Luca','Semir','Talea','Nele'];
 const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:{count:50,baselineAnswers:36},Semir:{count:30,baselineAnswers:30},Talea:{count:6,baselineAnswers:4}}},'2026-11-05':{english:{Luca:{count:111,baselineAnswers:66}}},'2026-11-06':{english:{Luca:{count:26,baselineAnswers:26}}}};
-const DAILY_WIN_EXCLUDED_DAYS={'2026-11-02':'Lern- und Battle-Antworten sind an diesem Tag nicht verlässlich getrennt; der Tagessieg wurde manuell Luca gutgeschrieben.','2026-11-04':'Die Tageszähler für Nele sind nicht verlässlich; dieser Tag wird nicht für Tagessiege gewertet.'};
-const DAILY_WINNER_OVERRIDES={'2026-11-02':{Luca:1}};
+const DAILY_WIN_EXCLUDED_DAYS={'2026-11-02':'Lern- und Battle-Antworten sind an diesem Tag nicht verlässlich getrennt; der Tagessieg wurde manuell Luca gutgeschrieben.'};
+const DAILY_WINNER_OVERRIDES={'2026-11-02':{Luca:1}}; const DAILY_WINNER_DAY_OVERRIDES={'2026-11-02':['Luca'],'2026-11-03':['Luca'],'2026-11-04':['Luca'],'2026-11-05':['Luca'],'2026-11-06':['Luca'],'2026-11-07':['Talea']};
 const VOCAB_QUESTION_MS=20000,OTHER_QUESTION_MS=15000,REVEAL_MS=3000;
 let db,uid='',code='',role='',slot='',room=null,unsubscribe=null,solo=null;
 let clock=null,busy=false,previousStageKey='',lastClockText='';
@@ -456,12 +456,12 @@ function learningDailyBreakdown(days,weekKey=''){
 function rankLearningDailyWins(days,weekKey=''){
  const wins=Object.fromEntries(names.map(name=>[name,0]));
  for(const day of learningDailyBreakdown(days,weekKey)){
-  if(DAILY_WIN_EXCLUDED_DAYS[day.dayKey])continue;
+  if(Object.hasOwn(DAILY_WINNER_DAY_OVERRIDES,day.dayKey)||DAILY_WIN_EXCLUDED_DAYS[day.dayKey])continue;
   day.rows.sort((a,b)=>b.attempts-a.attempts||a.rate-b.rate||names.indexOf(a.name)-names.indexOf(b.name));
   const leader=day.rows[0];
   for(const row of day.rows)if(row.attempts===leader.attempts&&row.rate===leader.rate)wins[row.name]++;
  }
- for(const [dayKey,awards] of Object.entries(DAILY_WINNER_OVERRIDES))if(isoWeekDays(weekKey).includes(dayKey))for(const [name,count] of Object.entries(awards))if(Object.hasOwn(wins,name))wins[name]+=Math.max(0,Math.floor(Number(count)||0));
+ for(const [dayKey,awards] of Object.entries(DAILY_WINNER_OVERRIDES))if(isoWeekDays(weekKey).includes(dayKey)&&!Object.hasOwn(DAILY_WINNER_DAY_OVERRIDES,dayKey))for(const [name,count] of Object.entries(awards))if(Object.hasOwn(wins,name))wins[name]+=Math.max(0,Math.floor(Number(count)||0)); for(const dayKey of isoWeekDays(weekKey))for(const name of DAILY_WINNER_DAY_OVERRIDES[dayKey]||[])if(Object.hasOwn(wins,name))wins[name]++;
  const all=names.map(name=>({name,wins:wins[name]}));
  const positive=all.filter(row=>row.wins>0).sort((a,b)=>b.wins-a.wins||names.indexOf(a.name)-names.indexOf(b.name));
  let last=null,place=0;
