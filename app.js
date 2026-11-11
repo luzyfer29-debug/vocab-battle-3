@@ -926,13 +926,20 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
     const prompt=String(check.prompt||prompts[index]||('Aufgabe '+(index+1))),accepted=Array.isArray(check.accepted)&&check.accepted.length?'<small>Erwartet: '+esc(check.accepted.join(' / '))+'</small>':'';
     answerRows.push('<tr><td>'+(index+1)+'. '+esc(prompt)+'</td><td>'+esc(answer||'(leer)')+'</td><td>'+(check.attempted?(check.correct?'✅ richtig':'❌ falsch'):'✍️ Entwurf')+accepted+'</td></tr>');
    }
-   const answerDetails=answerRows.length?'<details class="live-answer-details"><summary>Eingaben ansehen · '+answerRows.length+'</summary><div class="live-answer-table-wrap"><table><thead><tr><th>Aufgabe</th><th>Eingegeben</th><th>Rückmeldung</th></tr></thead><tbody>'+answerRows.join('')+'</tbody></table></div></details>':'';
-   rows.push({name,id,what,when,errorText,improvedText,answerDetails});
+   const isFrenchExercise=id.startsWith('french_');
+   const frenchErrorRows=isFrenchExercise?errors.map(([index,item])=>{
+    const matchingCheck=Object.values(checks).find(check=>String(check?.prompt||'')===String(item?.prompt||'')&&Number(check?.updatedAt||0)===Number(item?.lastWrongAt||0));
+    const submitted=String(matchingCheck?.submittedAnswer||'').trim(),expected=String(item?.answer||matchingCheck?.accepted?.join(' / ')||'Keine Lösung gespeichert');
+    return '<div class="live-error-item"><strong>'+esc(item?.prompt||'Aufgabe')+'</strong><p><strong>Taleas Antwort:</strong> '+esc(submitted||'Im ursprünglichen Versuch nicht gespeichert')+'</p><p><strong>Richtige Antwort:</strong> '+esc(expected)+'</p><p class="'+(item?.resolved?'good':'error')+'">'+(item?.resolved?'✅ Später richtig wiederholt':'❌ Noch offen')+'</p></div>';
+   }).join(''):'';
+   const errorReview=isFrenchExercise&&frenchErrorRows?'<details class="live-answer-details french-error-review"><summary>Fehler ansehen · '+errors.length+'</summary>'+frenchErrorRows+'</details>':'';
+   const answerDetails=errorReview||(answerRows.length?'<details class="live-answer-details"><summary>Eingaben ansehen · '+answerRows.length+'</summary><div class="live-answer-table-wrap"><table><thead><tr><th>Aufgabe</th><th>Eingegeben</th><th>Rückmeldung</th></tr></thead><tbody>'+answerRows.join('')+'</tbody></table></div></details>':'');
+   rows.push({name,id,what,when,errorText,improvedText,answerDetails,errorReview:!!errorReview});
   }
  }
  rows.sort((a,b)=>b.when-a.when);
  if(!rows.length)return '<p class="muted">Noch keine gespeicherten Lernaktivitäten.</p>';
- return '<div class="live-simple-list"><div class="live-simple-head"><span>Was</span><span>Wann</span><span>Fehler</span><span>Verbessert?</span></div>'+rows.map(row=>'<div class="live-simple-row"><span class="live-simple-what" data-label="Was">'+esc(row.what)+'</span><span data-label="Wann">'+evaluationDate(row.when)+'</span><span data-label="Fehler">'+esc(row.errorText)+'</span><span data-label="Verbessert?">'+esc(row.improvedText)+row.answerDetails+'</span></div>').join('')+'</div>';
+ return '<div class="live-simple-list"><div class="live-simple-head"><span>Was</span><span>Wann</span><span>Fehler</span><span>Verbessert?</span></div>'+rows.map(row=>'<div class="live-simple-row"><span class="live-simple-what" data-label="Was">'+esc(row.what)+'</span><span data-label="Wann">'+evaluationDate(row.when)+'</span><span data-label="Fehler">'+esc(row.errorText)+(row.errorReview?row.answerDetails:'')+'</span><span data-label="Verbessert?">'+esc(row.improvedText)+(row.errorReview?'':row.answerDetails)+'</span></div>').join('')+'</div>';
 }
 
 function renderDashboard(englishEntries,mathEntries,activityData={},seriesData={}){
