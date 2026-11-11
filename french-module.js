@@ -196,9 +196,9 @@ function flexibleCompletion(index, direction, answer) {
       14: /^(?:ich spreche|ich rede) .+$/
     }
     : {
-      7: /^(?:je m appelle|mon nom est) .+$/,
-      8: /^j ai (?:\d{1,2}|onze|douze|treize|quatorze|quinze|seize|dix sept|dix huit|dix neuf|vingt)(?: ans)?$/,
-      10: /^(?:j habite|je vis) .+$/,
+      7: /^(?:je m ?appelle|mon nom est) .+$/,
+      8: /^j ?ai (?:\d{1,2}|onze|douze|treize|quatorze|quinze|seize|dix sept|dix huit|dix neuf|vingt)(?: ans)?$/,
+      10: /^(?:j ?habite|je vis) .+$/,
       12: /^(?:oui je suis en (?:cinquieme|5e) a|non je suis en .+)$/,
       14: /^je parle .+$/
     };
