@@ -930,10 +930,11 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
    const frenchErrorRows=isFrenchExercise?errors.map(([index,item])=>{
     const matchingCheck=Object.values(checks).find(check=>String(check?.prompt||'')===String(item?.prompt||'')&&Number(check?.updatedAt||0)===Number(item?.lastWrongAt||0));
     const submitted=String(matchingCheck?.submittedAnswer||'').trim(),expected=String(item?.answer||matchingCheck?.accepted?.join(' / ')||'Keine Lösung gespeichert');
-    return '<div class="live-error-item"><strong>'+esc(item?.prompt||'Aufgabe')+'</strong><p><strong>Taleas Antwort:</strong> '+esc(submitted||'Im ursprünglichen Versuch nicht gespeichert')+'</p><p><strong>Richtige Antwort:</strong> '+esc(expected)+'</p><p class="'+(item?.resolved?'good':'error')+'">'+(item?.resolved?'✅ Später richtig wiederholt':'❌ Noch offen')+'</p></div>';
+    return '<div class="live-error-item"><strong>'+esc(item?.prompt||'Aufgabe')+'</strong><p><strong>Antwort von '+esc(name)+':</strong> '+esc(submitted||'Im ursprünglichen Versuch nicht gespeichert')+'</p><p><strong>Richtige Antwort:</strong> '+esc(expected)+'</p><p class="'+(item?.resolved?'good':'error')+'">'+(item?.resolved?'✅ Später richtig wiederholt':'❌ Noch offen')+'</p></div>';
    }).join(''):'';
    const errorReview=isFrenchExercise&&frenchErrorRows?'<details class="live-answer-details french-error-review"><summary>Fehler ansehen · '+errors.length+'</summary>'+frenchErrorRows+'</details>':'';
-   const answerDetails=errorReview||(answerRows.length?'<details class="live-answer-details"><summary>Eingaben ansehen · '+answerRows.length+'</summary><div class="live-answer-table-wrap"><table><thead><tr><th>Aufgabe</th><th>Eingegeben</th><th>Rückmeldung</th></tr></thead><tbody>'+answerRows.join('')+'</tbody></table></div></details>':'');
+   const frenchAllAnswers=isFrenchExercise&&answerRows.length?'<details class="live-answer-details"><summary>Alle Antworten ansehen · '+answerRows.length+'</summary><div class="live-answer-table-wrap"><table><thead><tr><th>Aufgabe</th><th>Antwort von '+esc(name)+'</th><th>Rückmeldung</th></tr></thead><tbody>'+answerRows.join('')+'</tbody></table></div></details>':'';
+   const answerDetails=isFrenchExercise?errorReview+frenchAllAnswers:(answerRows.length?'<details class="live-answer-details"><summary>Eingaben ansehen · '+answerRows.length+'</summary><div class="live-answer-table-wrap"><table><thead><tr><th>Aufgabe</th><th>Eingegeben</th><th>Rückmeldung</th></tr></thead><tbody>'+answerRows.join('')+'</tbody></table></div></details>':'');
    rows.push({name,id,what,when,errorText,improvedText,answerDetails,errorReview:!!errorReview});
   }
  }
