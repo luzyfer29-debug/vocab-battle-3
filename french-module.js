@@ -190,14 +190,14 @@ function flexibleCompletion(index, direction, answer) {
   const patterns = direction === "fr-de"
     ? {
       7: /^(?:ich heisse|mein name ist) .+$/,
-      8: /^ich bin (?:\\d{1,2}|zehn|elf|zwolf|dreizehn|vierzehn|funfzehn|sechzehn|siebzehn|achtzehn|neunzehn|zwanzig)(?: jahre(?: alt)?)?$/,
+      8: /^ich bin (?:\d{1,2}|zehn|elf|zwolf|dreizehn|vierzehn|funfzehn|sechzehn|siebzehn|achtzehn|neunzehn|zwanzig)(?: jahre(?: alt)?)?$/,
       10: /^(?:ich wohne|ich lebe) .+$/,
       12: /^(?:ja ich bin in der 7 ?a|nein ich bin in der .+)$/,
       14: /^(?:ich spreche|ich rede) .+$/
     }
     : {
       7: /^(?:je m appelle|mon nom est) .+$/,
-      8: /^j ai (?:\\d{1,2}|onze|douze|treize|quatorze|quinze|seize|dix sept|dix huit|dix neuf|vingt)(?: ans)?$/,
+      8: /^j ai (?:\d{1,2}|onze|douze|treize|quatorze|quinze|seize|dix sept|dix huit|dix neuf|vingt)(?: ans)?$/,
       10: /^(?:j habite|je vis) .+$/,
       12: /^(?:oui je suis en (?:cinquieme|5e) a|non je suis en .+)$/,
       14: /^je parle .+$/
