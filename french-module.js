@@ -54,7 +54,7 @@ function button(label, action, extra = "") { return `<button data-french-action=
 function key() { return `vb_french_unit1_${currentName || "guest"}`; }
 function save() { try { localStorage.setItem(key(), JSON.stringify(run)); } catch {} }
 function normalize(value) {
-  return String(value || "").toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/œ/g, "oe").replace(/ß/g, "ss").replace(/[!?.,:;…'’"]/g, " ").replace(/\s+/g, " ").trim();
+  return String(value || "").toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/œ/g, "oe").replace(/ß/g, "ss").replace(/['’]/g, "").replace(/[!?.,:;…"\/|]/g, " ").replace(/\s+/g, " ").trim();
 }
 function periodKeys(timestamp) {
   const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(timestamp)).map((item) => [item.type, item.value]));
@@ -188,7 +188,7 @@ function question(item) {
 function flexibleCompletion(index, direction, answer) {
   const text = normalize(answer);
   const patterns = direction === "fr-de"
-    ? { 7: /^ich heisse .+$/, 8: /^ich bin .+ jahre alt$/, 10: /^ich wohne .+$/, 14: /^ich spreche .+$/ }
+    ? { 7: /^ich heisse .+$/, 8: /^ich bin (?:\\d{1,2}|zehn|elf|zwolf|dreizehn|vierzehn|funfzehn|sechzehn|siebzehn|achtzehn|neunzehn|zwanzig)(?: jahre(?: alt)?)?$/, 10: /^ich wohne .+$/, 14: /^ich spreche .+$/ }
     : { 7: /^je m appelle .+$/, 8: /^j ai .+ ans$/, 10: /^j habite .+$/, 14: /^je parle .+$/ };
   return patterns[index]?.test(text) || false;
 }
