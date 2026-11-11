@@ -469,11 +469,11 @@ function rankLearningDailyWins(days,weekKey=''){
  const ranked=positive.map((row,index)=>{if(index===0||row.wins!==last)place=index+1;last=row.wins;return {...row,place,tied:positive.filter(x=>x.wins===row.wins).length>1,points:[20,15,10][place-1]||0};});
  return [...ranked,...all.filter(row=>!row.wins).map(row=>({...row,place:0,tied:false,points:0}))];
 }
-async function loadWeekLearningRows(weekKey){
+async function loadWeekLearningRows(weekKey,repairDays=true){
  if(!db)return [];
  const days=isoWeekDays(weekKey);
  return Promise.all(days.map(async day=>{
-  const corrected=await repairDailyAnswerCounters(day);if(corrected)return corrected;
+  if(repairDays){const corrected=await repairDailyAnswerCounters(day);if(corrected)return corrected;}
   const snap=await get(ref(db,`learningDailyLeaderboard/${day}`));return snap.val()||{};
  }));
 }
@@ -548,7 +548,7 @@ async function showRefereeDailyWeekly(){
  const {dayKey,weekKey}=activityDateKeys(),dateLabel=new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',dateStyle:'full'}).format(new Date());
  app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p>Wertungen werden geladen …</p>')+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));
  try{
-  const repairedDaily=await repairDailyAnswerCounters(dayKey);const [todaySnap,loadedWeekDays]=await Promise.all([get(ref(db,`learningDailyLeaderboard/${dayKey}`)),loadWeekLearningRows(weekKey)]);
+  const repairedDaily=await repairDailyAnswerCounters(dayKey);const [todaySnap,loadedWeekDays]=await Promise.all([get(ref(db,`learningDailyLeaderboard/${dayKey}`)),loadWeekLearningRows(weekKey,false)]);
   const today=todaySnap.val()||{};for(const subject of ["english","math"])for(const name of names)if(repairedDaily?.[subject]?.[name])today[subject]={...(today[subject]||{}),[name]:repairedDaily[subject][name]};const weekDays=loadedWeekDays.map((day,index)=>isoWeekDays(weekKey)[index]===dayKey?today:day);
   const dailyHtml=subject=>{
    const data=today[subject]||{};
