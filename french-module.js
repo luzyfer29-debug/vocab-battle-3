@@ -83,6 +83,13 @@ function question(item) {
   const frenchToGerman = item.direction === "fr-de";
   return { word, source: frenchToGerman ? word.fr : word.de, target: frenchToGerman ? word.de : word.fr, accepted: frenchToGerman ? [word.de, ...word.da] : [word.fr, ...word.fa], direction: frenchToGerman ? "Französisch → Deutsch" : "Deutsch → Französisch" };
 }
+function flexibleCompletion(index, direction, answer) {
+  const text = normalize(answer);
+  const patterns = direction === "fr-de"
+    ? { 7: /^ich heisse .+$/, 8: /^ich bin .+ jahre alt$/, 10: /^ich wohne .+$/, 14: /^ich spreche .+$/ }
+    : { 7: /^je m appelle .+$/, 8: /^j ai .+ ans$/, 10: /^j habite .+$/, 14: /^je parle .+$/ };
+  return patterns[index]?.test(text) || false;
+}
 function render() {
   if (run.completed) {
     const retry = run.wrongItems.length ? button(`🔁 Fehler noch einmal schreiben (${run.wrongItems.length})`, "review") : "";
@@ -102,7 +109,7 @@ function checkAnswer() {
   if (!value) return;
   const item = run.queue[run.position];
   const q = question(item);
-  const correct = q.accepted.some((answer) => normalize(answer) === normalize(value));
+  const correct = q.accepted.some((answer) => normalize(answer) === normalize(value)) || flexibleCompletion(item.index, item.direction, value);
   run.draft = value;
   run.feedback = { correct, answer: value };
   run.answers.push({ index: item.index, direction: item.direction, answer: value, correct });
