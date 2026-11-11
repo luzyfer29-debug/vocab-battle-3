@@ -1,26 +1,26 @@
 import { firebaseConfig } from "./firebase-config.js?v=20261016-kinder-dependency-cache-bust-2";
 
 const frenchWords = [
-  { image: "👋", fr: "Salut !", de: "Hallo! / Tschüss!", fa: ["Salut"], da: ["Hallo", "Tschüss"] },
-  { image: "🙂", fr: "Ça va ?", de: "Wie geht’s? / Geht’s?", fa: ["Ça va"], da: ["Wie gehts", "Gehts"] },
-  { image: "😊", fr: "Ça va.", de: "Es geht. / Ganz gut.", fa: ["Ça va"], da: ["Es geht", "Ganz gut"] },
-  { image: "😐", fr: "Bof.", de: "Na ja. / Geht so.", fa: ["Bof"], da: ["Na ja", "Geht so"] },
-  { image: "👋", fr: "À plus !", de: "Bis später!", fa: ["À plus"], da: ["Bis später"] },
+  { image: "👋", fr: "Salut !", de: "Hallo! / Tschüss!", fa: ["Salut"], da: ["Hallo", "Tschüss", "Hi", "Tschau"] },
+  { image: "🙂", fr: "Ça va ?", de: "Wie geht’s? / Geht’s?", fa: ["Ça va"], da: ["Wie gehts", "Gehts", "Wie geht es", "Geht es"] },
+  { image: "😊", fr: "Ça va.", de: "Es geht. / Ganz gut.", fa: ["Ça va"], da: ["Es geht", "Ganz gut", "Gut", "Alles gut"] },
+  { image: "😐", fr: "Bof.", de: "Na ja. / Geht so.", fa: ["Bof"], da: ["Na ja", "Geht so", "So lala", "Nicht so gut"] },
+  { image: "👋", fr: "À plus !", de: "Bis später!", fa: ["À plus"], da: ["Bis später", "Bis dann"] },
   { image: "👉", fr: "Et toi ?", de: "Und du?", fa: ["Et toi"], da: ["Und du"] },
-  { image: "🧍", fr: "Tu t'appelles comment ?", de: "Wie heißt du?", fa: ["Tu t'appelles comment"], da: ["Wie heißt du", "Wie heisst du"] },
+  { image: "🧍", fr: "Tu t'appelles comment ?", de: "Wie heißt du?", fa: ["Tu t'appelles comment"], da: ["Wie heißt du", "Wie heisst du", "Wie ist dein Name"] },
   { image: "🙋", fr: "Je m'appelle…", de: "Ich heiße …", fa: ["Je m'appelle", "Je m'appelle…", "Je m'appelle ..."], da: ["Ich heiße", "Ich heiße …", "Ich heiße ...", "Ich heisse"] },
   { image: "🎂", fr: "J'ai … ans.", de: "Ich bin … Jahre alt.", fa: ["J'ai … ans", "J'ai ... ans", "J'ai ans"], da: ["Ich bin Jahre alt", "Ich bin … Jahre alt", "Ich bin ... Jahre alt"] },
-  { image: "🏠", fr: "Tu habites où ?", de: "Wo wohnst du?", fa: ["Tu habites où"], da: ["Wo wohnst du"] },
+  { image: "🏠", fr: "Tu habites où ?", de: "Wo wohnst du?", fa: ["Tu habites où"], da: ["Wo wohnst du", "Wo lebst du"] },
   { image: "🏡", fr: "J'habite…", de: "Ich wohne …", fa: ["J'habite", "J'habite…", "J'habite ..."], da: ["Ich wohne", "Ich wohne …", "Ich wohne ..."] },
   { image: "🏫", fr: "Tu es en cinquième ?", de: "Bist du in der 7. Klasse?", fa: ["Tu es en cinquième"], da: ["Bist du in der 7 Klasse", "Bist du in der siebten Klasse"] },
   { image: "🧑‍🏫", fr: "Oui, je suis en cinquième A. / Non, je suis en…", de: "Ja, ich bin in der 7A. / Nein, ich bin in der …", fa: ["Oui je suis en cinquième A Non je suis en", "Oui je suis en cinquième A", "Non je suis en"], da: ["Ja ich bin in der 7A Nein ich bin in der", "Ja ich bin in der 7A", "Nein ich bin in der"] },
   { image: "🇩🇪", fr: "allemand", de: "Deutsch / deutsche Sprache", fa: ["allemand"], da: ["Deutsch", "deutsche Sprache"] },
   { image: "🗣️", fr: "Je parle…", de: "Ich spreche …", fa: ["Je parle", "Je parle…", "Je parle ..."], da: ["Ich spreche", "Ich spreche …", "Ich spreche ..."] },
-  { image: "🗣️❓", fr: "Tu parles quelles langues ?", de: "Welche Sprachen sprichst du?", fa: ["Tu parles quelles langues"], da: ["Welche Sprachen sprichst du"] },
+  { image: "🗣️❓", fr: "Tu parles quelles langues ?", de: "Welche Sprachen sprichst du?", fa: ["Tu parles quelles langues"], da: ["Welche Sprachen sprichst du", "Welche Sprachen kannst du sprechen"] },
   { image: "😄", fr: "Super !", de: "Super!", fa: ["Super"], da: ["Super"] },
   { image: "👏", fr: "C'est super !", de: "Das ist toll!", fa: ["C'est super"], da: ["Das ist toll", "Das ist super"] },
-  { image: "👍", fr: "Ah, d'accord.", de: "Ach so. / Aha, verstanden.", fa: ["Ah d'accord", "D'accord"], da: ["Ach so", "Aha verstanden", "Verstanden", "Aha"] },
-  { image: "🔔", fr: "Ah, ça sonne !", de: "Oh, es klingelt!", fa: ["Ah ça sonne"], da: ["Oh es klingelt", "Es klingelt"] },
+  { image: "👍", fr: "Ah, d'accord.", de: "Ach so. / Aha, verstanden.", fa: ["Ah d'accord", "D'accord"], da: ["Ach so", "Aha verstanden", "Verstanden", "Aha", "Alles klar"] },
+  { image: "🔔", fr: "Ah, ça sonne !", de: "Oh, es klingelt!", fa: ["Ah ça sonne"], da: ["Oh es klingelt", "Es klingelt", "Es läutet", "Die Klingel läutet"] },
 ];
 
 const root = document.querySelector("#app");
