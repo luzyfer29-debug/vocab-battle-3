@@ -1,3 +1,5 @@
+import { firebaseConfig } from "./firebase-config.js?v=20261016-kinder-dependency-cache-bust-2";
+
 const frenchWords = [
   { image: "👋", fr: "Salut !", de: "Hallo! / Tschüss!", fa: ["Salut"], da: ["Hallo", "Tschüss"] },
   { image: "🙂", fr: "Ça va ?", de: "Wie geht’s? / Geht’s?", fa: ["Ça va"], da: ["Wie gehts", "Gehts"] },
@@ -25,6 +27,24 @@ const root = document.querySelector("#app");
 const names = ["Luca", "Talea", "Nele"];
 let currentName = localStorage.getItem("vb2solo_name");
 let run;
+let firebasePromise;
+
+async function firebaseContext() {
+  if (!firebasePromise) {
+    firebasePromise = (async () => {
+      const [appModule, authModule, databaseModule] = await Promise.all([
+        import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"),
+        import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js"),
+        import("https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js"),
+      ]);
+      const app = appModule.getApps()[0] || appModule.initializeApp(firebaseConfig);
+      const auth = authModule.getAuth(app);
+      if (!auth.currentUser) await authModule.signInAnonymously(auth);
+      return { auth, database: databaseModule.getDatabase(app), databaseModule };
+    })();
+  }
+  return firebasePromise;
+}
 
 function esc(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
@@ -35,6 +55,87 @@ function key() { return `vb_french_unit1_${currentName || "guest"}`; }
 function save() { try { localStorage.setItem(key(), JSON.stringify(run)); } catch {} }
 function normalize(value) {
   return String(value || "").toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/œ/g, "oe").replace(/ß/g, "ss").replace(/[!?.,:;…'’"]/g, " ").replace(/\s+/g, " ").trim();
+}
+function periodKeys(timestamp) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(timestamp)).map((item) => [item.type, item.value]));
+  const date = new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)));
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - day);
+  const year = date.getUTCFullYear();
+  const week = Math.ceil((((date - new Date(Date.UTC(year, 0, 1))) / 86400000) + 1) / 7);
+  return { dayKey: `${parts.year}-${parts.month}-${parts.day}`, weekKey: `${year}-W${String(week).padStart(2, "0")}` };
+}
+async function syncActivity(newSession = false) {
+  if (!run || !currentName || !names.includes(currentName)) return;
+  const now = Date.now();
+  run.sessionId ||= String(now);
+  try {
+    const { auth, database, databaseModule } = await firebaseContext();
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    const path = `learningActivity/${uid}/${currentName}/french_vocab_unit1`;
+    const prompts = run.queue.map((item) => {
+      const q = question(item);
+      return `${q.direction}: ${q.source}`;
+    });
+    const draftAnswers = Array(run.total).fill("");
+    const answerChecks = {};
+    for (const entry of run.answers) {
+      draftAnswers[entry.position] = entry.answer;
+      answerChecks[String(entry.position)] = {
+        attempted: true,
+        correct: entry.correct,
+        submittedAnswer: entry.answer,
+        prompt: prompts[entry.position],
+        accepted: [question(run.queue[entry.position]).target],
+        updatedAt: entry.updatedAt,
+      };
+    }
+    const { dayKey, weekKey } = periodKeys(now);
+    const live = {
+      taskTitle: "Französisch · Unité 1",
+      done: run.answers.length,
+      total: run.total,
+      status: run.completed ? "Runde abgeschlossen · online gespeichert" : "In Bearbeitung · live gespeichert",
+      draftAnswers,
+      draftPrompts: prompts,
+      draftUpdatedAt: run.answers.map((entry) => entry.updatedAt),
+      updatedAt: now,
+    };
+    await databaseModule.runTransaction(databaseModule.ref(database, path), (current) => {
+      const value = current && typeof current === "object" ? { ...current } : {};
+      if (value.dayKey !== dayKey) { value.dayKey = dayKey; value.dayCount = 0; }
+      if (value.weekKey !== weekKey) { value.weekKey = weekKey; value.weekCount = 0; }
+      if (newSession) { value.dayCount = (Number(value.dayCount) || 0) + 1; value.weekCount = (Number(value.weekCount) || 0) + 1; }
+      value.lastAt = now;
+      value.live = live;
+      value.answerChecks = answerChecks;
+      value.errorItems = { ...(value.errorItems || {}) };
+      for (const entry of run.answers) {
+        if (entry.correct) {
+          for (const item of Object.values(value.errorItems)) {
+            if (item.vocabIndex === entry.index && item.direction === entry.direction && !item.resolved) {
+              item.resolved = true;
+              item.resolvedAt = entry.updatedAt;
+            }
+          }
+          continue;
+        }
+        const index = `${run.sessionId}_${entry.position}`;
+        const previous = value.errorItems[index];
+        value.errorItems[index] = { subject: "french", topic: "Französisch · Unité 1", prompt: prompts[entry.position], answer: question(run.queue[entry.position]).target, vocabIndex: entry.index, direction: entry.direction, count: (Number(previous?.count) || 0) + 1, lastWrongAt: entry.updatedAt, dayKey, weekKey };
+      }
+      value.sessions = Array.isArray(value.sessions) ? [...value.sessions] : [];
+      const session = { sessionId: run.sessionId, startedAt: run.startedAt || now, lastAt: now, live };
+      const sessionIndex = value.sessions.findIndex((item) => item.sessionId === run.sessionId);
+      if (sessionIndex >= 0) value.sessions[sessionIndex] = session;
+      else value.sessions.push(session);
+      value.sessions = value.sessions.slice(-100);
+      return value;
+    });
+  } catch (error) {
+    console.warn("Französische Lernaktivität konnte nicht synchronisiert werden:", error);
+  }
 }
 function shuffle(items) {
   const result = [...items];
@@ -75,7 +176,8 @@ function menu() {
 }
 function start(mode, reviewItems) {
   const queue = reviewItems ? shuffle(reviewItems) : shuffle(frenchWords.flatMap((word, index) => mode === "both" ? [{ index, direction: "fr-de" }, { index, direction: "de-fr" }] : [{ index, direction: mode }]));
-  run = { mode, queue, position: 0, correct: 0, total: queue.length, wrongItems: [], answers: [], completed: false, draft: "", feedback: null };
+  run = { mode, queue, position: 0, correct: 0, total: queue.length, wrongItems: [], answers: [], completed: false, draft: "", feedback: null, startedAt: Date.now(), sessionId: String(Date.now()) };
+  void syncActivity(true);
   save(); render();
 }
 function question(item) {
@@ -112,10 +214,10 @@ function checkAnswer() {
   const correct = q.accepted.some((answer) => normalize(answer) === normalize(value)) || flexibleCompletion(item.index, item.direction, value);
   run.draft = value;
   run.feedback = { correct, answer: value };
-  run.answers.push({ index: item.index, direction: item.direction, answer: value, correct });
+  run.answers.push({ index: item.index, position: run.position, direction: item.direction, answer: value, correct, updatedAt: Date.now() });
   if (correct) run.correct++;
   else run.wrongItems.push(item);
-  save(); render();
+  save(); void syncActivity(); render();
 }
 function next() {
   if (!run?.feedback) return;
@@ -123,7 +225,7 @@ function next() {
   run.feedback = null;
   run.draft = "";
   if (run.position >= run.queue.length) run.completed = true;
-  save(); render();
+  save(); void syncActivity(); render();
 }
 function showList() {
   const rows = frenchWords.map((word) => `<div class="solo-game" style="display:grid;grid-template-columns:48px 1fr;gap:10px;align-items:center"><div role="img" aria-label="Bildhinweis" style="font-size:32px;text-align:center">${word.image}</div><div><strong>${esc(word.fr)}</strong><br>${esc(word.de)}</div></div>`).join("");
