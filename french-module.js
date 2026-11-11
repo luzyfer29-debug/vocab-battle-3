@@ -1,26 +1,26 @@
 import { firebaseConfig } from "./firebase-config.js?v=20261016-kinder-dependency-cache-bust-2";
 
 const frenchWords = [
-  { image: "👋", fr: "Salut !", de: "Hallo! / Tschüss!", fa: ["Salut"], da: ["Hallo", "Tschüss", "Hi", "Tschau"] },
-  { image: "🙂", fr: "Ça va ?", de: "Wie geht’s? / Geht’s?", fa: ["Ça va"], da: ["Wie gehts", "Gehts", "Wie geht es", "Geht es"] },
-  { image: "😊", fr: "Ça va.", de: "Es geht. / Ganz gut.", fa: ["Ça va"], da: ["Es geht", "Ganz gut", "Gut", "Alles gut"] },
-  { image: "😐", fr: "Bof.", de: "Na ja. / Geht so.", fa: ["Bof"], da: ["Na ja", "Geht so", "So lala", "Nicht so gut"] },
-  { image: "👋", fr: "À plus !", de: "Bis später!", fa: ["À plus"], da: ["Bis später", "Bis dann"] },
-  { image: "👉", fr: "Et toi ?", de: "Und du?", fa: ["Et toi"], da: ["Und du"] },
-  { image: "🧍", fr: "Tu t'appelles comment ?", de: "Wie heißt du?", fa: ["Tu t'appelles comment"], da: ["Wie heißt du", "Wie heisst du", "Wie ist dein Name"] },
+  { image: "👋", fr: "Salut !", de: "Hallo! / Tschüss!", fa: ["Salut", "Bonjour", "Au revoir"], da: ["Hallo", "Tschüss", "Hi", "Tschau"] },
+  { image: "🙂", fr: "Ça va ?", de: "Wie geht’s? / Geht’s?", fa: ["Ça va", "Comment ça va"], da: ["Wie gehts", "Gehts", "Wie geht es", "Geht es", "Wie geht es dir"] },
+  { image: "😊", fr: "Ça va.", de: "Es geht. / Ganz gut.", fa: ["Ça va", "Ça va bien", "Je vais bien"], da: ["Es geht", "Ganz gut", "Gut", "Alles gut", "Mir gehts gut"] },
+  { image: "😐", fr: "Bof.", de: "Na ja. / Geht so.", fa: ["Bof", "Comme ci comme ça", "Pas très bien"], da: ["Na ja", "Geht so", "So lala", "Nicht so gut", "Nicht besonders"] },
+  { image: "👋", fr: "À plus !", de: "Bis später!", fa: ["À plus", "À bientôt"], da: ["Bis später", "Bis dann", "Bis bald"] },
+  { image: "👉", fr: "Et toi ?", de: "Und du?", fa: ["Et toi", "Et vous"], da: ["Und du", "Und dir"] },
+  { image: "🧍", fr: "Tu t'appelles comment ?", de: "Wie heißt du?", fa: ["Tu t'appelles comment", "Comment tu t'appelles"], da: ["Wie heißt du", "Wie heisst du", "Wie ist dein Name"] },
   { image: "🙋", fr: "Je m'appelle…", de: "Ich heiße …", fa: ["Je m'appelle", "Je m'appelle…", "Je m'appelle ..."], da: ["Ich heiße", "Ich heiße …", "Ich heiße ...", "Ich heisse"] },
   { image: "🎂", fr: "J'ai … ans.", de: "Ich bin … Jahre alt.", fa: ["J'ai … ans", "J'ai ... ans", "J'ai ans"], da: ["Ich bin Jahre alt", "Ich bin … Jahre alt", "Ich bin ... Jahre alt"] },
-  { image: "🏠", fr: "Tu habites où ?", de: "Wo wohnst du?", fa: ["Tu habites où"], da: ["Wo wohnst du", "Wo lebst du"] },
-  { image: "🏡", fr: "J'habite…", de: "Ich wohne …", fa: ["J'habite", "J'habite…", "J'habite ..."], da: ["Ich wohne", "Ich wohne …", "Ich wohne ..."] },
-  { image: "🏫", fr: "Tu es en cinquième ?", de: "Bist du in der 7. Klasse?", fa: ["Tu es en cinquième"], da: ["Bist du in der 7 Klasse", "Bist du in der siebten Klasse"] },
+  { image: "🏠", fr: "Tu habites où ?", de: "Wo wohnst du?", fa: ["Tu habites où", "Où habites-tu"], da: ["Wo wohnst du", "Wo lebst du"] },
+  { image: "🏡", fr: "J'habite…", de: "Ich wohne …", fa: ["J'habite", "J'habite…", "J'habite ...", "Je vis"], da: ["Ich wohne", "Ich wohne …", "Ich wohne ...", "Ich lebe"] },
+  { image: "🏫", fr: "Tu es en cinquième ?", de: "Bist du in der 7. Klasse?", fa: ["Tu es en cinquième", "Es-tu en cinquième"], da: ["Bist du in der 7 Klasse", "Bist du in der siebten Klasse", "Gehst du in die 7 Klasse", "Gehst du in die siebte Klasse"] },
   { image: "🧑‍🏫", fr: "Oui, je suis en cinquième A. / Non, je suis en…", de: "Ja, ich bin in der 7A. / Nein, ich bin in der …", fa: ["Oui je suis en cinquième A Non je suis en", "Oui je suis en cinquième A", "Non je suis en"], da: ["Ja ich bin in der 7A Nein ich bin in der", "Ja ich bin in der 7A", "Nein ich bin in der"] },
-  { image: "🇩🇪", fr: "allemand", de: "Deutsch / deutsche Sprache", fa: ["allemand"], da: ["Deutsch", "deutsche Sprache"] },
+  { image: "🇩🇪", fr: "allemand", de: "Deutsch / deutsche Sprache", fa: ["allemand", "l'allemand"], da: ["Deutsch", "deutsche Sprache", "Deutsch als Sprache"] },
   { image: "🗣️", fr: "Je parle…", de: "Ich spreche …", fa: ["Je parle", "Je parle…", "Je parle ..."], da: ["Ich spreche", "Ich spreche …", "Ich spreche ..."] },
-  { image: "🗣️❓", fr: "Tu parles quelles langues ?", de: "Welche Sprachen sprichst du?", fa: ["Tu parles quelles langues"], da: ["Welche Sprachen sprichst du", "Welche Sprachen kannst du sprechen"] },
-  { image: "😄", fr: "Super !", de: "Super!", fa: ["Super"], da: ["Super"] },
-  { image: "👏", fr: "C'est super !", de: "Das ist toll!", fa: ["C'est super"], da: ["Das ist toll", "Das ist super"] },
-  { image: "👍", fr: "Ah, d'accord.", de: "Ach so. / Aha, verstanden.", fa: ["Ah d'accord", "D'accord"], da: ["Ach so", "Aha verstanden", "Verstanden", "Aha", "Alles klar"] },
-  { image: "🔔", fr: "Ah, ça sonne !", de: "Oh, es klingelt!", fa: ["Ah ça sonne"], da: ["Oh es klingelt", "Es klingelt", "Es läutet", "Die Klingel läutet"] },
+  { image: "🗣️❓", fr: "Tu parles quelles langues ?", de: "Welche Sprachen sprichst du?", fa: ["Tu parles quelles langues", "Quelles langues parles-tu"], da: ["Welche Sprachen sprichst du", "Welche Sprachen kannst du sprechen", "Was sprichst du für Sprachen"] },
+  { image: "😄", fr: "Super !", de: "Super!", fa: ["Super", "Génial", "Cool"], da: ["Super", "Klasse", "Prima"] },
+  { image: "👏", fr: "C'est super !", de: "Das ist toll!", fa: ["C'est super", "C'est génial", "C'est top"], da: ["Das ist toll", "Das ist super", "Das ist klasse"] },
+  { image: "👍", fr: "Ah, d'accord.", de: "Ach so. / Aha, verstanden.", fa: ["Ah d'accord", "D'accord", "OK", "Ah je vois"], da: ["Ach so", "Aha verstanden", "Verstanden", "Aha", "Alles klar", "Okay"] },
+  { image: "🔔", fr: "Ah, ça sonne !", de: "Oh, es klingelt!", fa: ["Ah ça sonne", "Ça sonne"], da: ["Oh es klingelt", "Es klingelt", "Es läutet", "Die Klingel läutet"] },
 ];
 
 const root = document.querySelector("#app");
@@ -188,8 +188,8 @@ function question(item) {
 function flexibleCompletion(index, direction, answer) {
   const text = normalize(answer);
   const patterns = direction === "fr-de"
-    ? { 7: /^ich heisse .+$/, 8: /^ich bin (?:\d{1,2}|zehn|elf|zwolf|dreizehn|vierzehn|funfzehn|sechzehn|siebzehn|achtzehn|neunzehn|zwanzig)(?: jahre(?: alt)?)?$/, 10: /^ich wohne .+$/, 14: /^ich spreche .+$/ }
-    : { 7: /^je m appelle .+$/, 8: /^j ai .+ ans$/, 10: /^j habite .+$/, 14: /^je parle .+$/ };
+    ? { 7: /^(?:ich heisse|mein name ist) .+$/, 8: /^ich bin (?:\d{1,2}|zehn|elf|zwolf|dreizehn|vierzehn|funfzehn|sechzehn|siebzehn|achtzehn|neunzehn|zwanzig)(?: jahre(?: alt)?)?$/, 10: /^(?:ich wohne|ich lebe) .+$/, 14: /^ich spreche .+$/ }
+    : { 7: /^(?:je m appelle|mon nom est) .+$/, 8: /^j ai .+ ans$/, 10: /^(?:j habite|je vis) .+$/, 14: /^je parle .+$/ };
   return patterns[index]?.test(text) || false;
 }
 function render() {
