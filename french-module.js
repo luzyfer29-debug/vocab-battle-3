@@ -188,7 +188,7 @@ function question(item) {
 function flexibleCompletion(index, direction, answer) {
   const text = normalize(answer);
   const patterns = direction === "fr-de"
-    ? { 7: /^ich heisse .+$/, 8: /^ich bin (?:\\d{1,2}|zehn|elf|zwolf|dreizehn|vierzehn|funfzehn|sechzehn|siebzehn|achtzehn|neunzehn|zwanzig)(?: jahre(?: alt)?)?$/, 10: /^ich wohne .+$/, 14: /^ich spreche .+$/ }
+    ? { 7: /^ich heisse .+$/, 8: /^ich bin (?:\d{1,2}|zehn|elf|zwolf|dreizehn|vierzehn|funfzehn|sechzehn|siebzehn|achtzehn|neunzehn|zwanzig)(?: jahre(?: alt)?)?$/, 10: /^ich wohne .+$/, 14: /^ich spreche .+$/ }
     : { 7: /^je m appelle .+$/, 8: /^j ai .+ ans$/, 10: /^j habite .+$/, 14: /^je parle .+$/ };
   return patterns[index]?.test(text) || false;
 }
