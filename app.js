@@ -789,6 +789,7 @@ function activityDateKeys(timestamp=Date.now()){const p=Object.fromEntries(new I
 function activityCounts(activityData,name,ids){const {dayKey,weekKey}=activityDateKeys();let today=0,week=0;for(const id of ids){const c=activitySnapshot(activityData,name,id,dayKey,weekKey);today+=c.today;week+=c.week;}return `<small class="activity-inline">Heute ${today}× · Woche ${week}×</small>`;}
 function activityBreakdown(activityData,name,items){const {dayKey,weekKey}=activityDateKeys();return `<small class="activity-inline">${items.map(({id,title})=>{const c=activitySnapshot(activityData,name,id,dayKey,weekKey);return `${esc(title)}: heute ${c.today}× · Woche ${c.week}×`;}).join('<br>')}</small>`;}
 function learningActivityTitle(id){
+ if(id==='french_vocab_unit1')return 'Französisch · Unité 1';
  if(/^english_vocab_battle[1-3]$/.test(id))return 'Vokabeln '+id.slice(-1);
  if(/^english_vocab_work_page[12]$/.test(id))return 'Vokabelarbeit Station 1 · Seite '+id.slice(-1);
  if(/^english_vocab_work_station2_page[12]$/.test(id))return 'Vokabelarbeit Station 2 · Seite '+id.slice(-1);
@@ -898,7 +899,7 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
  const rows=[];
  for(const name of names){
   const byExercise={};
-  for(const device of Object.values(activityData||{}))for(const [id,entry] of Object.entries(device?.[name]||{}))if(id.startsWith('english_')||id.startsWith('math_'))byExercise[id]=mergeLearningActivityEntries(byExercise[id],entry);
+  for(const device of Object.values(activityData||{}))for(const [id,entry] of Object.entries(device?.[name]||{}))if(id.startsWith('english_')||id.startsWith('math_')||id.startsWith('french_'))byExercise[id]=mergeLearningActivityEntries(byExercise[id],entry);
   for(let station=1;station<=2;station++){
    const saved=latestEnglishSeriesResult(seriesData,name,'grammar'+station),savedTasks=Array.isArray(saved?.tasks)?saved.tasks:[];
    for(let taskIndex=0;taskIndex<GRAMMAR[station-1].tasks.length;taskIndex++){
