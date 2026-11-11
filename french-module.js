@@ -123,7 +123,7 @@ async function syncActivity(newSession = false) {
         }
         const index = `${run.sessionId}_${entry.position}`;
         const previous = value.errorItems[index];
-        value.errorItems[index] = { subject: "french", topic: "Französisch · Unité 1", prompt: prompts[entry.position], answer: question(run.queue[entry.position]).target, vocabIndex: entry.index, direction: entry.direction, count: (Number(previous?.count) || 0) + 1, lastWrongAt: entry.updatedAt, dayKey, weekKey };
+        value.errorItems[index] = { subject: "french", topic: "Französisch · Unité 1", prompt: prompts[entry.position], submittedAnswer: entry.answer, answer: question(run.queue[entry.position]).target, vocabIndex: entry.index, direction: entry.direction, count: (Number(previous?.count) || 0) + 1, lastWrongAt: entry.updatedAt, dayKey, weekKey };
       }
       value.sessions = Array.isArray(value.sessions) ? [...value.sessions] : [];
       const session = { sessionId: run.sessionId, startedAt: run.startedAt || now, lastAt: now, live };
