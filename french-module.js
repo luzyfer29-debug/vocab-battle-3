@@ -286,7 +286,8 @@ const franceMapQuestions=[
 {p:"Fluss, der bei Lyon nach Süden fließt?",a:["Rhône","Rhone"],h:"Mündet ins Mittelmeer."},
 {p:"Stadt nahe der spanischen Grenze am Mittelmeer?",a:["Perpignan"],h:"Nahe den Pyrenäen."},
 {p:"Region im Nordwesten mit Brest und Rennes?",a:["Bretagne","la Bretagne"],h:"An der Atlantikküste."},
-{p:"Nenne eines der drei Meere an Frankreich.",a:["Mittelmeer","Atlantik","Ärmelkanal","la Manche","la mer Méditerranée","l’océan Atlantique"],h:"Mittelmeer, Atlantik oder Ärmelkanal."}
+{p:"Wie heißt die Region im Süden mit Toulouse und Perpignan?",a:["Occitanie","l’Occitanie"],h:"Sie reicht bis zu den Pyrenäen und ans Mittelmeer."},
+{p:"Nenne eines der drei großen Gewässer an Frankreich.",a:["Mittelmeer","Atlantik","Ärmelkanal","la Manche","la mer Méditerranée","l’océan Atlantique"],h:"Mittelmeer, Atlantik oder Ärmelkanal."}
 ];
 let mapRun=null;
 function mapMenu(){try{mapRun=JSON.parse(localStorage.getItem("vb_french_map_"+currentName)||"null")}catch{mapRun=null}const resume=mapRun&&!mapRun.completed?button("Runde fortsetzen · Aufgabe "+(mapRun.position+1),"map-resume"):"";root.innerHTML=card('<h2>🗺️ Frankreich auf der Karte</h2><p>'+esc(currentName)+' · Klasse 7 Realschule</p><p>Übe, wo wichtige Städte, Regionen, Flüsse, Gebirge, Meere und Nachbarländer liegen.</p><div class="solo-actions">'+resume+button("🧭 Karte ansehen & lernen","map-look")+button("✍️ Karte abfragen · 10 Aufgaben","map-start")+button("Zurück zu Französisch","menu",'class="alt"')+'</div>')}
