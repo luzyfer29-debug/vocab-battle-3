@@ -791,6 +791,7 @@ function activityCounts(activityData,name,ids){const {dayKey,weekKey}=activityDa
 function activityBreakdown(activityData,name,items){const {dayKey,weekKey}=activityDateKeys();return `<small class="activity-inline">${items.map(({id,title})=>{const c=activitySnapshot(activityData,name,id,dayKey,weekKey);return `${esc(title)}: heute ${c.today}× · Woche ${c.week}×`;}).join('<br>')}</small>`;}
 function learningActivityTitle(id){
  if(id==='french_vocab_unit1')return 'Französisch · Unité 1';
+  if(id==='french_map')return 'Französisch · Karte Frankreich';
  if(/^english_vocab_battle[1-3]$/.test(id))return 'Vokabeln '+id.slice(-1);
  if(/^english_vocab_work_page[12]$/.test(id))return 'Vokabelarbeit Station 1 · Seite '+id.slice(-1);
  if(/^english_vocab_work_station2_page[12]$/.test(id))return 'Vokabelarbeit Station 2 · Seite '+id.slice(-1);
