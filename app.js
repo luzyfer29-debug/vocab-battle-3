@@ -546,7 +546,7 @@ async function showRefereeDailyWeekly(){
  const {dayKey,weekKey}=activityDateKeys(),dateLabel=new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',dateStyle:'full'}).format(new Date());
  app.innerHTML=card('<h2>🏆 Tages- und Wochenwertung</h2><p>Wertungen werden geladen …</p>')+card(btn('Zurück zum Schiedsrichter-Menü','home','alt'));
  try{
-  const repairedDaily=await repairDailyAnswerCounters(dayKey);const [todaySnap,loadedWeekDays]=await Promise.all([get(ref(db,`learningDailyLeaderboard/${dayKey}`)),loadWeekLearningRows(weekKey,false)]);
+  const repairedDaily=await repairDailyAnswerCounters(dayKey);const [todaySnap,loadedWeekDays]=await Promise.all([get(ref(db,`learningDailyLeaderboard/${dayKey}`)),loadWeekLearningRows(weekKey,true)]);
   const today=todaySnap.val()||{};for(const subject of ["english","math"])for(const name of names)if(repairedDaily?.[subject]?.[name])today[subject]={...(today[subject]||{}),[name]:repairedDaily[subject][name]};const weekDays=loadedWeekDays.map((day,index)=>isoWeekDays(weekKey)[index]===dayKey?today:day);
   const dailyHtml=subject=>{
    const data=today[subject]||{};
