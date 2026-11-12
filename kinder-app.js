@@ -325,14 +325,14 @@ function dailyRowTotals(row){
 }
 // A daily win is awarded once per calendar day using English and math learning answers, not battles.
 function weeklyDailyWins(days,weekKey=''){
- const wins=Object.fromEntries(RANKED_NAMES.map(name=>[name,0])),dayKeys=isoWeekDays(weekKey);
+ const wins=Object.fromEntries(RANKED_NAMES.map(name=>[name,0])),dayKeys=isoWeekDays(weekKey),todayKey=activityPeriodKeys().dayKey;
  for(const [dayIndex,day] of (days||[]).entries()){
   const dayKey=dayKeys[dayIndex]||'';
   if(Object.hasOwn(DAILY_WINNER_DAY_OVERRIDES,dayKey)||DAILY_WIN_EXCLUDED_DAYS[dayKey])continue;
   const rows=RANKED_NAMES.map(name=>{
    let attempts=0,checkedAttempts=0,mistakes=0;
    for(const subject of ['english','math']){
-    const byUid=day?.[subject]?.[name]||{},canonical=byUid?.[ADMIN_UID],sourceRows=canonical&&Number(canonical.dailyRepairVersion)>=8?[canonical]:Object.values(byUid);
+    const byUid=day?.[subject]?.[name]||{},canonical=byUid?.[ADMIN_UID],sourceRows=dayKey===todayKey?(canonical&&Number(canonical.dailyRepairVersion)>=8?[canonical]:[]):Object.values(byUid);
     for(const row of sourceRows){const totals=dailyRowTotals(row);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;}
    }
    const setting=DAILY_COUNTER_OVERRIDES[dayKey]?.english?.[name];
