@@ -323,9 +323,8 @@ function dailyRowTotals(row){
  const checkedAttempts=Math.max(0,Number(trusted?row?.checkedAttempts:row?.attempts)||0),submittedAttempts=verified?Math.max(0,Number(row?.submittedAttempts)||0):0,mistakes=Math.min(checkedAttempts,Math.max(0,Number(row?.mistakes)||0));
  return {attempts:checkedAttempts+submittedAttempts,checkedAttempts,mistakes};
 }
-// A daily win// A daily win is awarded once per calendar day, combining English and math learning.
-// The historical KW44 Luca correction is retained as a minimum, not a replacement
-// for live Firebase totals; future weeks are calculated exclusively from daily rows.
+// A daily win is awarded once per calendar day, based only on English learning.
+// Math activity does not contribute to the weekly award.
 function weeklyDailyWins(days,weekKey=''){
  const wins=Object.fromEntries(RANKED_NAMES.map(name=>[name,0])),dayKeys=isoWeekDays(weekKey);
  for(const [dayIndex,day] of (days||[]).entries()){
@@ -333,7 +332,7 @@ function weeklyDailyWins(days,weekKey=''){
   if(Object.hasOwn(DAILY_WINNER_DAY_OVERRIDES,dayKey)||DAILY_WIN_EXCLUDED_DAYS[dayKey])continue;
   const rows=RANKED_NAMES.map(name=>{
    let attempts=0,checkedAttempts=0,mistakes=0;
-   for(const subject of ['english','math'])for(const row of Object.values(day?.[subject]?.[name]||{})){
+   for(const row of Object.values(day?.english?.[name]||{})){
     const totals=dailyRowTotals(row);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;
    }
    const setting=DAILY_COUNTER_OVERRIDES[dayKey]?.english?.[name];
