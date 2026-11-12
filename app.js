@@ -423,16 +423,14 @@ async function repairDailyAnswerCounters(dayKey){
   const priorRows=Object.values(rows),unverified=Math.max(0,...priorRows.map(row=>Number(row?.unverifiedLegacyDailyCount)||Number(row?.attempts)||0));
   daily[subject]=daily[subject]||{};daily[subject][name]={...rows,"manual-today":{name,attempts:adjustment,checkedAttempts:0,mistakes:0,submittedAttempts:0,legacySubmittedAttempts:adjustment,answerCounterVersion:3,dailyRepairVersion:8,manualDailyOverride:true,manualCount:count,baselineAnswers,unverifiedLegacyDailyCount:unverified,progressByExercise:{},submittedByExercise:{}}};
  }
- if(dayKey===activityDateKeys().dayKey){
-  const writes=[];
-  for(const subject of ["english","math"])for(const name of names){
-   const canonical=daily?.[subject]?.[name]?.["learning-activity"];
-   if(canonical)writes.push(set(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}/${name}/${ADMIN_UID}`),canonical).catch(error=>console.warn("Kanonischer Tageswert konnte nicht gespeichert werden:",name,subject,error)));
-  }
-  const writeResults=await Promise.all(writes.map(write=>write.then(()=>null,error=>{console.warn("Kanonischer Tageswert konnte nicht gespeichert werden:",error);return String(error?.code||error?.message||error);})));
-  const writeErrors=writeResults.filter(Boolean);
-  status.textContent=writeErrors.length?("Tageswerte nicht synchronisiert: "+writeErrors.join("; ")):"Tageswerte synchronisiert.";
+ const writes=[];
+ for(const subject of ["english","math"])for(const name of names){
+  const canonical=daily?.[subject]?.[name]?.["learning-activity"];
+  if(canonical)writes.push(set(ref(db,`learningDailyLeaderboard/${dayKey}/${subject}/${name}/${ADMIN_UID}`),canonical).catch(error=>console.warn("Kanonischer Tageswert konnte nicht gespeichert werden:",name,subject,error)));
  }
+ const writeResults=await Promise.all(writes.map(write=>write.then(()=>null,error=>{console.warn("Kanonischer Tageswert konnte nicht gespeichert werden:",error);return String(error?.code||error?.message||error);})));
+ const writeErrors=writeResults.filter(Boolean);
+ status.textContent=writeErrors.length?("Tageswerte nicht synchronisiert: "+writeErrors.join("; ")):"Tageswerte synchronisiert.";
  return daily;
 }
 function learningDailyBreakdown(days,weekKey=''){
