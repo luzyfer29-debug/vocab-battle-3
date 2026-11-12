@@ -253,41 +253,30 @@ function showList() {
 }
 
 const franceMapQuestions=[
-{p:"Hauptstadt Frankreichs?",a:["Paris"],h:"Norden, mit einem Stern markiert."},
-{p:"Region um Paris?",a:["Île-de-France","Ile de France"],h:"Die Region heißt wörtlich „Insel Frankreich“."},
-{p:"Insel im Mittelmeer im Südosten?",a:["la Corse","Corse","Korsika"],h:"Bastia und Ajaccio sind markiert."},
-{p:"Stadt an der Spitze der Bretagne?",a:["Brest"],h:"Äußerster Nordwesten."},
-{p:"Stadt im Norden nahe Belgien?",a:["Lille"],h:"Ganz im Norden."},
-{p:"Stadt nahe Deutschland am Rhein?",a:["Strasbourg","Straßburg"],h:"Im Osten an der deutschen Grenze."},
-{p:"Region im Nordosten?",a:["Grand Est"],h:"An Deutschland und Luxemburg."},
-{p:"Hafenstadt am Mittelmeer im Süden?",a:["Marseille"],h:"Südfrankreich."},
-{p:"Stadt an der Côte d’Azur?",a:["Nice","Nizza"],h:"Südosten, nahe Italien und Monaco."},
-{p:"Stadt im Südwesten an der Garonne?",a:["Bordeaux"],h:"Nahe der Atlantikküste."},
-{p:"Gebirge an der Grenze Frankreich–Spanien?",a:["Pyrenäen","les Pyrénées","Pyrenees"],h:"Im Süden."},
-{p:"Gebirge mit dem Mont Blanc?",a:["Alpen","les Alpes"],h:"Im Südosten."},
-{p:"Hochland im mittleren Süden?",a:["Massif Central","Zentralmassiv"],h:"Westlich der Alpen."},
-{p:"Fluss durch Paris?",a:["Seine","la Seine"],h:"Fließt nordwestwärts zum Ärmelkanal."},
-{p:"Längster Fluss Frankreichs durch Orléans?",a:["Loire","la Loire"],h:"Fließt westwärts zum Atlantik."},
-{p:"Fluss durch Toulouse und Bordeaux?",a:["Garonne","la Garonne"],h:"Mündet in den Atlantik."},
-{p:"Meer südlich von Frankreich?",a:["Mittelmeer","la mer Méditerranée"],h:"Zwischen Europa und Afrika."},
-{p:"Ozean westlich von Frankreich?",a:["Atlantik","l’océan Atlantique"],h:"An der Westküste."},
-{p:"Französischer Name des Ärmelkanals?",a:["La Manche","Manche"],h:"Zwischen Frankreich und Großbritannien."},
-{p:"Nenne ein Nachbarland im Osten.",a:["Deutschland","Allemagne","Schweiz","Suisse","Italien","Italie","Luxemburg","Luxembourg"],h:"Deutschland, Schweiz, Italien und Luxemburg."},
-{p:"Welches Land liegt südlich der Pyrenäen?",a:["Spanien","Espagne"],h:"Im Süden."},
-{p:"Französisches Überseegebiet in der kleinen Weltkarte?",a:["Guadeloupe"],h:"In der Karibik."},
-{p:"Stadt in der Region Occitanie nahe der Garonne?",a:["Toulouse"],h:"Nordwestlich der Pyrenäen."},
-{p:"Region um Lyon und bis zu den Alpen?",a:["Auvergne-Rhône-Alpes","Auvergne Rhone Alpes"],h:"Im Südosten."},
-{p:"Region im Westen mit Nantes?",a:["Pays de la Loire","Pays de Loire"],h:"Südlich der Bretagne."},
-{p:"Region um Orléans?",a:["Centre-Val de Loire","Centre Val de Loire"],h:"Der Fluss Loire steht im Namen."},
-{p:"Region mit Dijon?",a:["Bourgogne-Franche-Comté","Bourgogne Franche Comte"],h:"Im Osten."},
-{p:"Region im Südwesten mit Bordeaux?",a:["Nouvelle-Aquitaine","Nouvelle Aquitaine"],h:"An der Atlantikküste."},
-{p:"Region mit Caen und Rouen?",a:["Normandie","la Normandie"],h:"Im Nordwesten."},
-{p:"Stadt an der Loire südwestlich von Orléans?",a:["Tours"],h:"Im Westen des Landes."},
-{p:"Fluss, der bei Lyon nach Süden fließt?",a:["Rhône","Rhone"],h:"Mündet ins Mittelmeer."},
-{p:"Stadt nahe der spanischen Grenze am Mittelmeer?",a:["Perpignan"],h:"Nahe den Pyrenäen."},
-{p:"Region im Nordwesten mit Brest und Rennes?",a:["Bretagne","la Bretagne"],h:"An der Atlantikküste."},
-{p:"Wie heißt die Region im Süden mit Toulouse und Perpignan?",a:["Occitanie","l’Occitanie"],h:"Sie reicht bis zu den Pyrenäen und ans Mittelmeer."},
-{p:"Nenne eines der drei großen Gewässer an Frankreich.",a:["Mittelmeer","Atlantik","Ärmelkanal","la Manche","la mer Méditerranée","l’océan Atlantique"],h:"Mittelmeer, Atlantik oder Ärmelkanal."}
+{p:"Welche Stadt ist die Hauptstadt Frankreichs?",a:["Paris"],h:"Sie liegt ungefähr in der Mitte des Nordens."},
+{p:"Welche große Stadt liegt ganz im Norden nahe Belgien?",a:["Lille"],h:"Sie liegt nahe der Nordseeküste."},
+{p:"Welche wichtige Stadt liegt im Osten nahe Deutschland?",a:["Strasbourg","Straßburg"],h:"Sie liegt nahe dem Rhein."},
+{p:"Welche Stadt liegt im Nordwesten an der Bretagne?",a:["Brest"],h:"Sie liegt an der Atlantikküste."},
+{p:"Welche große Stadt liegt an der Loire im Westen?",a:["Nantes"],h:"Sie liegt nahe der Atlantikküste."},
+{p:"Welche Stadt liegt im Südwesten nahe dem Atlantik?",a:["Bordeaux"],h:"Die Garonne fließt durch die Stadt."},
+{p:"Welche Stadt liegt südlich von Bordeaux und nahe den Pyrenäen?",a:["Toulouse"],h:"Sie liegt in Südfrankreich."},
+{p:"Welche große Stadt liegt an der Rhône?",a:["Lyon"],h:"Sie liegt südöstlich von Paris."},
+{p:"Welche große Hafenstadt liegt am Mittelmeer?",a:["Marseille"],h:"Sie liegt im Südosten."},
+{p:"Welche Stadt liegt nahe Italien und Monaco an der Côte d’Azur?",a:["Nice","Nizza"],h:"Sie liegt an der Mittelmeerküste."},
+{p:"Nenne ein Nachbarland östlich von Frankreich.",a:["Deutschland","Allemagne","Schweiz","Suisse","Italien","Italie","Luxemburg","Luxembourg"],h:"Deutschland, Schweiz, Italien und Luxemburg grenzen im Osten."},
+{p:"Welches Land liegt südlich der Pyrenäen?",a:["Spanien","Espagne"],h:"Es liegt südlich von Frankreich."},
+{p:"Welches Land grenzt im Norden an Frankreich?",a:["Belgien","Belgique"],h:"Es liegt oberhalb von Hauts-de-France."},
+{p:"Wie heißt der Ozean westlich von Frankreich auf Französisch?",a:["l’océan Atlantique","océan Atlantique","Atlantique"],h:"Er liegt an der Westküste."},
+{p:"Wie heißt das Meer südlich von Frankreich auf Französisch?",a:["la mer Méditerranée","mer Méditerranée","Méditerranée"],h:"Es liegt bei Marseille und Nice."},
+{p:"Wie heißt der Ärmelkanal auf Französisch?",a:["La Manche","Manche"],h:"Er liegt nördlich der Bretagne und Normandie."},
+{p:"Welcher Fluss fließt durch Paris?",a:["la Seine","Seine"],h:"Er fließt zum Ärmelkanal."},
+{p:"Wie heißt Frankreichs längster Fluss?",a:["la Loire","Loire"],h:"Er fließt durch Nantes Richtung Atlantik."},
+{p:"Welcher Fluss fließt bei Lyon nach Süden?",a:["le Rhône","Rhône","Rhone"],h:"Er mündet ins Mittelmeer."},
+{p:"Wie heißt das Gebirge an der Grenze zu Spanien?",a:["les Pyrénées","Pyrénées","Pyrenäen","Pyrenees"],h:"Es bildet Frankreichs Südgrenze."},
+{p:"Wie heißt das Gebirge im Südosten mit dem Mont Blanc?",a:["les Alpes","Alpes","Alpen"],h:"Der Mont Blanc liegt dort."},
+{p:"Wie heißt die große Insel im Mittelmeer?",a:["la Corse","Corse","Korsika"],h:"Ajaccio liegt auf dieser Insel."},
+{p:"Welcher Fluss fließt durch Bordeaux?",a:["la Garonne","Garonne"],h:"Er fließt von Toulouse zum Atlantik."},
+{p:"Wie heißt das Hochland in der Mitte des Südens?",a:["le Massif Central","Massif Central","Zentralmassiv"],h:"Es liegt westlich der Alpen."}
 ];
 let mapRun=null;
 function mapMenu(){try{mapRun=JSON.parse(localStorage.getItem("vb_french_map_"+currentName)||"null")}catch{mapRun=null}const resume=mapRun&&!mapRun.completed?button("Runde fortsetzen · Aufgabe "+(mapRun.position+1),"map-resume"):"";root.innerHTML=card('<h2>🗺️ Frankreich auf der Karte</h2><p>'+esc(currentName)+' · Klasse 7 Realschule</p><p>Übe, wo wichtige Städte, Regionen, Flüsse, Gebirge, Meere und Nachbarländer liegen.</p><div class="solo-actions">'+resume+button("🧭 Karte ansehen & lernen","map-look")+button("✍️ Karte abfragen · 10 Aufgaben","map-start")+button("Zurück zu Französisch","menu",'class="alt"')+'</div>')}
@@ -314,9 +303,9 @@ async function syncMapActivity(newSession=false){
   });
  }catch(e){console.warn("Karten-Lernaktivität konnte nicht synchronisiert werden:",e);}
 }
-function mapLook(){root.innerHTML=card('<h2>🧭 Frankreich entdecken</h2><p>Suche Hauptstadt, Regionen, Städte, Flüsse, Gebirge, Meere und Nachbarländer. Tippe auf die Karte, um sie groß zu öffnen.</p><a href="./france-map.jpg" target="_blank" rel="noopener"><img src="./france-map.jpg" alt="Karte von Frankreich mit Regionen, Städten, Flüssen, Gebirgen und Nachbarländern" style="display:block;width:100%;height:auto;max-height:72vh;object-fit:contain;object-position:top;background:#e8eef7;border-radius:12px"></a><p class="small muted">Merke: Paris liegt im Norden, die Bretagne im Nordwesten, die Alpen im Südosten und die Pyrenäen im Süden.</p>')+card('<div class="solo-actions">'+button("✍️ Jetzt abfragen","map-start")+button("Zur Karte-Auswahl","map-menu",'class="alt"')+'</div>')}
+function mapLook(){root.innerHTML=card('<h2>🧭 Frankreich entdecken</h2><p>Suche Hauptstadt, Regionen, Städte, Flüsse, Gebirge, Meere und Nachbarländer. Tippe auf die Karte, um sie groß zu öffnen.</p><a href="./france-map.svg" target="_blank" rel="noopener"><img src="./france-map.svg" alt="Karte von Frankreich mit Regionen, Städten, Flüssen, Gebirgen und Nachbarländern" style="display:block;width:100%;height:auto;max-height:72vh;object-fit:contain;object-position:top;background:#e8eef7;border-radius:12px"></a><p class="small muted">Merke: Paris liegt im Norden, die Bretagne im Nordwesten, die Alpen im Südosten und die Pyrenäen im Süden.</p>')+card('<div class="solo-actions">'+button("✍️ Jetzt abfragen","map-start")+button("Zur Karte-Auswahl","map-menu",'class="alt"')+'</div>')}
 function mapStart(){mapRun={queue:shuffle(franceMapQuestions.map((_,i)=>i)).slice(0,10),position:0,total:10,answers:[],completed:false,draft:"",feedback:null,startedAt:Date.now(),sessionId:String(Date.now())};mapSave();void syncMapActivity(true);mapRender()}
-function mapRender(){if(!mapRun)return mapMenu();if(mapRun.completed){root.innerHTML=card('<h2>✅ Kartenrunde geschafft!</h2><p>'+esc(currentName)+' · '+mapRun.answers.filter(x=>x.correct).length+' von '+mapRun.total+' richtig.</p><div class="solo-actions">'+button("Noch einmal üben","map-start")+button("Karte ansehen","map-look")+button("Zur Karte-Auswahl","map-menu",'class="alt"')+'</div>');return}const q=franceMapQuestions[mapRun.queue[mapRun.position]];let body;if(mapRun.feedback){body='<section class="solo-game"><p class="'+(mapRun.feedback.correct?'good':'error')+'">'+(mapRun.feedback.correct?'✅ Richtig!':'🔎 Schau noch einmal genau hin.')+'</p><p>Gesucht: <strong>'+esc(q.a[0])+'</strong></p><p class="muted">'+esc(q.h)+'</p>'+button("Weiter","map-next")+'</section>'}else{body='<p class="muted">Nutze die Karte zum Nachschauen.</p><label>Deine Antwort<input data-map-answer autocomplete="off" value="'+esc(mapRun.draft)+'"></label>'+button("Antwort prüfen","map-check")}root.innerHTML=card('<h2>🗺️ Karten-Quiz · '+esc(currentName)+'</h2><p>Aufgabe '+(mapRun.position+1)+' von '+mapRun.total+'</p><div class="solo-game"><h3>'+esc(q.p)+'</h3><a href="./france-map.jpg" target="_blank" rel="noopener"><img src="./france-map.jpg" alt="Frankreichkarte zum Nachschauen" style="display:block;width:100%;height:auto;max-height:38vh;object-fit:contain;object-position:top;background:#e8eef7;border-radius:10px"></a></div>'+body)+card(button("Zur Karte-Auswahl","map-menu",'class="alt"'))}
+function mapRender(){if(!mapRun)return mapMenu();if(mapRun.completed){root.innerHTML=card('<h2>✅ Kartenrunde geschafft!</h2><p>'+esc(currentName)+' · '+mapRun.answers.filter(x=>x.correct).length+' von '+mapRun.total+' richtig.</p><div class="solo-actions">'+button("Noch einmal üben","map-start")+button("Karte ansehen","map-look")+button("Zur Karte-Auswahl","map-menu",'class="alt"')+'</div>');return}const q=franceMapQuestions[mapRun.queue[mapRun.position]];let body;if(mapRun.feedback){body='<section class="solo-game"><p class="'+(mapRun.feedback.correct?'good':'error')+'">'+(mapRun.feedback.correct?'✅ Richtig!':'🔎 Schau noch einmal genau hin.')+'</p><p>Gesucht: <strong>'+esc(q.a[0])+'</strong></p><p class="muted">'+esc(q.h)+'</p>'+button("Weiter","map-next")+'</section>'}else{body='<p class="muted">Nutze die Karte zum Nachschauen.</p><label>Deine Antwort<input data-map-answer autocomplete="off" value="'+esc(mapRun.draft)+'"></label>'+button("Antwort prüfen","map-check")}root.innerHTML=card('<h2>🗺️ Karten-Quiz · '+esc(currentName)+'</h2><p>Aufgabe '+(mapRun.position+1)+' von '+mapRun.total+'</p><div class="solo-game"><h3>'+esc(q.p)+'</h3><a href="./france-map.svg" target="_blank" rel="noopener"><img src="./france-map.svg" alt="Frankreichkarte zum Nachschauen" style="display:block;width:100%;height:auto;max-height:38vh;object-fit:contain;object-position:top;background:#e8eef7;border-radius:10px"></a></div>'+body)+card(button("Zur Karte-Auswahl","map-menu",'class="alt"'))}
 function mapCheck(){if(!mapRun||mapRun.feedback)return;const answer=root.querySelector("[data-map-answer]")?.value.trim()||"";if(!answer)return;const q=franceMapQuestions[mapRun.queue[mapRun.position]];const correct=q.a.some(a=>normalize(a)===normalize(answer));mapRun.draft=answer;mapRun.feedback={correct};mapRun.answers.push({answer:answer,correct:correct,updatedAt:Date.now()});mapSave();void syncMapActivity();mapRender()}
 function mapNext(){if(!mapRun?.feedback)return;mapRun.position++;mapRun.feedback=null;mapRun.draft="";if(mapRun.position>=mapRun.queue.length)mapRun.completed=true;mapSave();void syncMapActivity();mapRender()}
 
