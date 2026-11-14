@@ -260,6 +260,7 @@ function dailyProgressCounts(progress){
 function dailySubmittedCount(progress,checkedProgress={}){
  let total=0;
  for(const [exercise,entry] of Object.entries(progress||{})){
+  if(isRemovedVocabBattleActivity(exercise))continue;
   const checked=new Set(Object.entries(checkedProgress?.[exercise]?.items||{}).map(([key,item])=>String(item?.answerIndex??(key.includes('_')?key.slice(0,key.lastIndexOf('_')):key))));
   const items=entry?.items&&typeof entry.items==='object'?entry.items:null;
   if(!items){total+=Math.max(0,Math.floor(Number(entry?.count)||0));continue;}
@@ -275,7 +276,7 @@ function dailySubmittedCount(progress,checkedProgress={}){
  return total;
 }
 function dailyRowTotals(row){
- const entries=Object.values(row?.progressByExercise||{}),stored=Math.max(Number(row?.attempts)||0,(Number(row?.checkedAttempts)||0)+(Number(row?.submittedAttempts)||0));
+ const entries=Object.entries(row?.progressByExercise||{}).filter(([exercise])=>!isRemovedVocabBattleActivity(exercise)).map(([,item])=>item),stored=Math.max(Number(row?.attempts)||0,(Number(row?.checkedAttempts)||0)+(Number(row?.submittedAttempts)||0));
  if(Number(row?.answerCounterVersion)===3){
   const checked=entries.reduce((sum,item)=>sum+Math.max(0,Math.floor(Number(item?.count)||0)),0),mistakes=entries.reduce((sum,item)=>sum+Math.max(0,Math.floor(Number(item?.mistakes)||0)),0),mappedSubmitted=dailySubmittedCount(row?.submittedByExercise,row?.progressByExercise),legacy=Math.max(0,Number(row?.legacySubmittedAttempts)||0);
   return {attempts:checked+legacy+mappedSubmitted,checkedAttempts:checked,mistakes:Math.min(checked,mistakes)};
