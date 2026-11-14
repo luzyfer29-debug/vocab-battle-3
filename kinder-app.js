@@ -172,9 +172,11 @@ function dailyAnswerItemKey(index,prompt){
  for(let i=0;i<clean.length;i++){hash^=clean.charCodeAt(i);hash=Math.imul(hash,16777619);}
  return String(index).replace(/[^A-Za-z0-9_-]/g,"_")+"_"+(hash>>>0).toString(36);
 }
+function isRemovedVocabBattleActivity(activity,key=''){const id=String(typeof activity==='string'?activity:activity?.originalActivity||activity?.id||activity?.activity||'');return /^english_vocab_battle[123]$/.test(id)||/^vocab_[123]$/.test(id)||/(?:^|_)vocab_[123](?:_|$)/.test(id)||/(?:^|_)english_vocab_battle[123](?:_|$)/.test(String(key||''));}
 function dailyProgressFromActivity(activity,dayKey){
  const progress={};
  for(const [exercise,entry] of Object.entries(activity||{})){
+  if(isRemovedVocabBattleActivity(exercise))continue;
   let exerciseUpdatedAt=0;const items={},checks=entry?.answerChecks&&typeof entry.answerChecks==="object"?entry.answerChecks:{};
   for(const [index,item] of Object.entries(checks)){
    if(item?.attempted!==true)continue;
@@ -207,6 +209,7 @@ function dailyProgressCounts(progress){
 function dailySubmittedCount(progress,checkedProgress={}){
  let total=0;
  for(const [exercise,entry] of Object.entries(progress||{})){
+  if(isRemovedVocabBattleActivity(exercise))continue;
   const checked=new Set(Object.entries(checkedProgress?.[exercise]?.items||{}).map(([key,item])=>String(item?.answerIndex??(key.includes('_')?key.slice(0,key.lastIndexOf('_')):key))));
   const items=entry?.items&&typeof entry.items==='object'?entry.items:null;
   if(!items){total+=Math.max(0,Math.floor(Number(entry?.count)||0));continue;}
@@ -312,7 +315,7 @@ function applyDailyCrowns(subject,actionPrefix){void dailyCrownNames(subject).th
 function isoWeekDays(weekKey){const m=String(weekKey||'').match(/^(\d{4})-W(\d{2})$/);if(!m)return [];const year=Number(m[1]),week=Number(m[2]),jan4=new Date(Date.UTC(year,0,4)),weekday=jan4.getUTCDay()||7,monday=new Date(Date.UTC(year,0,4-(weekday-1)+(week-1)*7));return Array.from({length:7},(_,i)=>{const d=new Date(monday);d.setUTCDate(d.getUTCDate()+i);return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;});}
 function previousIsoWeek(weekKey){const first=isoWeekDays(weekKey)[0];if(!first)return '';const d=new Date(`${first}T12:00:00Z`);d.setUTCDate(d.getUTCDate()-7);return activityPeriodKeys(d.getTime()).weekKey;}
 function dailyRowTotals(row){
- const entries=Object.values(row?.progressByExercise||{}),stored=Math.max(Number(row?.attempts)||0,(Number(row?.checkedAttempts)||0)+(Number(row?.submittedAttempts)||0));
+ const entries=Object.entries(row?.progressByExercise||{}).filter(([exercise])=>!isRemovedVocabBattleActivity(exercise)).map(([,item])=>item),stored=Math.max(Number(row?.attempts)||0,(Number(row?.checkedAttempts)||0)+(Number(row?.submittedAttempts)||0));
  if(Number(row?.answerCounterVersion)===3){
   const checked=entries.reduce((sum,item)=>sum+Math.max(0,Math.floor(Number(item?.count)||0)),0),mistakes=entries.reduce((sum,item)=>sum+Math.max(0,Math.floor(Number(item?.mistakes)||0)),0),mappedSubmitted=dailySubmittedCount(row?.submittedByExercise,row?.progressByExercise),legacy=Math.max(0,Number(row?.legacySubmittedAttempts)||0);
   return {attempts:checked+legacy+mappedSubmitted,checkedAttempts:checked,mistakes:Math.min(checked,mistakes)};
@@ -393,7 +396,7 @@ async function updateDailyDraftAnswers(name,subject,eventAt,exercise,answers){
 }
 function learningActivityIds(subject){
  if(subject==='english')return [
-  ...[1,2,3].map(n=>`english_vocab_battle${n}`),'english_gap1','english_gap2',
+  'english_gap1','english_gap2',
   ...[1,2].map(n=>`english_vocab_work_page${n}`),...[1,2].map(n=>`english_vocab_work_station2_page${n}`),
   ...GRAMMAR.flatMap((station,index)=>station.tasks.map((_,task)=>`english_grammar_${index+1}_task${task+1}`)),
   'english_listening','english_reading',...WRITING_TASKS.map((_,index)=>`english_writing_task${index+1}`)
@@ -430,6 +433,7 @@ async function backfillTodayEnglishAnswers(dayKey){
   // Solo saves also carry today's completed question index in the activity row.
   // Recover answers even when older app versions failed to save answerChecks.
   for(let battle=1;battle<=3;battle++){
+   if(isRemovedVocabBattleActivity(`english_vocab_battle${battle}`))continue;
    const exercise=`english_vocab_battle${battle}`,activity=byName[name][exercise],at=Number(activity?.live?.updatedAt)||Number(activity?.lastAt)||0;
    if(activity?.dayKey!==dayKey||!at||activityPeriodKeys(at).dayKey!==dayKey)continue;
    const done=Math.max(0,Math.min(30,Number(activity?.live?.done)||0));if(!done)continue;
@@ -470,6 +474,7 @@ async function backfillTodayEnglishVocabProgress(dayKey){
   try{
    const recovered={};let latest=0;
    for(let battle=1;battle<=3;battle++){
+    if(isRemovedVocabBattleActivity(`english_vocab_battle${battle}`))continue;
     let local=null;try{local=JSON.parse(localStorage.getItem(`${key}_${name}_battle_${battle}`)||'null');}catch{}
     const progress=local,at=Number(local?.updatedAt)||0;
     if(!progress||!at||activityPeriodKeys(at).dayKey!==dayKey)continue;
@@ -662,7 +667,7 @@ async function importLegacyLearningErrors(subject,name){
 }
 function errorPeriodChoice(subject){errorEvalSubject=subject;errorEvalMode='analytics';errorEvalPeriod='';errorEvalTopics=[];errorEvalQueue=[];errorEvalCurrent=null;const names=SOLO_NAMES.map((n,i)=>btn(esc(n),`errorName${subject}_${i}`));app.innerHTML=card(`<h2>📊 ${subject==='math'?'Mathe':'Englisch'}-Auswertung</h2><p>Wähle dein Kind.</p><div class="name-actions">${names.join('')}</div>`)+card(btn('Zurück','home','alt'));}
 function learningActivityLabel(exercise){
- const fixed={english_vocab_battle1:'Vokabeln 1',english_vocab_battle2:'Vokabeln 2',english_vocab_battle3:'Vokabeln 3',english_listening:'Listening',english_reading:'Reading',math_rational_cards:'Rationale Zahlen · Merkkarten',math_proportional_practice:'Proportional / Antiproportional · Übung',math_proportional_worksheet:'Proportional · Arbeitsblatt',math_proportional_flashcards:'Proportional · Lernkarten'};
+ const fixed={english_listening:'Listening',english_reading:'Reading',math_rational_cards:'Rationale Zahlen · Merkkarten',math_proportional_practice:'Proportional / Antiproportional · Übung',math_proportional_worksheet:'Proportional · Arbeitsblatt',math_proportional_flashcards:'Proportional · Lernkarten'};
  if(fixed[exercise])return fixed[exercise];
  let match=String(exercise).match(/^english_vocab_work_page(\\d+)$/);if(match)return 'Vokabelarbeit · Seite '+match[1];
  match=String(exercise).match(/^english_vocab_work_station2_page(\\d+)$/);if(match)return 'Vokabelarbeit · Station 2 · Seite '+match[1];
@@ -690,6 +695,7 @@ async function learningReview(name,subject=''){
  try{
   const data=await loadChildLearningActivity(name,subject),topics=new Map();
   for(const [exercise,entry] of Object.entries(data))for(const [index,item] of Object.entries(entry?.errorItems||{})){
+   if(isRemovedVocabBattleActivity(exercise))continue;
    const itemSubject=item?.subject|| (exercise.startsWith('math_')?'math':'english');
    const hasAttemptEvidence=item?.attempted===true||Number(index)<Math.max(0,Number(entry?.live?.done)||0);
    if(itemSubject!==subject||(subject==='math'&&(/(?:^math_rational|^math_exam$|^rational_)/i.test(String(exercise))||/rational(?:e|en)?\s+zahlen|rational_/i.test(String(item?.topic||''))||/rational(?:e|en)?\s+zahlen/i.test(learningActivityLabel(exercise)) ))||item?.resolved===true||item?.source==='live_battle'||item?.source==='battle'||!hasAttemptEvidence)continue;
@@ -712,7 +718,8 @@ async function learningReview(name,subject=''){
      delete reviewItem.required;
     }
    }
-   const storedTitle=String(item.topic||''),title=/^Vokabel-Battle [1-3]$/.test(storedTitle)?learningActivityLabel(exercise):storedTitle||learningActivityLabel(exercise),key=`${subject}::${title}`;
+   if(isRemovedVocabBattleActivity(exercise))continue;
+   const storedTitle=String(item.topic||''),title=storedTitle||learningActivityLabel(exercise),key=`${subject}::${title}`;
    if(!topics.has(key))topics.set(key,{title,subject,items:[]});
    topics.get(key).items.push({exercise,index,item:reviewItem});
   }
@@ -735,9 +742,9 @@ async function errorEvaluation(subject,period){
  errorEvalMode='analytics';errorEvalName=name;
  if(!period){errorEvalSubject=subject;errorEvalPeriod='';app.innerHTML=card(`<h2>📊 ${subject==='math'?'Mathe':'Englisch'}-Auswertung · ${esc(name)}</h2><p>Welchen Zeitraum möchtest du ansehen?</p><div class="name-actions">${btn('📅 Tägliche Auswertung','errorPeriod_day')}${btn('🗓️ Wöchentliche Auswertung','errorPeriod_week')}</div>`)+card(btn('Zurück','home','alt'));return;}
  errorEvalSubject=subject;errorEvalPeriod=period;app.innerHTML=card('<h2>Auswertung wird geladen …</h2>');
- try{await importLegacyLearningErrors(subject,name);const data=await loadChildLearningActivity(name,subject),keys=activityPeriodKeys(),topics=new Map();for(const [exercise,entry] of Object.entries(data)){if(exercise==='english_vocab_work_battle1'||exercise==='english_vocab_work_battle2')continue;for(const [index,item] of Object.entries(entry?.errorItems||{})){if(item?.subject!==subject)continue;const inPeriod=period==='day'?item.dayKey===keys.dayKey:item.weekKey===keys.weekKey;if(!inPeriod&&!item.resolved){/* offene Fehler bleiben sichtbar, bis sie richtig gelöst sind */}else if(!inPeriod)continue;const topic=String(item.topic||exercise);if(!topics.has(topic))topics.set(topic,[]);topics.get(topic).push({exercise,index,item});}}
+ try{await importLegacyLearningErrors(subject,name);const data=await loadChildLearningActivity(name,subject),keys=activityPeriodKeys(),topics=new Map();for(const [exercise,entry] of Object.entries(data)){if(isRemovedVocabBattleActivity(exercise)||exercise==='english_vocab_work_battle1'||exercise==='english_vocab_work_battle2')continue;for(const [index,item] of Object.entries(entry?.errorItems||{})){if(item?.subject!==subject)continue;const inPeriod=period==='day'?item.dayKey===keys.dayKey:item.weekKey===keys.weekKey;if(!inPeriod&&!item.resolved){/* offene Fehler bleiben sichtbar, bis sie richtig gelöst sind */}else if(!inPeriod)continue;const topic=String(item.topic||exercise);if(!topics.has(topic))topics.set(topic,[]);topics.get(topic).push({exercise,index,item});}}
   errorEvalTopics=[...topics.entries()].map(([title,items])=>({title,items:items.sort((a,b)=>Number(a.item.lastWrongAt||0)-Number(b.item.lastWrongAt||0))}));const openCount=errorEvalTopics.reduce((n,t)=>n+t.items.filter(x=>!x.item.resolved).length,0),periodLabel=period==='day'?'Heute':'Diese Woche';
-  const activityField=period==='day'?'dayCount':'weekCount',activityKey=period==='day'?'dayKey':'weekKey',activityDate=period==='day'?keys.dayKey:keys.weekKey,activityTitle=period==='day'?'Heute geübt':'Diese Woche geübt',activityRows=Object.entries(data).filter(([exercise,entry])=>exercise!=='english_vocab_work_battle1'&&exercise!=='english_vocab_work_battle2'&&entry?.[activityKey]===activityDate&&Number(entry[activityField])>0).sort((a,b)=>Number(b[1].lastAt||0)-Number(a[1].lastAt||0));
+  const activityField=period==='day'?'dayCount':'weekCount',activityKey=period==='day'?'dayKey':'weekKey',activityDate=period==='day'?keys.dayKey:keys.weekKey,activityTitle=period==='day'?'Heute geübt':'Diese Woche geübt',activityRows=Object.entries(data).filter(([exercise,entry])=>!isRemovedVocabBattleActivity(exercise)&&exercise!=='english_vocab_work_battle1'&&exercise!=='english_vocab_work_battle2'&&entry?.[activityKey]===activityDate&&Number(entry[activityField])>0).sort((a,b)=>Number(b[1].lastAt||0)-Number(a[1].lastAt||0));
   const activitySummary=activityRows.length?`<div class="player"><h3>${activityTitle}</h3>${activityRows.map(([exercise,entry])=>`<p>📘 ${esc(learningActivityLabel(exercise))} · ${Number(entry[activityField])}× gestartet oder fortgesetzt</p>`).join('')}</div>`:'';
   const blocks=errorEvalTopics.length?errorEvalTopics.map((t,i)=>{const open=t.items.filter(x=>!x.item.resolved).length,done=t.items.length-open;return `<div class="player"><h3>${esc(t.title)}</h3><p>${open} offen · ${done} richtig bearbeitet</p>${open?btn(`Fehler üben (${open})`,`errorTopic${i}`):'<p class="good">✅ Alle Fehler richtig bearbeitet</p>'}</div>`;}).join(''):'<p class="muted">Keine Fehler für diesen Zeitraum. Richtig beantwortete Aufgaben erscheinen hier nicht als Fehler.</p>';
   app.innerHTML=card(`<h2>📊 ${subject==='math'?'Mathe':'Englisch'} · ${periodLabel} · ${esc(name)}</h2><p>Nach Themen gebündelt. Offene Fehler bleiben hier, bis du sie richtig löst.</p>${activitySummary}<p><strong>${openCount} noch offen</strong></p>${blocks}<div class="name-actions">${btn('📅 Tägliche Auswertung','errorPeriod_day','alt')}${btn('🗓️ Wöchentliche Auswertung','errorPeriod_week','alt')}</div>`)+card(btn('Zurück zur Übersicht','errorSubjectHome','alt'));
@@ -924,7 +931,6 @@ function battleOverviewActivities(subject){
   {id:'proportional_exam',label:'Proportional-/Antiproportional-Klassenarbeit'}
  ];
  return [
-  ...[1,2,3].map(i=>({id:`vocab_${i}`,label:`Vokabel-Battle ${i}`})),
   {id:'vocab_work_station1',label:'Vokabelarbeit · Station 1'},
   {id:'vocab_work_station2',label:'Vokabelarbeit · Station 2'},
   {id:'grammar_station1',label:'Grammatik · Station 1'},
@@ -968,6 +974,7 @@ async function showBattleSeries(subject){
   const weeks=new Set([weekKey]);
   for(const [key,entries] of Object.entries(data)){
    const retained=Object.values(entries||{}).some(rec=>!isRemovedVocabBattleResult(rec,key));if(!retained)continue;
+   if(isRemovedVocabBattleActivity('',key)||Object.values(entries||{}).some(rec=>isRemovedVocabBattleResult(rec,key)))continue;
    const match=key.match(/^week_(\d{4}-W\d{2})_/);
    if(match)weeks.add(match[1]);
    else for(const rec of Object.values(entries||{}))if(!isRemovedVocabBattleResult(rec,key)&&rec?.finished&&Number(rec.updatedAt)>0)weeks.add(activityPeriodKeys(Number(rec.updatedAt)).weekKey);
@@ -977,6 +984,7 @@ async function showBattleSeries(subject){
    const rows=RANKED_NAMES.map(name=>({name,points:0,played:0,correct:0}));
    const records=[];
    for(const [key,byName] of Object.entries(data)){
+    if(isRemovedVocabBattleActivity('',key)||Object.values(byName||{}).some(rec=>isRemovedVocabBattleResult(rec,key)))continue;
     const match=key.match(/^week_(\d{4}-W\d{2})_/);
     if(match&&match[1]!==week)continue;
     for(const row of rows){
