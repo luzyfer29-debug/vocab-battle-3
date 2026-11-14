@@ -953,7 +953,7 @@ function renderDashboard(englishEntries,mathEntries,activityData={},seriesData={
  const newest=(entries,includeFourth=false)=>{const latest={};for(const perDevice of Object.values(entries||{}))for(const [name,perBattle] of Object.entries(perDevice||{}))if(SOLO_NAMES.includes(name))for(const [battle,v] of Object.entries(perBattle||{})){if(!/^battle[123]$/.test(battle)&&!(includeFourth&&['battle4','battle5','battle6'].includes(battle)))continue;if(!v||typeof v!=='object')continue;const k=name+':'+battle;if(!latest[k]||Number(v.updatedAt)>Number(latest[k].updatedAt))latest[k]=v;}return latest;};
  const english=newest(englishEntries),math=newest(mathEntries,true),now=Date.now();
  const evaluationTable=(headers,rows,minWidth=540)=>{const labeledRows=rows.replace(/<tr>(.*?)<\/tr>/gs,(_,row)=>{let cell=0;return '<tr>'+row.replace(/<td(?=[\\s>])/g,()=>'<td data-label=\"'+esc(headers[++cell]||'Details')+'\"')+'</tr>';});return '<div class=\"live-evaluation-wrap\" style=\"overflow-x:auto\"><table class=\"live-evaluation-table\" style=\"width:100%;min-width:'+minWidth+'px;text-align:left\"><thead><tr>'+headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+labeledRows+'</tbody></table></div>';};
- const sections=[['🇬🇧 Vokabeln',english,false],['Rationale Zahlen',math,true]].map(([heading,latest,isMath])=>{
+ const sections=[['Rationale Zahlen',math,true]].map(([heading,latest,isMath])=>{
   if(isMath){
    const colors=['#7dd3fc','#62e2c2','#ffd166','#fda4af'];
    const topics=[1,2,3,4].map(b=>{
