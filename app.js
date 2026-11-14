@@ -1246,7 +1246,6 @@ function battleOverviewActivities(subject){
   {id:'proportional_exam',label:'Proportional-/Antiproportional-Klassenarbeit'}
  ];
  return [
-  ...[1,2,3].map(i=>({id:`vocab_${i}`,label:`Vokabeln ${i}`})),
   {id:'vocab_work_station1',label:'Vokabelarbeit · Station 1'},
   {id:'vocab_work_station2',label:'Vokabelarbeit · Station 2'},
   {id:'grammar_station1',label:'Grammatik · Station 1'},
