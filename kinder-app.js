@@ -959,6 +959,7 @@ function legacyBattleResult(profile,activity){
 function battleResultsMenu(){
  app.innerHTML=card(`<h2>🏆 Battle-Auswertung</h2><p>Wähle ein Fach. Die Ergebnisse werden aus derselben gemeinsamen Wertung geladen wie auf der Schiedsrichterseite.</p><div class="solo-actions">${btn('🇬🇧 Englisch','battleSeriesEnglish')}${btn('🔢 Mathe','battleSeriesMath')}</div>`)+card(btn('Zurück zur Startseite','home','alt'));
 }
+function isRemovedVocabBattleResult(result,key=''){const id=String(result?.originalActivity||result?.activity||'');return /^english_vocab_battle[123]$/.test(id)||/^vocab_[123]$/.test(id)||/(?:^|_)vocab_[123](?:_|$)/.test(id)||/(?:^|_)vocab_[123](?:_|$)/.test(String(key||''));}
 async function showBattleSeries(subject){
  stopSoloHeartbeat();const title=subject==='math'?'Mathe':'Englisch';
  app.innerHTML=card('<h2>🏆 '+title+' · Battle-Wochenwertung</h2><p>Ergebnisse werden geladen …</p>')+card(btn('Zurück','home','alt'));
@@ -966,9 +967,10 @@ async function showBattleSeries(subject){
   const snap=await get(ref(db,'battleRankings/'+subject)),data=snap.val()||{},weekKey=activityPeriodKeys().weekKey;
   const weeks=new Set([weekKey]);
   for(const [key,entries] of Object.entries(data)){
+   const retained=Object.values(entries||{}).some(rec=>!isRemovedVocabBattleResult(rec,key));if(!retained)continue;
    const match=key.match(/^week_(\d{4}-W\d{2})_/);
    if(match)weeks.add(match[1]);
-   else for(const rec of Object.values(entries||{}))if(rec?.finished&&Number(rec.updatedAt)>0)weeks.add(activityPeriodKeys(Number(rec.updatedAt)).weekKey);
+   else for(const rec of Object.values(entries||{}))if(!isRemovedVocabBattleResult(rec,key)&&rec?.finished&&Number(rec.updatedAt)>0)weeks.add(activityPeriodKeys(Number(rec.updatedAt)).weekKey);
   }
   const selected=Array.from(weeks).sort().reverse();
   const weeklyTables=selected.map(week=>{
@@ -978,7 +980,7 @@ async function showBattleSeries(subject){
     const match=key.match(/^week_(\d{4}-W\d{2})_/);
     if(match&&match[1]!==week)continue;
     for(const row of rows){
-     const result=byName?.[row.name];if(!result?.finished)continue;
+     const result=byName?.[row.name];if(!result?.finished||isRemovedVocabBattleResult(result,key))continue;
      const at=Number(result.updatedAt)||0;
      if(!match&&(!at||activityPeriodKeys(at).weekKey!==week))continue;
      const battlePoints=Math.max(0,Number(result.bonusPoints)||0),weeklyPoints=Math.max(0,Number(result.weeklyBonusPoints)||0);
