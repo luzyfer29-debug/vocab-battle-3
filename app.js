@@ -965,7 +965,9 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
   const cutoff=Number(liveClearTimes()[name])||0;
   for(const [id,entry] of Object.entries(byExercise)){
    const live=entry.live||{},when=Number(entry.lastAt||live.updatedAt||0);if(when<=cutoff)continue;
-   const errors=Object.entries(entry.errorItems||{}).filter(([index,item])=>{const wrongAt=Number(item?.lastWrongAt)||0,resolvedAt=Number(item?.resolvedAt)||0,check=entry.answerChecks?.[index],correctFirst=check?.attempted===true&&check?.correct===true&&!wrongAt;return item?.source!=='live_battle'&&item?.source!=='battle'&&!correctFirst&&!(item?.resolved===true&&wrongAt>0&&resolvedAt===wrongAt+1);});
+   const submittedForIndex=index=>{const key=String(index),item=entry.errorItems?.[key],check=entry.answerChecks?.[key],events=Object.values(entry.answerEvents||{}).filter(event=>String(event?.index)===key&&String(event?.submittedAnswer||'').trim()).sort((a,b)=>(Number(b.checkedAt)||Number(b.eventAt)||0)-(Number(a.checkedAt)||Number(a.eventAt)||0));return String(events[0]?.submittedAnswer||item?.submittedAnswer||check?.submittedAnswer||'').trim();};
+   const enteredIndexes=new Set([...Object.keys(entry.errorItems||{}),...Object.keys(entry.answerChecks||{}),...Object.values(entry.answerEvents||{}).map(event=>String(event?.index??''))].filter(index=>submittedForIndex(index)));
+   const errors=Object.entries(entry.errorItems||{}).filter(([index,item])=>{const wrongAt=Number(item?.lastWrongAt)||0,resolvedAt=Number(item?.resolvedAt)||0,check=entry.answerChecks?.[index],correctFirst=check?.attempted===true&&check?.correct===true&&!wrongAt;return enteredIndexes.has(String(index))&&item?.source!=='live_battle'&&item?.source!=='battle'&&!correctFirst&&!(item?.resolved===true&&wrongAt>0&&resolvedAt===wrongAt+1);});
    const unresolved=errors.filter(([,item])=>!item?.resolved).length,improved=errors.length-unresolved;
    const errorText=errors.length?errors.length+' Aufgaben mit Fehlern · '+unresolved+' noch offen':'Keine Fehler';
    const improvedText=errors.length?improved+' von '+errors.length+' danach richtig wiederholt':'Nicht nötig – fehlerfrei';
@@ -1007,8 +1009,9 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
    const isFrenchExercise=id.startsWith('french_');
    const frenchErrorRows=isFrenchExercise?errors.map(([index,item])=>{
     const matchingCheck=Object.values(checks).find(check=>String(check?.prompt||'')===String(item?.prompt||'')&&Number(check?.updatedAt||0)===Number(item?.lastWrongAt||0));
-    const submitted=String(matchingCheck?.submittedAnswer||'').trim(),expected=String(item?.answer||matchingCheck?.accepted?.join(' / ')||'Keine Lösung gespeichert');
-    return '<div class="live-error-item"><strong>'+esc(item?.prompt||'Aufgabe')+'</strong><p><strong>Antwort von '+esc(name)+':</strong> '+esc(submitted||'Im ursprünglichen Versuch nicht gespeichert')+'</p><p><strong>Richtige Antwort:</strong> '+esc(expected)+'</p><p class="'+(item?.resolved?'good':'error')+'">'+(item?.resolved?'✅ Später richtig wiederholt':'❌ Noch offen')+'</p></div>';
+    const submitted=submittedForIndex(index),expected=String(item?.answer||matchingCheck?.accepted?.join(' / ')||'Keine Lösung gespeichert');
+    if(!submitted)return '';
+    return '<div class="live-error-item"><strong>'+esc(item?.prompt||'Aufgabe')+'</strong><p><strong>Antwort von '+esc(name)+':</strong> '+esc(submitted)+'</p><p><strong>Richtige Antwort:</strong> '+esc(expected)+'</p><p class="'+(item?.resolved?'good':'error')+'">'+(item?.resolved?'✅ Später richtig wiederholt':'❌ Noch offen')+'</p></div>';
    }).join(''):'';
    const errorReview=isFrenchExercise&&frenchErrorRows?'<details class="live-answer-details french-error-review"><summary>Fehler ansehen · '+errors.length+'</summary>'+frenchErrorRows+'</details>':'';
    const answerList=answerRows.length?'<details class="live-answer-details" data-live-key="answers-'+esc(name)+'-'+esc(id)+'"><summary>Eingaben ansehen · '+answerRows.length+'</summary><div class="live-answer-card-list">'+answerRows.map(row=>row.html).join('')+'</div></details>':'';
