@@ -198,7 +198,7 @@ function dailyProgressFromActivity(activity,dayKey){
    const touchedToday=item.dayKey===dayKey||(checkedAt>0&&activityPeriodKeys(checkedAt).dayKey===dayKey);
    if(!touchedToday)continue;
    const key="attempt_"+String(eventId).replace(/[^A-Za-z0-9_-]/g,"_");
-   items[key]={count:1,mistakes:item.correct===false?1:(wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey?1:0),answerIndex:String(item.index??"")};
+   items[key]={count:1,mistakes:item.correct===false?1:0,answerIndex:String(item.index??""),updatedAt:checkedAt};
    if(item.index!==undefined)eventsByIndex.add(String(item.index));
   }
   for(const [index,item] of Object.entries(checks)){
@@ -207,7 +207,7 @@ function dailyProgressFromActivity(activity,dayKey){
    const touchedToday=item.dayKey===dayKey||(checkedAt>0&&activityPeriodKeys(checkedAt).dayKey===dayKey);
    if(!touchedToday)continue;
    const key="legacy_"+dailyAnswerItemKey(index,item.prompt||item.topic||"");
-   items[key]={count:1,mistakes:wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey?1:0,answerIndex:String(index)};
+   items[key]={count:1,mistakes:item.correct===false?1:0,answerIndex:String(index),updatedAt:checkedAt};
   }
   for(const [index,item] of Object.entries(entry?.errorItems||{})){
    const check=checks[index],checkAt=Number(check?.checkedAt)||0,checkToday=check?.attempted===true&&(check.dayKey===dayKey||(checkAt>0&&activityPeriodKeys(checkAt).dayKey===dayKey));
@@ -232,20 +232,35 @@ function dailySubmittedCount(progress,checkedProgress={}){
  let total=0;
  for(const [exercise,entry] of Object.entries(progress||{})){
   if(isRemovedVocabBattleActivity(exercise))continue;
-  const checked=new Set(Object.entries(checkedProgress?.[exercise]?.items||{}).map(([key,item])=>String(item?.answerIndex??(key.includes('_')?key.slice(0,key.lastIndexOf('_')):key))));
+  const checkedAtByIndex={};
+  for(const [key,item] of Object.entries(checkedProgress?.[exercise]?.items||{})){
+   const index=String(item?.answerIndex??(key.includes('_')?key.slice(0,key.lastIndexOf('_')):key));
+   const at=Number(item?.updatedAt)||Number(item?.checkedAt)||0;
+   checkedAtByIndex[index]=Math.max(checkedAtByIndex[index]||0,at);
+  }
   const items=entry?.items&&typeof entry.items==='object'?entry.items:null;
   if(!items){total+=Math.max(0,Math.floor(Number(entry?.count)||0));continue;}
   const counted=new Set();
   for(const [key,item] of Object.entries(items)){
    if(Math.max(0,Math.floor(Number(item?.count)||0))<=0)continue;
    const separator=key.lastIndexOf('_'),answerIndex=String(item?.answerIndex??(separator>0?key.slice(0,separator):key));
-   if(Object.prototype.hasOwnProperty.call(item,'answer')&&!String(item.answer||'').trim()&&key===dailyAnswerItemKey(answerIndex,'draft'))continue;if(checked.has(answerIndex)||counted.has(answerIndex))continue;
+   if(Object.prototype.hasOwnProperty.call(item,'answer')&&!String(item.answer||'').trim()&&key===dailyAnswerItemKey(answerIndex,'draft'))continue;
+   const updatedAt=Number(item?.updatedAt)||Number(entry?.updatedAt)||0;
+   if(updatedAt){
+    const itemDayKey=activityPeriodKeys(updatedAt).dayKey;
+    if(itemDayKey>=DAILY_COUNT_WINDOW_START_DAY&&!isWithinDailyCountWindow(updatedAt,itemDayKey))continue;
+   }
+   const checkedAt=Number(checkedAtByIndex[answerIndex])||0;
+   if(checkedAt&&updatedAt&&checkedAt>=updatedAt)continue;
+   if(checkedAt&&!updatedAt)continue;
+   if(counted.has(answerIndex))continue;
    counted.add(answerIndex);
   }
   total+=counted.size;
  }
  return total;
 }
+
 async function prepareDailyCounterV3(name,subject,eventAt,path){
  const dayKey=activityPeriodKeys(eventAt).dayKey,currentSnap=await get(ref(db,path)),current=currentSnap.val()||{};
  if(Number(current.answerCounterVersion)===3)return;
@@ -282,7 +297,7 @@ async function updateDailyLeaderboard(name,subject,eventAt,wrong,exercise,index,
    const value=current&&typeof current==="object"?{...current}:{name,attempts:0,mistakes:0,checkedAttempts:0,submittedAttempts:0,answerCounterVersion:3,progressByExercise:{},submittedByExercise:{},legacySubmittedAttempts:0};
    if(Number(value.answerCounterVersion)!==3)return current;
    const progress=Object.fromEntries(Object.entries(value.progressByExercise||{}).map(([id,item])=>[id,{...item,updatedAt:Number(item?.updatedAt)||eventAt}])),exerciseValue={...(progress[exercise]||{}),updatedAt:eventAt},items={...(exerciseValue.items||{})},old=items[key];
-   if(!old)items[key]={count:1,mistakes:wrong?1:0,answerIndex:String(index)};
+   if(!old)items[key]={count:1,mistakes:wrong?1:0,answerIndex:String(index),updatedAt:eventAt};
    else if(wrong&&!Number(old.mistakes))items[key]={...old,mistakes:1};
    exerciseValue.items=items;
    const values=Object.values(items);
@@ -351,45 +366,15 @@ function dailyRowTotals(row){
 }
 function mergeDailyCounterRows(byUid,dayKey=''){
  const rows=Object.values(byUid||{}).filter(row=>row&&!row.manualDailyOverride);
- const version3=rows.filter(row=>Number(row.answerCounterVersion)===3);
- if(!version3.length){
-  const sum=rows.reduce((total,row)=>{const value=dailyRowTotals(row);total.attempts+=value.attempts;total.checkedAttempts+=value.checkedAttempts;total.mistakes+=value.mistakes;return total;},{attempts:0,checkedAttempts:0,mistakes:0});if(dayKey>=DAILY_COUNT_WINDOW_START_DAY)sum.attempts=sum.checkedAttempts;return sum;
- }
- const checkedByExercise={},submittedByExercise={};let legacy=0;
- for(const row of version3){
-  legacy=Math.max(legacy,Math.max(0,Math.floor(Number(row.legacySubmittedAttempts)||0)));
-  for(const [exercise,entry] of Object.entries(row.progressByExercise||{})){
-   if(isRemovedVocabBattleActivity(exercise))continue;
-   const bucket=checkedByExercise[exercise]||(checkedByExercise[exercise]={});
-   for(const [key,item] of Object.entries(entry?.items||{})){
-    if(Math.max(0,Math.floor(Number(item?.count)||0))<=0)continue;
-    const separator=key.lastIndexOf('_'),index=String(item?.answerIndex??(separator>0?key.slice(0,separator):key));
-    const prior=bucket[index]||{count:0,mistakes:0};
-    bucket[index]={count:1,mistakes:Math.max(Number(prior.mistakes)||0,Number(item?.mistakes)||0)};
-   }
-  }
-  for(const [exercise,entry] of Object.entries(row.submittedByExercise||{})){
-   if(isRemovedVocabBattleActivity(exercise))continue;
-   const bucket=submittedByExercise[exercise]||(submittedByExercise[exercise]={});
-   for(const [key,item] of Object.entries(entry?.items||{})){
-    if(Math.max(0,Math.floor(Number(item?.count)||0))<=0)continue;
-    const separator=key.lastIndexOf('_'),index=String(item?.answerIndex??(separator>0?key.slice(0,separator):key));
-    bucket[index]=1;
-   }
-  }
- }
- let checkedAttempts=0,mistakes=0,submittedAttempts=0;
- for(const [exercise,items] of Object.entries(checkedByExercise)){
-  checkedAttempts+=Object.keys(items).length;
-  mistakes+=Object.values(items).reduce((sum,item)=>sum+(Number(item.mistakes)||0),0);
- }
- for(const [exercise,items] of Object.entries(submittedByExercise)){
-  const checked=new Set(Object.keys(checkedByExercise[exercise]||{}));
-  submittedAttempts+=Object.keys(items).filter(index=>!checked.has(index)).length;
- }
- checkedAttempts=Math.max(0,checkedAttempts);mistakes=Math.min(checkedAttempts,mistakes);
- return {attempts:dayKey>=DAILY_COUNT_WINDOW_START_DAY?checkedAttempts:checkedAttempts+submittedAttempts+legacy,checkedAttempts,mistakes};
+ return rows.reduce((sum,row)=>{
+  const value=dailyRowTotals(row);
+  sum.attempts+=value.attempts;
+  sum.checkedAttempts+=value.checkedAttempts;
+  sum.mistakes+=value.mistakes;
+  return sum;
+ },{attempts:0,checkedAttempts:0,mistakes:0});
 }
+
 // A daily win is awarded once per calendar day using English and math learning answers, not battles.
 function childLearningDailyBreakdown(days,weekKey=''){
  return (days||[]).map((data,index)=>{
@@ -433,7 +418,7 @@ function learningProgressCount(state){
 async function updateDailyActivityProgress(name,subject,exercise,eventAt,state){
  if(!learningTimeIsOpen())return;
  if(!Array.isArray(state?.draftAnswers)||!Array.isArray(state?.draftUpdatedAt))return;
- const dayKey=activityPeriodKeys(eventAt).dayKey,answers=state.draftAnswers.map((answer,index)=>({index,answer:String(answer||''),updatedAt:Number(state.draftUpdatedAt[index])||0})).filter(item=>item.updatedAt>0&&activityPeriodKeys(item.updatedAt).dayKey===dayKey);
+ const dayKey=activityPeriodKeys(eventAt).dayKey,answers=state.draftAnswers.map((answer,index)=>({index,answer:String(answer||''),updatedAt:Number(state.draftUpdatedAt[index])||0})).filter(item=>item.updatedAt>0&&activityPeriodKeys(item.updatedAt).dayKey===dayKey&&isWithinDailyCountWindow(item.updatedAt,dayKey));
  if(answers.length)await updateDailyDraftAnswers(name,subject,eventAt,exercise,answers);
 }
 async function updateDailyDraftAnswers(name,subject,eventAt,exercise,answers){
@@ -448,6 +433,7 @@ async function updateDailyDraftAnswers(name,subject,eventAt,exercise,answers){
    const checkedProgress=Object.fromEntries(Object.entries(value.progressByExercise||{}).map(([id,item])=>[id,{...item,updatedAt:Number(item?.updatedAt)||eventAt}]));
    const submittedProgress={...(value.submittedByExercise||{})},exerciseValue={...(submittedProgress[exercise]||{})},items={...(exerciseValue.items||{})};
    for(const entry of answers){
+    const updatedAt=Number(entry.updatedAt)||0;if(!updatedAt||activityPeriodKeys(updatedAt).dayKey!==dayKey||!isWithinDailyCountWindow(updatedAt,dayKey))continue;
     const index=String(entry.index),key=dailyAnswerItemKey(index,'draft');
     const prior=items[key],updatedAt=Number(entry.updatedAt)||eventAt;
     if(!prior||updatedAt>=Number(prior.updatedAt||0))items[key]={count:String(entry.answer||'').trim()?1:0,answerIndex:index,answer:String(entry.answer||''),updatedAt};
@@ -725,8 +711,8 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
    if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}
    if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}
    value.lastAt=Math.max(Number(value.lastAt)||0,eventAt);
-   const checks={...(value.answerChecks||{})},previous=checks[key]||{},errors={...(value.errorItems||{})},old=errors[key],sessions=Array.isArray(value.sessions)?value.sessions:[],lastSession=sessions[sessions.length-1]||{},runId=activeLearningRunIds.get(path)||String(lastSession.runId||('run_'+(Number(lastSession.startedAt)||eventAt)+'_'+String(uid).replace(/[^A-Za-z0-9_-]/g,'_'))),sameRun=Boolean(previous.attempted&&(previous.runId===runId||(!previous.runId&&Number(lastSession.startedAt)>0&&Number(previous.checkedAt)>=Number(lastSession.startedAt)))),previousWrongAt=sameRun?Number(previous.lastWrongAt)||0:0,wrongAt=correct?previousWrongAt:eventAt;
-   attemptId=sameRun&&previous.eventId?previous.eventId:'attempt_'+String(uid).replace(/[^A-Za-z0-9_-]/g,'_')+'_'+String(runId).replace(/[^A-Za-z0-9_-]/g,'_')+'_'+dayKey+'_'+String(index).replace(/[^A-Za-z0-9_-]/g,'_');
+   const checks={...(value.answerChecks||{})},previous=checks[key]||{},errors={...(value.errorItems||{})},old=errors[key],sessions=Array.isArray(value.sessions)?value.sessions:[],lastSession=sessions[sessions.length-1]||{},runId=activeLearningRunIds.get(path)||String(lastSession.runId||('run_'+(Number(lastSession.startedAt)||eventAt)+'_'+String(uid).replace(/[^A-Za-z0-9_-]/g,'_'))),sameRun=Boolean(previous.attempted&&(previous.runId===runId||(!previous.runId&&Number(lastSession.startedAt)>0&&Number(previous.checkedAt)>=Number(lastSession.startedAt)))),wrongAt=correct?0:eventAt;
+   attemptId='attempt_'+String(uid).replace(/[^A-Za-z0-9_-]/g,'_')+'_'+String(runId).replace(/[^A-Za-z0-9_-]/g,'_')+'_'+dayKey+'_'+String(index).replace(/[^A-Za-z0-9_-]/g,'_')+'_'+eventAt+'_'+Math.random().toString(36).slice(2,8);
    checks[key]={attempted:true,source:"answer_check",subject,topic,prompt:String(q?.prompt||q?.q||q?.word||topic||""),submittedAnswer:String(q?.submittedAnswer||""),accepted:Array.isArray(q?.accepted)?q.accepted.map(String):null,dayKey,weekKey,checkedAt:eventAt,lastWrongAt:wrongAt,correct:!!correct,eventId:attemptId,runId};
    value.answerChecks=checks;
    const answerEvents={...(value.answerEvents||{})},previousEvent=answerEvents[attemptId],eventWrongAt=Math.max(Number(previousEvent?.lastWrongAt)||0,wrongAt);
