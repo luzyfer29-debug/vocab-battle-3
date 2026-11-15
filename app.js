@@ -978,7 +978,7 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
    const seenEvents=new Set();
    events.sort((a,b)=>(Number(b.checkedAt)||Number(b.eventAt)||0)-(Number(a.checkedAt)||Number(a.eventAt)||0)).forEach(event=>{
     const index=String(event.index??''),check=checks[index]||{},at=Number(event.checkedAt)||Number(event.eventAt)||0;
-    const error=entry.errorItems?.[index],fallbackAnswer=Number(check.checkedAt)===at?check.submittedAnswer:(Number(error?.lastWrongAt)===at?error?.submittedAnswer:''),answer=String(event.submittedAnswer??fallbackAnswer??'').trim();
+    const priorError=entry.errorItems?.[index],fallbackAnswer=Number(check.checkedAt)===at?check.submittedAnswer:(Number(priorError?.lastWrongAt)===at?priorError?.submittedAnswer:''),answer=String(event.submittedAnswer??fallbackAnswer??'').trim();
     if(!answer)return;
     const error=entry.errorItems?.[index],resolved=event.resolved===true||(event.correct===false&&error?.resolved===true&&Number(error.resolvedAt)>at);
     const status=event.correct===true?'✅ Richtig':resolved?'🔁 Falsch – später korrigiert':'❌ Falsch – noch nicht korrigiert';
