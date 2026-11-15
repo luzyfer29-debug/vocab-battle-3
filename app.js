@@ -350,10 +350,10 @@ async function repairDailyAnswerCounters(dayKey){
     const series=saved['grammar'+station],tasks=Array.isArray(series?.tasks)?series.tasks:[];
     for(let taskIndex=0;taskIndex<tasks.length;taskIndex++){
      const task=tasks[taskIndex];if(!task)continue;
-     const definition=GRAMMAR[station-1]?.tasks?.[taskIndex],answers=Array.isArray(task.draftAnswers)?task.draftAnswers:[],draftCount=Math.max(answers.filter(value=>String(value||'').trim()).length,Number(task.attempted)||0),taskAt=Number(task.updatedAt)||Number(series.updatedAt)||0;
+     const definition=GRAMMAR[station-1]?.tasks?.[taskIndex],answers=Array.isArray(task.draftAnswers)?task.draftAnswers:[],draftCount=answers.filter(value=>String(value||'').trim()).length,taskAt=Number(task.updatedAt)||Number(series.updatedAt)||0;
      if(!taskAt||activityPeriodKeys(taskAt).dayKey!==dayKey)continue;
      const exercise='english_grammar_'+station+'_task'+(taskIndex+1),prior=childActivity[exercise]||{},priorLive=prior.live||{},priorAt=Number(priorLive.updatedAt)||0;
-     const priorAnswers=Array.isArray(priorLive.draftAnswers)?priorLive.draftAnswers:[],mergedAnswers=answers.map((value,index)=>String(value||'').trim()?value:(priorAnswers[index]||'')),mergedCount=Math.max(draftCount,mergedAnswers.filter(value=>String(value||'').trim()).length,Number(priorLive.draftCount)||0,Number(priorLive.done)||0);
+     const priorAnswers=Array.isArray(priorLive.draftAnswers)?priorLive.draftAnswers:[],mergedAnswers=answers.map((value,index)=>String(value||'').trim()?value:(priorAnswers[index]||'')),mergedCount=mergedAnswers.filter(value=>String(value||'').trim()).length;
      const prompts=definition?.items?definition.items.map(item=>String(item[0])+' _____ '+String(item[1])):(definition?.prompts||[]);
      const updated=Array.isArray(task.draftUpdatedAt)?task.draftUpdatedAt:answers.map(()=>taskAt),priorUpdated=Array.isArray(priorLive.draftUpdatedAt)?priorLive.draftUpdatedAt:[];
      const timestamps=mergedAnswers.map((_,index)=>Math.max(Number(updated[index])||taskAt,Number(priorUpdated[index])||0));
@@ -413,40 +413,14 @@ async function repairDailyAnswerCounters(dayKey){
   }
   // Restore today's typed drafts from saved live activity when a child device's daily write was delayed.
   for(const [exercise,entry] of Object.entries(childActivity)){
-   const live=entry?.live||{},answers=Array.isArray(live.draftAnswers)?live.draftAnswers:[],updated=Array.isArray(live.draftUpdatedAt)?live.draftUpdatedAt:[],prompts=Array.isArray(live.draftPrompts)?live.draftPrompts:[],liveAt=Number(live.updatedAt)||Number(entry.lastAt)||0,liveIsToday=entry.dayKey===dayKey||Boolean(liveAt&&activityPeriodKeys(liveAt).dayKey===dayKey),draftCount=liveIsToday&&!exercise.toLowerCase().includes('battle')?Math.max(answers.filter(value=>String(value||'').trim()).length,Number(live.draftCount)||0,Number(live.done)||0):0;
+   const live=entry?.live||{},answers=Array.isArray(live.draftAnswers)?live.draftAnswers:[],updated=Array.isArray(live.draftUpdatedAt)?live.draftUpdatedAt:[],prompts=Array.isArray(live.draftPrompts)?live.draftPrompts:[],liveAt=Number(live.updatedAt)||Number(entry.lastAt)||0,liveIsToday=entry.dayKey===dayKey||Boolean(liveAt&&activityPeriodKeys(liveAt).dayKey===dayKey),draftCount=liveIsToday&&!exercise.toLowerCase().includes('battle')?answers.filter(value=>String(value||'').trim()).length:0;
    const drafts=answers.map((answer,index)=>({index,answer:String(answer||''),updatedAt:Number(updated[index])||(liveIsToday?liveAt:0)})).filter(item=>item.updatedAt>0&&activityPeriodKeys(item.updatedAt).dayKey===dayKey);
    const target=submittedByExercise[exercise]||{items:{}},items={...(target.items||{})};
    for(const draft of drafts){
     const index=String(draft.index),key=dailyAnswerItemKey(index,'draft'),prior=items[key];
     if(!prior||draft.updatedAt>=Number(prior.updatedAt||0))items[key]={count:draft.answer.trim()?1:0,answerIndex:index,answer:draft.answer,prompt:String(prompts[draft.index]||''),updatedAt:draft.updatedAt};
    }
-   if(liveIsToday&&draftCount>0){
-    let added=0;
-    for(let index=0;index<Math.max(draftCount,answers.length)&&added<draftCount;index++){
-     if(String(answers[index]||'').trim())continue;
-     const key=dailyAnswerItemKey(index,'draft'),prior=items[key];if(prior&&Number(prior.count)>0)continue;
-     items[key]={count:1,answerIndex:String(index),answer:'',prompt:String(prompts[index]||''),updatedAt:liveAt||Date.now()};added++;
-    }
-   }
    if(Object.keys(items).length){target.items=items;target.count=Object.values(items).filter(item=>Number(item?.count)>0).length;target.updatedAt=Date.now();submittedByExercise[exercise]=target;}
-  }
-  // Recover distinct same-day answer indices from legacy live activity records, even when
-  // older clients saved the error/retry history without a full draftAnswers array.
-  for(const [exercise,entry] of Object.entries(childActivity)){
-   if(exercise.toLowerCase().includes('battle'))continue;
-   const live=entry?.live||{},liveAt=Math.max(Number(live.updatedAt)||0,Number(entry.lastAt)||0),liveIsToday=entry.dayKey===dayKey||Boolean(liveAt&&activityPeriodKeys(liveAt).dayKey===dayKey);
-   if(!liveIsToday)continue;
-   const indices=new Set([...Object.keys(entry.answerChecks||{}),...Object.keys(entry.errorItems||{})].filter(index=>/^\d+$/.test(String(index))));
-   const answers=Array.isArray(live.draftAnswers)?live.draftAnswers:[];
-   for(let index=0;index<answers.length;index++)if(String(answers[index]||'').trim())indices.add(String(index));
-   const target=submittedByExercise[exercise]||{items:{}},items={...(target.items||{})};
-   let count=Math.max(indices.size,Number(live.draftCount)||0,Number(live.done)||0);
-   for(let index=0;index<count;index++)indices.add(String(index));
-   for(const index of indices){
-    const check=entry.answerChecks?.[index]||{},error=entry.errorItems?.[index]||{},key=dailyAnswerItemKey(index,'draft'),prior=items[key];
-    if(!prior||Number(prior.count)<=0)items[key]={count:1,answerIndex:String(index),answer:String(answers[Number(index)]||check.submittedAnswer||error.submittedAnswer||''),prompt:String(live.draftPrompts?.[Number(index)]||check.prompt||error.prompt||''),updatedAt:Number(live.draftUpdatedAt?.[Number(index)])||liveAt||Date.now()};
-   }
-   if(Object.keys(items).length){target.items=items;target.count=Object.values(items).filter(item=>Number(item?.count)>0).length;target.updatedAt=Math.max(Number(target.updatedAt)||0,liveAt);submittedByExercise[exercise]=target;}
   }
   const submitted=dailySubmittedCount(submittedByExercise,progress),unverified=Math.max(0,...Object.values(existing).map(row=>Number(row?.unverifiedLegacyDailyCount)||Number(row?.attempts)||0)),computedAttempts=totals.checked+submitted,legacySubmitted=Math.max(0,unverified-computedAttempts);
   daily[subject]=daily[subject]||{};
