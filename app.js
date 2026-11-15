@@ -871,7 +871,33 @@ function resetControls(subject){
  return `<details class="card live-reset" data-live-key="live-reset-${subject}"><summary><strong>🗑️ ${label}-Lernstände verwalten</strong><span>Zurücksetzen</span></summary><div class="live-reset-content"><p>Setze ein einzelnes Lernkästchen oder alle Lernkästchen dieses Fachs für ein Kind zurück.</p><label>Lernkästchen<select id="reset-box-${subject}">${options}</select></label><label>Kind<select id="reset-target-${subject}"><option value="Luca">Luca</option><option value="Talea">Talea</option><option value="Nele">Nele</option><option value="all">Alle drei Kinder</option></select></label><button data-action="resetLearning" data-reset-subject="${subject}">🗑️ Auswahl zurücksetzen</button></div></details>`;
 }
 function latestEnglishSeriesResult(seriesData,name,activity){let latest=null;for(const device of Object.values(seriesData||{})){const candidate=device?.[name]?.[activity];if(candidate&&(!latest||Number(candidate.updatedAt||0)>=Number(latest.updatedAt||0)))latest=candidate;}return latest;}
-function mergeLearningActivityEntries(first,second){if(!first)return second;if(!second)return first;const base=Number(second.lastAt||0)>=Number(first.lastAt||0)?second:first,errors={...(first.errorItems||{})};for(const [key,item] of Object.entries(second.errorItems||{})){const old=errors[key],at=Number(item?.resolvedAt||item?.lastWrongAt||0),oldAt=Number(old?.resolvedAt||old?.lastWrongAt||0);if(!old||at>=oldAt)errors[key]=item;}const firstLive=first.live||{},secondLive=second.live||{},live=Number(secondLive.updatedAt||0)>=Number(firstLive.updatedAt||0)?secondLive:firstLive,sessionMap=new Map();for(const session of [...(Array.isArray(first.sessions)?first.sessions:[]),...(Array.isArray(second.sessions)?second.sessions:[])]){const key=String(session?.startedAt||session?.lastAt||'');if(!key)continue;const old=sessionMap.get(key);if(!old||Number(session.lastAt||0)>=Number(old.lastAt||0))sessionMap.set(key,session);}const sessions=[...sessionMap.values()].sort((a,b)=>Number(a.startedAt||0)-Number(b.startedAt||0)).slice(-100);return {...base,errorItems:errors,live,sessions};}
+function mergeLearningActivityEntries(first,second){
+ if(!first)return second;
+ if(!second)return first;
+ const firstAt=Number(first.lastAt||0),secondAt=Number(second.lastAt||0),base=secondAt>=firstAt?second:first,errors={...(first.errorItems||{})};
+ for(const [key,item] of Object.entries(second.errorItems||{})){const old=errors[key],at=Number(item?.resolvedAt||item?.lastWrongAt||0),oldAt=Number(old?.resolvedAt||old?.lastWrongAt||0);if(!old||at>=oldAt)errors[key]=item;}
+ const firstLive=first.live||{},secondLive=second.live||{},liveBase=Number(secondLive.updatedAt||0)>=Number(firstLive.updatedAt||0)?secondLive:firstLive;
+ const firstAnswers=Array.isArray(firstLive.draftAnswers)?firstLive.draftAnswers:[],secondAnswers=Array.isArray(secondLive.draftAnswers)?secondLive.draftAnswers:[],firstTimes=Array.isArray(firstLive.draftUpdatedAt)?firstLive.draftUpdatedAt:[],secondTimes=Array.isArray(secondLive.draftUpdatedAt)?secondLive.draftUpdatedAt:[],answerLength=Math.max(firstAnswers.length,secondAnswers.length),draftAnswers=[],draftUpdatedAt=[];
+ for(let index=0;index<answerLength;index++){
+  const a=String(firstAnswers[index]||''),b=String(secondAnswers[index]||''),at=Number(firstTimes[index])||Number(firstLive.updatedAt)||firstAt,bt=Number(secondTimes[index])||Number(secondLive.updatedAt)||secondAt,useSecond=b.trim()&&(!a.trim()||bt>=at);
+  draftAnswers[index]=useSecond?secondAnswers[index]:(a.trim()?firstAnswers[index]:secondAnswers[index]||firstAnswers[index]||'');
+  draftUpdatedAt[index]=useSecond?bt:(a.trim()?at:bt||at);
+ }
+ const firstPrompts=Array.isArray(firstLive.draftPrompts)?firstLive.draftPrompts:[],secondPrompts=Array.isArray(secondLive.draftPrompts)?secondLive.draftPrompts:[],promptLength=Math.max(firstPrompts.length,secondPrompts.length),draftPrompts=Array.from({length:promptLength},(_,index)=>firstPrompts[index]||secondPrompts[index]||'');
+ const live={...liveBase};
+ if(answerLength){live.draftAnswers=draftAnswers;live.draftUpdatedAt=draftUpdatedAt;}
+ if(promptLength)live.draftPrompts=draftPrompts;
+ const checks={...(first.answerChecks||{})};
+ for(const [index,item] of Object.entries(second.answerChecks||{})){const old=checks[index];if(!old||Number(item?.checkedAt||0)>=Number(old?.checkedAt||0))checks[index]=item;}
+ const answerEvents={...(first.answerEvents||{})};
+ for(const [id,item] of Object.entries(second.answerEvents||{})){const old=answerEvents[id];if(!old||Number(item?.checkedAt||item?.eventAt||0)>=Number(old?.checkedAt||old?.eventAt||0))answerEvents[id]=item;}
+ const sessionMap=new Map();
+ for(const session of [...(Array.isArray(first.sessions)?first.sessions:[]),...(Array.isArray(second.sessions)?second.sessions:[])]){
+  const key=String(session?.startedAt||session?.lastAt||'');if(!key)continue;const old=sessionMap.get(key);if(!old||Number(session.lastAt||0)>=Number(old.lastAt||0))sessionMap.set(key,session);
+ }
+ const sessions=[...sessionMap.values()].sort((a,b)=>Number(a.startedAt||0)-Number(b.startedAt||0)).slice(-100);
+ return {...base,errorItems:errors,answerChecks:checks,answerEvents,live,sessions};
+}
 function latestLearningActivity(activityData,name,exercise){let latest=null;for(const device of Object.values(activityData||{})){const candidate=device?.[name]?.[exercise];if(candidate)latest=mergeLearningActivityEntries(latest,candidate);}return latest;}
 function learningActivityPanel(activityData,names,subject,seriesData={}){
  const title=subject==='math'?'Mathe':'Englisch';
