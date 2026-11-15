@@ -699,7 +699,7 @@ async function cleanupFalsePositiveLearningErrors(name,subject){
 }
 async function recordLearningError(name,subject,exercise,index,topic,q,correct,occurredAt=Date.now()){
  if(!learningTimeIsOpen()||!db||!uid||!SOLO_NAMES.includes(name)||!exercise)return false;
- const eventAt=Number(occurredAt)||Date.now(),path=`learningActivity/${uid}/${name}/${exercise}`;
+ const eventAt=Number(occurredAt)||Date.now(),path=`learningActivity/${uid}/${name}/${exercise}`,acceptedAnswers=Array.isArray(q?.accepted)?q.accepted.map(String):(Array.isArray(q?.options)&&Number.isInteger(q?.correct)&&q.options[q.correct]!==undefined?[String(q.options[q.correct])]:(q?.answer!==undefined?[String(q.answer)]:null));
  let attemptId='';
  // Save every checked answer for counting; only actual wrong answers enter the error list.
  let activitySaved=false;
@@ -713,10 +713,11 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
    value.lastAt=Math.max(Number(value.lastAt)||0,eventAt);
    const checks={...(value.answerChecks||{})},previous=checks[key]||{},errors={...(value.errorItems||{})},old=errors[key],sessions=Array.isArray(value.sessions)?value.sessions:[],lastSession=sessions[sessions.length-1]||{},runId=activeLearningRunIds.get(path)||String(lastSession.runId||('run_'+(Number(lastSession.startedAt)||eventAt)+'_'+String(uid).replace(/[^A-Za-z0-9_-]/g,'_'))),sameRun=Boolean(previous.attempted&&(previous.runId===runId||(!previous.runId&&Number(lastSession.startedAt)>0&&Number(previous.checkedAt)>=Number(lastSession.startedAt)))),wrongAt=correct?0:eventAt;
    attemptId='attempt_'+String(uid).replace(/[^A-Za-z0-9_-]/g,'_')+'_'+String(runId).replace(/[^A-Za-z0-9_-]/g,'_')+'_'+dayKey+'_'+String(index).replace(/[^A-Za-z0-9_-]/g,'_')+'_'+eventAt+'_'+Math.random().toString(36).slice(2,8);
-   checks[key]={attempted:true,source:"answer_check",subject,topic,prompt:String(q?.prompt||q?.q||q?.word||topic||""),submittedAnswer:String(q?.submittedAnswer||""),accepted:Array.isArray(q?.accepted)?q.accepted.map(String):null,dayKey,weekKey,checkedAt:eventAt,lastWrongAt:wrongAt,correct:!!correct,eventId:attemptId,runId};
+   checks[key]={attempted:true,source:"answer_check",subject,topic,prompt:String(q?.prompt||q?.q||q?.word||topic||""),submittedAnswer:String(q?.submittedAnswer||""),accepted:acceptedAnswers,dayKey,weekKey,checkedAt:eventAt,lastWrongAt:wrongAt,correct:!!correct,eventId:attemptId,runId};
    value.answerChecks=checks;
    const answerEvents={...(value.answerEvents||{})},previousEvent=answerEvents[attemptId],eventWrongAt=Math.max(Number(previousEvent?.lastWrongAt)||0,wrongAt);
-   answerEvents[attemptId]={attempted:true,source:"answer_check",subject,topic,index:Number(index),prompt:String(q?.prompt||q?.q||q?.word||topic||""),dayKey,weekKey,checkedAt:eventAt,eventAt,lastWrongAt:eventWrongAt,correct:!!correct,runId};value.answerEvents=answerEvents;
+   if(correct)for(const [id,priorAttempt] of Object.entries(answerEvents))if(String(priorAttempt?.index)===key&&priorAttempt?.correct===false)answerEvents[id]={...priorAttempt,resolved:true,resolvedAt:Math.max(Number(priorAttempt.resolvedAt)||0,eventAt)};
+   answerEvents[attemptId]={attempted:true,source:"answer_check",subject,topic,index:Number(index),prompt:String(q?.prompt||q?.q||q?.word||topic||""),submittedAnswer:String(q?.submittedAnswer||""),accepted:acceptedAnswers,dayKey,weekKey,checkedAt:eventAt,eventAt,lastWrongAt:eventWrongAt,correct:!!correct,resolved:false,runId};value.answerEvents=answerEvents;
    if(correct){
     if(old&&isFalsePositiveResolvedLearningRecord(old)){delete errors[key];changedItem=null;}
     else if(old){changedItem={...old,resolved:true,resolvedAt:Math.max(eventAt,Number(old.lastWrongAt)||0)+1};errors[key]=changedItem;}
