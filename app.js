@@ -313,7 +313,6 @@ async function repairDailyAnswerCounters(dayKey){
      if(!old||at>=oldAt)errors[index]=item;
     }
     const checks={...(prior.answerChecks||{})};
-    const checks={...(prior.answerChecks||{})};
     for(const [index,item] of Object.entries(entry?.answerChecks||{})){const old=checks[index];if(!old||Number(item?.checkedAt||0)>=Number(old?.checkedAt||0))checks[index]=item;}
     const answerEvents={...(prior.answerEvents||{})};
     for(const [id,item] of Object.entries(entry?.answerEvents||{})){const old=answerEvents[id];if(!old||Number(item?.checkedAt||item?.eventAt||0)>=Number(old?.checkedAt||old?.eventAt||0))answerEvents[id]=item;}
