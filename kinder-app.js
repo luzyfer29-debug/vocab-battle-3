@@ -435,7 +435,7 @@ async function updateDailyDraftAnswers(name,subject,eventAt,exercise,answers){
    for(const entry of answers){
     const updatedAt=Number(entry.updatedAt)||0;if(!updatedAt||activityPeriodKeys(updatedAt).dayKey!==dayKey||!isWithinDailyCountWindow(updatedAt,dayKey))continue;
     const index=String(entry.index),key=dailyAnswerItemKey(index,'draft');
-    const prior=items[key],updatedAt=Number(entry.updatedAt)||eventAt;
+    const prior=items[key];
     if(!prior||updatedAt>=Number(prior.updatedAt||0))items[key]={count:String(entry.answer||'').trim()?1:0,answerIndex:index,answer:String(entry.answer||''),updatedAt};
    }
    exerciseValue.items=items;exerciseValue.count=Object.values(items).filter(item=>Number(item?.count)>0).length;exerciseValue.updatedAt=eventAt;submittedProgress[exercise]=exerciseValue;
