@@ -395,7 +395,7 @@ async function repairDailyAnswerCounters(dayKey){
    if(exercise.includes('_battle')||exercise.includes('battle'))continue;
    const prior=progress[exercise]||{items:{}},items={...(prior.items||{})};let changed=false;
    for(const [index,error] of Object.entries(entry?.errorItems||{})){
-    if(error?.source==='live_battle'||error?.source==='battle')continue;
+    if(!String(error?.submittedAnswer||'').trim()||error?.source==='live_battle'||error?.source==='battle')continue;
     const wrongAt=Number(error?.lastWrongAt)||0,resolvedAt=Number(error?.resolvedAt)||0,wrongToday=wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey&&!isFalsePositiveResolvedLearningRecord(error),attemptAt=wrongToday?wrongAt:(resolvedAt>0&&activityPeriodKeys(resolvedAt).dayKey===dayKey?resolvedAt:0);
     if(!attemptAt)continue;
     const answerIndex=String(index),existingItem=Object.entries(items).find(([key,item])=>String(item?.answerIndex??(key.includes('_')?key.slice(0,key.lastIndexOf('_')):key))===answerIndex);
