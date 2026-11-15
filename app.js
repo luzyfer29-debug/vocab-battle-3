@@ -823,6 +823,28 @@ function learningActivityTitle(id){
  if(id.startsWith('math_fraction_')){const found=FRACTION_MODULES.find(x=>x.id===id.slice('math_fraction_'.length));return 'Bruchrechnung · '+(found?.title||id.slice('math_fraction_'.length));}
  return id.replaceAll('_',' ');
 }
+function refereeExpectedAnswers(exercise,index){
+ const i=Number(index);if(!Number.isInteger(i)||i<0)return null;
+ let question=null;
+ const grammar=String(exercise).match(/^english_grammar_([12])_task(\\d+)$/);
+ if(grammar){const task=GRAMMAR[Number(grammar[1])-1]?.tasks[Number(grammar[2])-1];if(Array.isArray(task?.items?.[i]))return task.items[i][2]||null;if(task?.open?.[i])return ['Beispiel: '+task.open[i]];}
+ const vocab=String(exercise).match(/^english_vocab_work(_station2)?_page([12])$/);
+ if(vocab){const bank=vocab[1]?VOCAB_WORK_STATION2_BATTLE_QUESTIONS:VOCAB_WORK_BATTLE_QUESTIONS;question=bank.filter(item=>item.title.startsWith('Seite '+vocab[2]+' ·'))[i];}
+ if(exercise==='english_listening')question=LISTENING_QUESTIONS[i];
+ if(exercise==='english_reading')question=READING_QUIZ[i];
+ let match=String(exercise).match(/^math_rational_battle([1-3])$/);if(match)question=MATH_BATTLES[Number(match[1])-1]?.[i];
+ if(exercise==='math_exam')question=MATH_EXAM_BATTLE[i];
+ if(exercise==='math_rational_exam')question=MATH_RATIONAL_EXAM_BATTLE[i];
+ match=String(exercise).match(/^math_proportional_exam([1-3])$/);if(match)question=MATH_PROPORTIONAL_CLASSWORKS[Number(match[1])-1]?.questions?.[i];
+ match=String(exercise).match(/^math_fraction_(.+)$/);if(match)question=FRACTION_MODULES.find(item=>item.id===match[1])?.questions?.[i];
+ if(Array.isArray(question))return question[2]||question[1]||null;
+ if(Array.isArray(question?.accepted))return question.accepted;
+ if(Array.isArray(question?.options)&&Number.isInteger(question.correct)&&question.options[question.correct]!==undefined)return [String(question.options[question.correct])];
+ if(question?.answerText)return [String(question.answerText)];
+ if(question?.answer!==undefined)return Array.isArray(question.answer)?question.answer.map(String):[String(question.answer)];
+ if(question?.correctAnswer!==undefined)return Array.isArray(question.correctAnswer)?question.correctAnswer.map(String):[String(question.correctAnswer)];
+ return null;
+}
 function isLegacyEnglishGapActivity(id){return /^english_gap_?[12]$/i.test(String(id||''));}
 let legacyEnglishGapCleanupStarted=false;
 async function removeLegacyEnglishGapActivities(activityData){
@@ -951,7 +973,7 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
    const checks=entry.answerChecks||{},events=Object.values(entry.answerEvents||{}).filter(item=>item?.attempted===true),answers=Array.isArray(live.draftAnswers)?live.draftAnswers:[],prompts=Array.isArray(live.draftPrompts)?live.draftPrompts:[],draftTimes=Array.isArray(live.draftUpdatedAt)?live.draftUpdatedAt:[],answerRows=[],latestCheckAtByIndex={};
    for(const event of events){const index=String(event.index??''),at=Number(event.checkedAt)||Number(event.eventAt)||0;latestCheckAtByIndex[index]=Math.max(latestCheckAtByIndex[index]||0,at);}
    for(const [index,check] of Object.entries(checks)){const at=Number(check?.checkedAt)||0;latestCheckAtByIndex[index]=Math.max(latestCheckAtByIndex[index]||0,at);}
-   const expectedText=value=>Array.isArray(value)&&value.length?value.map(String).join(' / '):'—';
+   const expectedText=value=>Array.isArray(value)&&value.length?value.map(String).join(' / '):String(value||'—');
    const answerCard=(at,index,prompt,answer,expected,status)=>'<article class="live-answer-card"><div class="live-answer-card-head"><strong>Aufgabe '+(Number(index)+1)+'. '+esc(prompt||'Lernaufgabe')+'</strong><time>'+esc(at?evaluationDate(at):'Zeit unbekannt')+'</time></div><p><b>Eingegeben:</b> '+esc(answer)+'</p><p><b>Richtig wäre:</b> '+esc(expectedText(expected))+'</p><p><b>Status:</b> '+esc(status)+'</p></article>';
    const seenEvents=new Set();
    events.sort((a,b)=>(Number(b.checkedAt)||Number(b.eventAt)||0)-(Number(a.checkedAt)||Number(a.eventAt)||0)).forEach(event=>{
@@ -960,7 +982,7 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
     if(!answer)return;
     const error=entry.errorItems?.[index],resolved=event.resolved===true||(event.correct===false&&error?.resolved===true&&Number(error.resolvedAt)>at);
     const status=event.correct===true?'✅ Richtig':resolved?'🔁 Falsch – später korrigiert':'❌ Falsch – noch nicht korrigiert';
-    const expected=Array.isArray(event.accepted)?event.accepted:(Number(check.checkedAt)===at?check.accepted:null);
+    const expected=event.accepted||(Number(check.checkedAt)===at?check.accepted:null)||refereeExpectedAnswers(id,index);
     answerRows.push(answerCard(at,index,event.prompt||check.prompt||prompts[Number(index)]||'',answer,expected,status));
     if(event.eventId)seenEvents.add(String(event.eventId));
    });
@@ -973,9 +995,8 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
     const answer=String(answers[index]||'').trim(),at=Number(draftTimes[index])||Number(live.updatedAt)||0;
     if(!answer||at<=(latestCheckAtByIndex[String(index)]||0))continue;
     const latest=events.filter(event=>String(event.index)===String(index)).sort((a,b)=>(Number(b.checkedAt)||Number(b.eventAt)||0)-(Number(a.checkedAt)||Number(a.eventAt)||0))[0],check=checks[String(index)]||{};
-    answerRows.push(answerCard(at,index,prompts[index]||latest?.prompt||check.prompt||'',answer,latest?.accepted||check.accepted,'✍️ Noch nicht geprüft'));
+    answerRows.push(answerCard(at,index,prompts[index]||latest?.prompt||check.prompt||'',answer,latest?.accepted||check.accepted||refereeExpectedAnswers(id,index),'✍️ Noch nicht geprüft'));
    }
-   answerRows.sort((a,b)=>0);
    const isFrenchExercise=id.startsWith('french_');
    const frenchErrorRows=isFrenchExercise?errors.map(([index,item])=>{
     const matchingCheck=Object.values(checks).find(check=>String(check?.prompt||'')===String(item?.prompt||'')&&Number(check?.updatedAt||0)===Number(item?.lastWrongAt||0));
