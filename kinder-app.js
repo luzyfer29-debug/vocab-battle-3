@@ -326,6 +326,47 @@ function dailyRowTotals(row){
  const checkedAttempts=Math.max(0,Number(trusted?row?.checkedAttempts:row?.attempts)||0),submittedAttempts=verified?Math.max(0,Number(row?.submittedAttempts)||0):0,mistakes=Math.min(checkedAttempts,Math.max(0,Number(row?.mistakes)||0));
  return {attempts:checkedAttempts+submittedAttempts,checkedAttempts,mistakes};
 }
+function mergeDailyCounterRows(byUid){
+ const rows=Object.values(byUid||{}).filter(row=>row&&!row.manualDailyOverride);
+ const version3=rows.filter(row=>Number(row.answerCounterVersion)===3);
+ if(!version3.length){
+  return rows.reduce((sum,row)=>{const value=dailyRowTotals(row);sum.attempts+=value.attempts;sum.checkedAttempts+=value.checkedAttempts;sum.mistakes+=value.mistakes;return sum;},{attempts:0,checkedAttempts:0,mistakes:0});
+ }
+ const checkedByExercise={},submittedByExercise={};let legacy=0;
+ for(const row of version3){
+  legacy=Math.max(legacy,Math.max(0,Math.floor(Number(row.legacySubmittedAttempts)||0)));
+  for(const [exercise,entry] of Object.entries(row.progressByExercise||{})){
+   if(isRemovedVocabBattleActivity(exercise))continue;
+   const bucket=checkedByExercise[exercise]||(checkedByExercise[exercise]={});
+   for(const [key,item] of Object.entries(entry?.items||{})){
+    if(Math.max(0,Math.floor(Number(item?.count)||0))<=0)continue;
+    const separator=key.lastIndexOf('_'),index=String(item?.answerIndex??(separator>0?key.slice(0,separator):key));
+    const prior=bucket[index]||{count:0,mistakes:0};
+    bucket[index]={count:1,mistakes:Math.max(Number(prior.mistakes)||0,Number(item?.mistakes)||0)};
+   }
+  }
+  for(const [exercise,entry] of Object.entries(row.submittedByExercise||{})){
+   if(isRemovedVocabBattleActivity(exercise))continue;
+   const bucket=submittedByExercise[exercise]||(submittedByExercise[exercise]={});
+   for(const [key,item] of Object.entries(entry?.items||{})){
+    if(Math.max(0,Math.floor(Number(item?.count)||0))<=0)continue;
+    const separator=key.lastIndexOf('_'),index=String(item?.answerIndex??(separator>0?key.slice(0,separator):key));
+    bucket[index]=1;
+   }
+  }
+ }
+ let checkedAttempts=0,mistakes=0,submittedAttempts=0;
+ for(const [exercise,items] of Object.entries(checkedByExercise)){
+  checkedAttempts+=Object.keys(items).length;
+  mistakes+=Object.values(items).reduce((sum,item)=>sum+(Number(item.mistakes)||0),0);
+ }
+ for(const [exercise,items] of Object.entries(submittedByExercise)){
+  const checked=new Set(Object.keys(checkedByExercise[exercise]||{}));
+  submittedAttempts+=Object.keys(items).filter(index=>!checked.has(index)).length;
+ }
+ checkedAttempts=Math.max(0,checkedAttempts);mistakes=Math.min(checkedAttempts,mistakes);
+ return {attempts:checkedAttempts+submittedAttempts+legacy,checkedAttempts,mistakes};
+}
 // A daily win is awarded once per calendar day using English and math learning answers, not battles.
 function childLearningDailyBreakdown(days,weekKey=''){
  return (days||[]).map((data,index)=>{
@@ -333,8 +374,7 @@ function childLearningDailyBreakdown(days,weekKey=''){
   const rows=RANKED_NAMES.map(name=>{
    let attempts=0,checkedAttempts=0,mistakes=0;
    for(const subject of ['english','math']){
-    const byUid=data?.[subject]?.[name]||{},canonical=byUid?.[ADMIN_UID],sourceRows=canonical&&Number(canonical.dailyRepairVersion)>=8?[canonical]:Object.values(byUid);
-    for(const row of sourceRows){const totals=dailyRowTotals(row);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;}
+    const byUid=data?.[subject]?.[name]||{},totals=mergeDailyCounterRows(byUid);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;
    }
    const setting=DAILY_COUNTER_OVERRIDES[dayKey]?.english?.[name];
    if(setting!==undefined){const count=Number(typeof setting==='number'?setting:setting?.count)||0,baselineAnswers=Number(typeof setting==='number'?0:setting?.baselineAnswers)||0;attempts=count+Math.max(0,attempts-baselineAnswers);}
@@ -587,7 +627,7 @@ async function showDailyLeaderboard(subject){
   // already-synced per-answer learning activity. This keeps the child's view current too.
   let ownChecked={checked:0,mistakes:0,submitted:0};if(uid&&RANKED_NAMES.includes(soloName)){const ownActivityRows=await Promise.all(learningActivityIds(subject).map(async exercise=>{try{const activitySnapshot=await get(ref(db,`learningActivity/${uid}/${soloName}/${exercise}`));const value=activitySnapshot.val();return value?[exercise,value]:null;}catch(error){console.warn('Einzelne Lernaktivität konnte nicht gelesen werden:',exercise,error);return null;}}));const ownActivity=Object.fromEntries(ownActivityRows.filter(Boolean)),ownProgress=dailyProgressFromActivity(ownActivity,dayKey),draftProgress={};for(const [exercise,entry] of Object.entries(ownActivity)){const answers=Array.isArray(entry?.live?.draftAnswers)?entry.live.draftAnswers:[],updated=Array.isArray(entry?.live?.draftUpdatedAt)?entry.live.draftUpdatedAt:[],items={};answers.forEach((answer,index)=>{const at=Number(updated[index])||0;if(!at||activityPeriodKeys(at).dayKey!==dayKey)return;const key=dailyAnswerItemKey(index,'draft');items[key]={count:String(answer||'').trim()?1:0,answerIndex:String(index),answer:String(answer||''),updatedAt:at};});for(const [index,error] of Object.entries(entry?.errorItems||{})){const wrongAt=Number(error?.lastWrongAt)||0,resolvedAt=Number(error?.resolvedAt)||0,wrongToday=wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey&&!isFalsePositiveResolvedLearningRecord(error),at=wrongToday?wrongAt:(resolvedAt>0&&activityPeriodKeys(resolvedAt).dayKey===dayKey?resolvedAt:0);if(!at||error?.source==='live_battle'||error?.source==='battle')continue;const key=dailyAnswerItemKey(index,error?.prompt||error?.topic||exercise);if(!items[key]||Number(items[key].count)<1)items[key]={count:1,answerIndex:String(index),answer:String(error?.submittedAnswer||''),updatedAt:at};}if(Object.keys(items).length)draftProgress[exercise]={items};}for(const [exercise,entry] of Object.entries(ownActivity)){const live=entry?.live||{},liveAt=Number(live.updatedAt)||Number(entry.lastAt)||0,liveIsToday=entry.dayKey===dayKey||Boolean(liveAt&&activityPeriodKeys(liveAt).dayKey===dayKey);if(!liveIsToday||exercise.toLowerCase().includes('battle'))continue;const count=Math.max((Array.isArray(live.draftAnswers)?live.draftAnswers:[]).filter(value=>String(value||'').trim()).length,Number(live.draftCount)||0,Number(live.done)||0),items=draftProgress[exercise]?.items||{};let added=0;for(let index=0;index<count&&added<count;index++){const key=dailyAnswerItemKey(index,'draft');if(items[key]&&Number(items[key].count)>0)continue;items[key]={count:1,answerIndex:String(index),answer:'',updatedAt:liveAt||Date.now()};added++;}if(Object.keys(items).length)draftProgress[exercise]={items};}const checked=dailyProgressCounts(ownProgress);ownChecked={...checked,submitted:dailySubmittedCount(draftProgress,ownProgress)};}
   const totals={},ownRecordSeen=new Set();
-  for(const [name,byUid] of Object.entries(raw)){if(!RANKED_NAMES.includes(name))continue;const canonical=byUid?.[ADMIN_UID],hasCanonical=canonical&&Number(canonical.dailyRepairVersion)>=8,selectedRows=hasCanonical?[[name===soloName?uid:ADMIN_UID,canonical]]:Object.entries(byUid||{});for(const [rowUid,row] of selectedRows){const t=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0});const values=dailyRowTotals(row);let attempts=values.attempts,checked=values.checkedAttempts,mistakes=values.mistakes;if(name===soloName&&rowUid===uid){attempts=Math.max(attempts,ownChecked.checked+ownChecked.submitted+Math.max(0,values.attempts-values.checkedAttempts));checked=Math.max(checked,ownChecked.checked);mistakes=Math.max(mistakes,ownChecked.mistakes);ownRecordSeen.add(name);}t.attempts+=attempts;t.checkedAttempts+=checked;t.mistakes+=mistakes;}}
+  for(const [name,byUid] of Object.entries(raw)){if(!RANKED_NAMES.includes(name))continue;const t=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0}),values=mergeDailyCounterRows(byUid);t.attempts+=values.attempts;t.checkedAttempts+=values.checkedAttempts;t.mistakes+=values.mistakes;if(name===soloName){t.attempts=Math.max(t.attempts,ownChecked.checked+ownChecked.submitted);t.checkedAttempts=Math.max(t.checkedAttempts,ownChecked.checked);t.mistakes=Math.max(t.mistakes,ownChecked.mistakes);ownRecordSeen.add(name);}}
   if(soloName&&RANKED_NAMES.includes(soloName)&&!ownRecordSeen.has(soloName)&&(ownChecked.checked||ownChecked.submitted)){const t=totals[soloName]||(totals[soloName]={name:soloName,attempts:0,checkedAttempts:0,mistakes:0});t.attempts+=ownChecked.checked+ownChecked.submitted;t.checkedAttempts+=ownChecked.checked;t.mistakes+=ownChecked.mistakes;}
   applyDailyCounterOverride(totals,dayKey,subject);const rows=RANKED_NAMES.map(name=>{const value=totals[name]||{name,attempts:0,checkedAttempts:0,mistakes:0};return {...value,rate:value.checkedAttempts?100*value.mistakes/value.checkedAttempts:null};}),most=[...rows].sort((a,b)=>b.attempts-a.attempts||a.name.localeCompare(b.name)),fewest=[...rows].sort((a,b)=>Number(!a.checkedAttempts)-Number(!b.checkedAttempts)||(a.rate??Infinity)-(b.rate??Infinity)||b.attempts-a.attempts||a.name.localeCompare(b.name));
   const renderRow=(x,i,metric)=>{const ranked=metric==='attempts'?x.attempts>0:x.checkedAttempts>0,medal=ranked?(i===0?'🥇':i===1?'🥈':i===2?'🥉':'👤'):'👤',metricText=metric==='attempts'?`${x.attempts} Antworten bearbeitet`:(x.rate===null?'— Fehlerquote':`${x.rate.toFixed(1).replace('.',',')} % Fehler`);return `<div class="solo-game"><div class="row"><h3>${medal} ${esc(x.name)}</h3><span class="small">${metricText}</span></div><p>${x.checkedAttempts?`${x.mistakes} falsch von ${x.checkedAttempts} geprüften Antworten${x.manualAdjustment?' · Grundwert ohne Fehlerquote':''}`:x.manualAdjustment?'Fehlerquote für den Grundwert nicht verfügbar':'Noch keine geprüften Antworten'}</p></div>`;};
