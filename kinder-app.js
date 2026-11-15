@@ -526,6 +526,7 @@ async function repairCorruptDailyEnglishSummary(dayKey){
   return changed?rows:current;
  });
 }
+async function ownDailyAnswerCounts(subject,dayKey,childName){let ownChecked={checked:0,mistakes:0,submitted:0};if(uid&&RANKED_NAMES.includes(childName)){const ownActivityRows=await Promise.all(learningActivityIds(subject).map(async exercise=>{try{const activitySnapshot=await get(ref(db,`learningActivity/${uid}/${childName}/${exercise}`));const value=activitySnapshot.val();return value?[exercise,value]:null;}catch(error){console.warn('Einzelne Lernaktivität konnte nicht gelesen werden:',exercise,error);return null;}}));const ownActivity=Object.fromEntries(ownActivityRows.filter(Boolean)),ownProgress=dailyProgressFromActivity(ownActivity,dayKey),draftProgress={};for(const [exercise,entry] of Object.entries(ownActivity)){const answers=Array.isArray(entry?.live?.draftAnswers)?entry.live.draftAnswers:[],updated=Array.isArray(entry?.live?.draftUpdatedAt)?entry.live.draftUpdatedAt:[],items={};answers.forEach((answer,index)=>{const at=Number(updated[index])||0;if(!at||activityPeriodKeys(at).dayKey!==dayKey)return;const key=dailyAnswerItemKey(index,'draft');items[key]={count:String(answer||'').trim()?1:0,answerIndex:String(index),answer:String(answer||''),updatedAt:at};});for(const [index,error] of Object.entries(entry?.errorItems||{})){const wrongAt=Number(error?.lastWrongAt)||0,resolvedAt=Number(error?.resolvedAt)||0,wrongToday=wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey&&!isFalsePositiveResolvedLearningRecord(error),at=wrongToday?wrongAt:(resolvedAt>0&&activityPeriodKeys(resolvedAt).dayKey===dayKey?resolvedAt:0);if(!at||error?.source==='live_battle'||error?.source==='battle')continue;const key=dailyAnswerItemKey(index,error?.prompt||error?.topic||exercise);if(!items[key]||Number(items[key].count)<1)items[key]={count:1,answerIndex:String(index),answer:String(error?.submittedAnswer||''),updatedAt:at};}if(Object.keys(items).length)draftProgress[exercise]={items};}for(const [exercise,entry] of Object.entries(ownActivity)){const live=entry?.live||{},liveAt=Number(live.updatedAt)||Number(entry.lastAt)||0,liveIsToday=entry.dayKey===dayKey||Boolean(liveAt&&activityPeriodKeys(liveAt).dayKey===dayKey);if(!liveIsToday||exercise.toLowerCase().includes('battle'))continue;const count=Math.max((Array.isArray(live.draftAnswers)?live.draftAnswers:[]).filter(value=>String(value||'').trim()).length,Number(live.draftCount)||0,Number(live.done)||0),items=draftProgress[exercise]?.items||{};let added=0;for(let index=0;index<count&&added<count;index++){const key=dailyAnswerItemKey(index,'draft');if(items[key]&&Number(items[key].count)>0)continue;items[key]={count:1,answerIndex:String(index),answer:'',updatedAt:liveAt||Date.now()};added++;}if(Object.keys(items).length)draftProgress[exercise]={items};}const checked=dailyProgressCounts(ownProgress);ownChecked={...checked,submitted:dailySubmittedCount(draftProgress,ownProgress)};}return ownChecked;}
 async function showChildDailyWeeklyOverview(){
  status.textContent='';
  app.innerHTML=card('<h2>🏆 Tages- und Wochenauswertung</h2><p>Wertungen werden geladen …</p>')+card(btn('Zur Startseite','home','alt'));
@@ -537,14 +538,26 @@ async function showChildDailyWeeklyOverview(){
   let today=todaySnap.val()||{};
   if(!Object.keys(today).length){await new Promise(resolve=>setTimeout(resolve,350));today=(await get(ref(db,'learningDailyLeaderboard/'+dayKey))).val()||{};}
   const weekDays=weekRows.map((snap,index)=>days[index]===dayKey?today:(snap.val()||{}));
+  const ownDaily={english:await ownDailyAnswerCounts('english',dayKey,soloName),math:await ownDailyAnswerCounts('math',dayKey,mathName)};
   const dailyHtml=subject=>{
    const data=today[subject]||{};
-   const rows=RANKED_NAMES.map(name=>{
-    const byUid=data[name]||{},canonical=byUid[ADMIN_UID],sourceRows=canonical&&Number(canonical.dailyRepairVersion)>=8?[canonical]:Object.values(byUid);
-    let attempts=0,checkedAttempts=0,mistakes=0;for(const row of sourceRows){const totals=dailyRowTotals(row);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;}
-    const manualDailyOverride=sourceRows.some(row=>row?.manualDailyOverride);
-    return {name,attempts,checkedAttempts,mistakes,manualDailyOverride,rate:checkedAttempts?mistakes/checkedAttempts:null};
-   }).sort((a,b)=>b.attempts-a.attempts||(a.rate??Infinity)-(b.rate??Infinity)||RANKED_NAMES.indexOf(a.name)-RANKED_NAMES.indexOf(b.name));
+   const ownName=subject==='math'?mathName:soloName,own=ownDaily[subject]||{checked:0,mistakes:0,submitted:0},totals={},ownRecordSeen=new Set();
+   for(const [name,byUid] of Object.entries(data)){
+    if(!RANKED_NAMES.includes(name))continue;
+    const canonical=byUid?.[ADMIN_UID],hasCanonical=canonical&&Number(canonical.dailyRepairVersion)>=8,selectedRows=hasCanonical?[[name===ownName?uid:ADMIN_UID,canonical]]:Object.entries(byUid||{});
+    for(const [rowUid,row] of selectedRows){
+     const total=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0,manualDailyOverride:false}),values=dailyRowTotals(row);
+     let attempts=values.attempts,checkedAttempts=values.checkedAttempts,mistakes=values.mistakes;
+     if(name===ownName&&rowUid===uid){attempts=Math.max(attempts,own.checked+own.submitted+Math.max(0,values.attempts-values.checkedAttempts));checkedAttempts=Math.max(checkedAttempts,own.checked);mistakes=Math.max(mistakes,own.mistakes);ownRecordSeen.add(name);}
+     total.attempts+=attempts;total.checkedAttempts+=checkedAttempts;total.mistakes+=mistakes;total.manualDailyOverride=total.manualDailyOverride||Boolean(row?.manualDailyOverride);
+    }
+   }
+   if(ownName&&RANKED_NAMES.includes(ownName)&&!ownRecordSeen.has(ownName)&&(own.checked||own.submitted)){
+    const total=totals[ownName]||(totals[ownName]={name:ownName,attempts:0,checkedAttempts:0,mistakes:0,manualDailyOverride:false});
+    total.attempts+=own.checked+own.submitted;total.checkedAttempts+=own.checked;total.mistakes+=own.mistakes;
+   }
+   applyDailyCounterOverride(totals,dayKey,subject);
+   const rows=RANKED_NAMES.map(name=>{const value=totals[name]||{name,attempts:0,checkedAttempts:0,mistakes:0};return {...value,rate:value.checkedAttempts?value.mistakes/value.checkedAttempts:null};}).sort((a,b)=>b.attempts-a.attempts||(a.rate??Infinity)-(b.rate??Infinity)||RANKED_NAMES.indexOf(a.name)-RANKED_NAMES.indexOf(b.name));
    const manual=Object.entries(data).flatMap(([name,devices])=>Object.values(devices||{}).filter(row=>row?.manualDailyOverride).map(row=>name+': heute ausnahmsweise '+Number(row.manualCount)+' gesetzt'));
    const unknown=Object.entries(data).flatMap(([name,devices])=>Object.values(devices||{}).filter(row=>Number(row?.unverifiedLegacyDailyCount)>0&&!row?.manualDailyOverride).map(row=>name+': '+Number(row.unverifiedLegacyDailyCount)+' alte Antworten'));
    const note=[...manual,...(unknown.length?['nicht prüfbare Altsummen werden nicht gewertet ('+unknown.join(', ')+')']:[])],noteHtml=note.length?'<div class="daily-note"><strong>Hinweis zur Zählung</strong><span>'+esc(note.join('; '))+'. Neue Antworten werden korrekt gezählt.</span></div>':'';
