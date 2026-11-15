@@ -973,7 +973,7 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
    }).join(''):'';
    const errorReview=isFrenchExercise&&frenchErrorRows?'<details class="live-answer-details french-error-review"><summary>Fehler ansehen · '+errors.length+'</summary>'+frenchErrorRows+'</details>':'';
    const frenchAllAnswers=isFrenchExercise&&answerRows.length?'<details class="live-answer-details" open><summary>Alle Antworten ansehen · '+answerRows.length+'</summary><div class="live-answer-table-wrap"><table><thead><tr><th>Aufgabe</th><th>Antwort von '+esc(name)+'</th><th>Rückmeldung</th></tr></thead><tbody>'+answerRows.join('')+'</tbody></table></div></div>':'';
-   const answerDetails=isFrenchExercise?errorReview+frenchAllAnswers:(answerRows.length?'<div class="live-answer-details"><strong class="live-answer-heading">Eingaben · '+answerRows.length+'</strong><div class="live-answer-table-wrap"><table><thead><tr><th>Aufgabe</th><th>Eingegeben</th><th>Rückmeldung</th></tr></thead><tbody>'+answerRows.join('')+'</tbody></table></div></details>':'');
+   const answerDetails=isFrenchExercise?errorReview+frenchAllAnswers:(answerRows.length?'<div class="live-answer-details"><strong class="live-answer-heading">Eingaben · '+answerRows.length+'</strong><div class="live-answer-table-wrap"><table><thead><tr><th>Aufgabe</th><th>Eingegeben</th><th>Rückmeldung</th></tr></thead><tbody>'+answerRows.join('')+'</tbody></table></div></div>':'');
    rows.push({name,id,what,when,errorText,improvedText,answerDetails,errorReview:!!errorReview});
   }
  }
