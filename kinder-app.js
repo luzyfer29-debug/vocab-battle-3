@@ -1077,16 +1077,16 @@ async function enter(){
    if(meta.mode==='vocab-work'){msg('Diese Battle-Art ist auf der Kinderseite nicht verfügbar.',true);return;}
    if(joinExpectedRoomType){const isMath=meta.subject==='math',matches=joinExpectedRoomType==='fractions'?isMath&&meta.mode==='fractions':joinExpectedRoomType==='math-exam'?isMath&&meta.mode==='math-exam':joinExpectedRoomType==='rational'?isMath&&(meta.mode==='vocab'||meta.mode==='rational'||!meta.mode):!isMath&&(meta.mode==='vocab'||!meta.mode);if(!matches){msg('Dieser Code gehört zu einem anderen Battle. Bitte nimm den Code für den ausgewählten Button.',true);return;}}
    let s=Object.keys(r.slots||{}).find(k=>r.slots[k]?.name===name&&r.slots[k]?.uid===uid);
-   if(!s){if(meta.stage!=='lobby'){msg('Das Battle läuft bereits. Bitte einen neuen Raum im Warteraum öffnen.',true);return;}s=String(names.indexOf(name)+1);if(r.slots?.[s]){msg('Dieser Name ist schon vergeben. Bitte anderen Namen wählen.',true);return;}msg('Du wirst in den Warteraum eingetragen …');await joinWithTimeout(set(ref(db,`rooms/${c}/slots/${s}`),{name,uid,score:0}),'Der Eintrag konnte nicht gespeichert werden. Bitte neuen Raumcode versuchen.');}
-   code=c;role='player';slot=s;listen();return;
+   if(!s){if(meta.stage!=='lobby'){msg('Das Battle läuft bereits. Bitte einen neuen Raum im Warteraum öffnen.',true);return;}s=String(names.indexOf(name)+1);if(r.slots?.[s]){msg('Dieser Name ist schon vergeben. Bitte anderen Namen wählen.',true);return;}msg('Du wirst in den Warteraum eingetragen …');const slotWrite=set(ref(db,`rooms/${c}/slots/${s}`),{name,uid,score:0});slotWrite.catch(e=>msg('Eintrag konnte nicht gespeichert werden: '+e.message,true));}
+   code=c;role='player';slot=s;status.textContent='';listen();return;
   }
   if(grammarSnap?.exists()){
    const r=grammarSnap.val(),meta=r.meta||{};
    if(joinExpectedRoomType==='grammar'&&meta.station===undefined){msg('Dieser Code gehört nicht zum Grammatik-Battle. Bitte den Grammatik-Raumcode verwenden.',true);return;}if(joinExpectedRoomType==='vocab-work-1'&&meta.kind!=='vocab-work'){msg('Dieser Code gehört nicht zum Vokabelarbeit-Battle Station 1.',true);return;}
    if(joinExpectedRoomType==='vocab-work-2'&&meta.kind!=='vocab-work-station2'){msg('Dieser Code gehört nicht zum Vokabelarbeit-Battle Station 2.',true);return;}
    let s=Object.keys(r.slots||{}).find(k=>r.slots[k]?.name===name&&r.slots[k]?.uid===uid);
-   if(!s){if(meta.stage!=='lobby'){msg('Das Battle läuft bereits. Bitte den nächsten Raum abwarten.',true);return;}s=String(names.indexOf(name)+1);if(r.slots?.[s]){msg('Dieser Name ist schon vergeben. Bitte anderen Namen wählen.',true);return;}msg('Du wirst in den Warteraum eingetragen …');await joinWithTimeout(set(ref(db,`grammarRooms/${c}/slots/${s}`),{name,uid,score:0}),'Der Eintrag konnte nicht gespeichert werden. Bitte neuen Raumcode versuchen.');}
-   if(meta.kind==='writing'){wbCode=c;wbSlot=s;wbListen();return;}
+   if(!s){if(meta.stage!=='lobby'){msg('Das Battle läuft bereits. Bitte den nächsten Raum abwarten.',true);return;}s=String(names.indexOf(name)+1);if(r.slots?.[s]){msg('Dieser Name ist schon vergeben. Bitte anderen Namen wählen.',true);return;}msg('Du wirst in den Warteraum eingetragen …');const slotWrite=set(ref(db,`grammarRooms/${c}/slots/${s}`),{name,uid,score:0});slotWrite.catch(e=>msg('Eintrag konnte nicht gespeichert werden: '+e.message,true));}
+   status.textContent='';if(meta.kind==='writing'){wbCode=c;wbSlot=s;wbListen();return;}
    if(meta.kind==='vocab-work'||meta.kind==='vocab-work-station2'||meta.station!==undefined){gbCode=c;gbSlot=s;gbListen();return;}
   }
   msg('Raumcode nicht gefunden. Prüfe die sechs Ziffern.',true);
