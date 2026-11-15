@@ -279,20 +279,35 @@ function dailySubmittedCount(progress,checkedProgress={}){
  let total=0;
  for(const [exercise,entry] of Object.entries(progress||{})){
   if(isRemovedVocabBattleActivity(exercise))continue;
-  const checked=new Set(Object.entries(checkedProgress?.[exercise]?.items||{}).map(([key,item])=>String(item?.answerIndex??(key.includes('_')?key.slice(0,key.lastIndexOf('_')):key))));
+  const checkedAtByIndex={};
+  for(const [key,item] of Object.entries(checkedProgress?.[exercise]?.items||{})){
+   const index=String(item?.answerIndex??(key.includes('_')?key.slice(0,key.lastIndexOf('_')):key));
+   const at=Number(item?.updatedAt)||Number(item?.checkedAt)||0;
+   checkedAtByIndex[index]=Math.max(checkedAtByIndex[index]||0,at);
+  }
   const items=entry?.items&&typeof entry.items==='object'?entry.items:null;
   if(!items){total+=Math.max(0,Math.floor(Number(entry?.count)||0));continue;}
   const counted=new Set();
   for(const [key,item] of Object.entries(items)){
    if(Math.max(0,Math.floor(Number(item?.count)||0))<=0)continue;
    const separator=key.lastIndexOf('_'),answerIndex=String(item?.answerIndex??(separator>0?key.slice(0,separator):key));
-   if(Object.prototype.hasOwnProperty.call(item,'answer')&&!String(item.answer||'').trim()&&key===dailyAnswerItemKey(answerIndex,'draft'))continue;if(checked.has(answerIndex)||counted.has(answerIndex))continue;
+   if(Object.prototype.hasOwnProperty.call(item,'answer')&&!String(item.answer||'').trim()&&key===dailyAnswerItemKey(answerIndex,'draft'))continue;
+   const updatedAt=Number(item?.updatedAt)||Number(entry?.updatedAt)||0;
+   if(updatedAt){
+    const itemDayKey=activityPeriodKeys(updatedAt).dayKey;
+    if(itemDayKey>=DAILY_COUNT_WINDOW_START_DAY&&!isWithinDailyCountWindow(updatedAt,itemDayKey))continue;
+   }
+   const checkedAt=Number(checkedAtByIndex[answerIndex])||0;
+   if(checkedAt&&updatedAt&&checkedAt>=updatedAt)continue;
+   if(checkedAt&&!updatedAt)continue;
+   if(counted.has(answerIndex))continue;
    counted.add(answerIndex);
   }
   total+=counted.size;
  }
  return total;
 }
+
 function dailyRowTotals(row){
  const entries=Object.entries(row?.progressByExercise||{}).filter(([exercise])=>!isRemovedVocabBattleActivity(exercise)).map(([,item])=>item),stored=Math.max(Number(row?.attempts)||0,(Number(row?.checkedAttempts)||0)+(Number(row?.submittedAttempts)||0));
  if(Number(row?.answerCounterVersion)===3){
@@ -464,7 +479,7 @@ function learningDailyBreakdown(days,weekKey=''){
    for(const subject of ['english','math'])for(const row of Object.values(data?.[subject]?.[name]||{})){
     const totals=dailyRowTotals(row);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;
    }
-   if(dayKey>=DAILY_COUNT_WINDOW_START_DAY)attempts=checkedAttempts;
+   
    const setting=DAILY_COUNTER_OVERRIDES[dayKey]?.english?.[name];
    if(setting!==undefined){
     const count=Number(typeof setting==='number'?setting:setting?.count)||0;
