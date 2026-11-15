@@ -962,7 +962,7 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
    for(let index=0;index<length;index++){
     const check=checks[String(index)]||{},answer=String(check.submittedAnswer||answers[index]||'').trim();
     if(!answer&&!check.attempted&&!wasChecked)continue;
-    const prompt=String(check.prompt||prompts[index]||('Aufgabe '+(index+1))),accepted=Array.isArray(check.accepted)&&check.accepted.length?'<small>Erwartet: '+esc(check.accepted.join(' / '))+'</small>':'',answerStatus=check.attempted?(check.correct?'✅ richtig':'❌ falsch'):(wasChecked?'⏭️ nicht beantwortet':'✍️ Entwurf');
+    const prompt=String(check.prompt||prompts[index]||('Aufgabe '+(index+1))),accepted=Array.isArray(check.accepted)&&check.accepted.length?'<small>Erwartet: '+esc(check.accepted.join(' / '))+'</small>':'',answerStatus=check.attempted?(check.correct?'✅ richtig':'❌ falsch'):(answer?'✍️ Entwurf':'— Nichts eingegeben');
     answerRows.push('<tr><td>'+(index+1)+'. '+esc(prompt)+'</td><td>'+esc(answer||'(leer)')+'</td><td>'+answerStatus+accepted+'</td></tr>');
    }
    const isFrenchExercise=id.startsWith('french_');
