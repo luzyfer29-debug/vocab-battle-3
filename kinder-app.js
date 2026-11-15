@@ -156,6 +156,7 @@ const DAILY_WIN_EXCLUDED_DAYS={'2026-11-02':'Lern- und Battle-Antworten sind an 
 const DAILY_WINNER_OVERRIDES={'2026-11-02':{Luca:1},'2026-11-13':{Luca:1}}; const DAILY_WINNER_DAY_OVERRIDES={'2026-11-02':['Luca'],'2026-11-03':['Luca'],'2026-11-04':['Luca'],'2026-11-05':['Luca'],'2026-11-06':['Luca'],'2026-11-07':['Talea'],'2026-11-09':['Talea'],'2026-11-10':['Luca']};
 function applyDailyCounterOverride(totals,dayKey,subject){for(const [name,setting] of Object.entries(DAILY_COUNTER_OVERRIDES[dayKey]?.[subject]||{})){const row=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0}),count=Number(typeof setting==='number'?setting:setting?.count)||0,baselineAnswers=Number(typeof setting==='number'?0:setting?.baselineAnswers)||0,current=Number(row.attempts)||0;row.attempts=count+Math.max(0,current-baselineAnswers);row.manualAdjustment=true;}}
 let activitySyncWarned=false;
+const activeLearningRunIds=new Map();
 function activityPeriodKeys(timestamp=Date.now()){
 
  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(timestamp)).map(x=>[x.type,x.value]));
@@ -647,7 +648,10 @@ async function showDailyLeaderboard(subject){
 async function recordLearningActivity(name,exercise,increment=true,liveState=null){
  if(!db||!uid||!SOLO_NAMES.includes(name)||!name||!exercise)return;
  const now=Date.now(),{dayKey,weekKey}=activityPeriodKeys(now),path=`learningActivity/${uid}/${name}/${exercise}`;
- try{await runTransaction(ref(db,path),current=>{const value=current&&typeof current==='object'?{...current}:{};if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}if(increment){value.dayCount=(Number(value.dayCount)||0)+1;value.weekCount=(Number(value.weekCount)||0)+1;}value.lastAt=now;if(liveState&&typeof liveState==='object')value.live={...liveState,updatedAt:now};const sessions=Array.isArray(value.sessions)?[...value.sessions]:[];if(increment||!sessions.length)sessions.push({startedAt:now,lastAt:now,live:liveState&&typeof liveState==='object'?{...liveState,updatedAt:now}:null});else sessions[sessions.length-1]={...sessions[sessions.length-1],lastAt:now,live:liveState&&typeof liveState==='object'?{...liveState,updatedAt:now}:sessions[sessions.length-1].live};value.sessions=sessions.slice(-100);return value;});activitySyncWarned=false;const subject=String(exercise).startsWith('math_')?'math':'english';const dailyState=liveState&&typeof liveState==='object'?liveState:{taskTitle:exercise,done:Math.max(1,Number(increment)||0),status:'Lernaktivität erfasst'};await updateDailyActivityProgress(name,subject,exercise,now,dailyState);}catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg('Tages- und Wochenzählung wartet auf die Firebase-Regeln. Lernfortschritt bleibt davon unberührt.',true);}}
+ let requestedRunId=activeLearningRunIds.get(path)||'';
+ if(increment||!requestedRunId)requestedRunId='run_'+now+'_'+String(uid).replace(/[^A-Za-z0-9_-]/g,'_')+'_'+Math.random().toString(36).slice(2,10);
+ activeLearningRunIds.set(path,requestedRunId);
+ try{await runTransaction(ref(db,path),current=>{const value=current&&typeof current==='object'?{...current}:{};if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}if(increment){value.dayCount=(Number(value.dayCount)||0)+1;value.weekCount=(Number(value.weekCount)||0)+1;}value.lastAt=now;if(liveState&&typeof liveState==='object')value.live={...liveState,updatedAt:now};const sessions=Array.isArray(value.sessions)?[...value.sessions]:[];if(increment||!sessions.length){sessions.push({runId:requestedRunId,startedAt:now,lastAt:now,live:liveState&&typeof liveState==='object'?{...liveState,updatedAt:now}:null});activeLearningRunIds.set(path,requestedRunId);}else{const last=sessions[sessions.length-1],runId=String(last.runId||requestedRunId);sessions[sessions.length-1]={...last,runId,lastAt:now,live:liveState&&typeof liveState==='object'?{...liveState,updatedAt:now}:last.live};activeLearningRunIds.set(path,runId);}value.sessions=sessions.slice(-100);return value;});activitySyncWarned=false;const subject=String(exercise).startsWith('math_')?'math':'english';const dailyState=liveState&&typeof liveState==='object'?liveState:{taskTitle:exercise,done:Math.max(1,Number(increment)||0),status:'Lernaktivität erfasst'};await updateDailyActivityProgress(name,subject,exercise,now,dailyState);}catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg('Tages- und Wochenzählung wartet auf die Firebase-Regeln. Lernfortschritt bleibt davon unberührt.',true);}}
 }
 function touchLearningActivity(name,exercise,liveState=null){void recordLearningActivity(name,exercise,false,liveState);}
 async function restoreLearningActivityAt(name,exercise,timestamp){
@@ -691,7 +695,8 @@ async function cleanupFalsePositiveLearningErrors(name,subject){
 }
 async function recordLearningError(name,subject,exercise,index,topic,q,correct,occurredAt=Date.now()){
  if(!db||!uid||!SOLO_NAMES.includes(name)||!exercise)return false;
- const eventAt=Number(occurredAt)||Date.now(),path=`learningActivity/${uid}/${name}/${exercise}`,attemptId='attempt_'+eventAt+'_'+String(index).replace(/[^A-Za-z0-9_-]/g,'_')+'_'+Math.random().toString(36).slice(2,10);
+ const eventAt=Number(occurredAt)||Date.now(),path=`learningActivity/${uid}/${name}/${exercise}`;
+ let attemptId='';
  // Save every checked answer for counting; only actual wrong answers enter the error list.
  let activitySaved=false;
  try{
@@ -702,11 +707,12 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
    if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}
    if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}
    value.lastAt=Math.max(Number(value.lastAt)||0,eventAt);
-   const checks={...(value.answerChecks||{})},previous=checks[key]||{},errors={...(value.errorItems||{})},old=errors[key];
-   const previousWrongAt=Number(previous.lastWrongAt)||0,wrongAt=correct?previousWrongAt:eventAt;
-   checks[key]={attempted:true,source:"answer_check",subject,topic,prompt:String(q?.prompt||q?.q||q?.word||topic||""),submittedAnswer:String(q?.submittedAnswer||""),accepted:Array.isArray(q?.accepted)?q.accepted.map(String):null,dayKey,weekKey,checkedAt:eventAt,lastWrongAt:wrongAt,correct:!!correct,eventId:attemptId};
+   const checks={...(value.answerChecks||{})},previous=checks[key]||{},errors={...(value.errorItems||{})},old=errors[key],sessions=Array.isArray(value.sessions)?value.sessions:[],lastSession=sessions[sessions.length-1]||{},runId=activeLearningRunIds.get(path)||String(lastSession.runId||('run_'+(Number(lastSession.startedAt)||eventAt)+'_'+String(uid).replace(/[^A-Za-z0-9_-]/g,'_'))),sameRun=Boolean(previous.attempted&&(previous.runId===runId||(!previous.runId&&Number(lastSession.startedAt)>0&&Number(previous.checkedAt)>=Number(lastSession.startedAt)))),previousWrongAt=sameRun?Number(previous.lastWrongAt)||0:0,wrongAt=correct?previousWrongAt:eventAt;
+   attemptId=sameRun&&previous.eventId?previous.eventId:'attempt_'+String(uid).replace(/[^A-Za-z0-9_-]/g,'_')+'_'+String(runId).replace(/[^A-Za-z0-9_-]/g,'_')+'_'+dayKey+'_'+String(index).replace(/[^A-Za-z0-9_-]/g,'_');
+   checks[key]={attempted:true,source:"answer_check",subject,topic,prompt:String(q?.prompt||q?.q||q?.word||topic||""),submittedAnswer:String(q?.submittedAnswer||""),accepted:Array.isArray(q?.accepted)?q.accepted.map(String):null,dayKey,weekKey,checkedAt:eventAt,lastWrongAt:wrongAt,correct:!!correct,eventId:attemptId,runId};
    value.answerChecks=checks;
-   const answerEvents={...(value.answerEvents||{})};answerEvents[attemptId]={attempted:true,source:"answer_check",subject,topic,index:Number(index),prompt:String(q?.prompt||q?.q||q?.word||topic||""),dayKey,weekKey,checkedAt:eventAt,eventAt,lastWrongAt:wrongAt,correct:!!correct};value.answerEvents=answerEvents;
+   const answerEvents={...(value.answerEvents||{})},previousEvent=answerEvents[attemptId],eventWrongAt=Math.max(Number(previousEvent?.lastWrongAt)||0,wrongAt);
+   answerEvents[attemptId]={attempted:true,source:"answer_check",subject,topic,index:Number(index),prompt:String(q?.prompt||q?.q||q?.word||topic||""),dayKey,weekKey,checkedAt:eventAt,eventAt,lastWrongAt:eventWrongAt,correct:!!correct,runId};value.answerEvents=answerEvents;
    if(correct){
     if(old&&isFalsePositiveResolvedLearningRecord(old)){delete errors[key];changedItem=null;}
     else if(old){changedItem={...old,resolved:true,resolvedAt:Math.max(eventAt,Number(old.lastWrongAt)||0)+1};errors[key]=changedItem;}
