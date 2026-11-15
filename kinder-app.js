@@ -225,7 +225,7 @@ function dailySubmittedCount(progress,checkedProgress={}){
   for(const [key,item] of Object.entries(items)){
    if(Math.max(0,Math.floor(Number(item?.count)||0))<=0)continue;
    const separator=key.lastIndexOf('_'),answerIndex=String(item?.answerIndex??(separator>0?key.slice(0,separator):key));
-   if(checked.has(answerIndex)||counted.has(answerIndex))continue;
+   if(Object.prototype.hasOwnProperty.call(item,'answer')&&!String(item.answer||'').trim()&&key===dailyAnswerItemKey(answerIndex,'draft'))continue;if(checked.has(answerIndex)||counted.has(answerIndex))continue;
    counted.add(answerIndex);
   }
   total+=counted.size;
