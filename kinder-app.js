@@ -698,7 +698,7 @@ async function cleanupFalsePositiveLearningErrors(name,subject){
  falsePositiveCleanupDone.add(cleanupKey);
 }
 async function recordLearningError(name,subject,exercise,index,topic,q,correct,occurredAt=Date.now()){
- if(!db||!uid||!SOLO_NAMES.includes(name)||!exercise)return false;
+ if(!learningTimeIsOpen()||!db||!uid||!SOLO_NAMES.includes(name)||!exercise)return false;
  const eventAt=Number(occurredAt)||Date.now(),path=`learningActivity/${uid}/${name}/${exercise}`;
  let attemptId='';
  // Save every checked answer for counting; only actual wrong answers enter the error list.
