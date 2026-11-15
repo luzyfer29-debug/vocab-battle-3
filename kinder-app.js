@@ -487,7 +487,8 @@ async function backfillTodayEnglishAnswers(dayKey){
    const done=Math.max(0,Math.min(30,Number(activity?.live?.done)||0));if(!done)continue;
    const questions=BATTLES[battle-1]||[],prior=progress[exercise]||{count:0,mistakes:0,items:{},updatedAt:at},items={...(prior.items||{})};
    for(let index=0;index<done;index++){
-    const q=questions[index],prompt=q?.prompt||q?.q||q?.word||`Vokabeln ${battle} · Aufgabe ${index+1}`,key=dailyAnswerItemKey(index,prompt),check=activity.answerChecks?.[String(index)],error=activity.errorItems?.[String(index)];
+    const q=questions[index],prompt=q?.prompt||q?.q||q?.word||`Vokabeln ${battle} · Aufgabe ${index+1}`,key='legacy_'+dailyAnswerItemKey(index,prompt),check=activity.answerChecks?.[String(index)],error=activity.errorItems?.[String(index)],hasAttemptEvent=Object.values(activity?.answerEvents||{}).some(attempt=>String(attempt?.index)===String(index)&&attempt.dayKey===dayKey);
+    if(hasAttemptEvent)continue;
     const wrongAt=Number(check?.lastWrongAt||error?.lastWrongAt)||0,wrongToday=wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey&&!isFalsePositiveResolvedLearningRecord(error);
     const mistakes=check?.attempted===true?Number(wrongToday):Number(error?.attempted===true&&wrongToday);
     items[key]=items[key]?{...items[key],mistakes:Math.max(Number(items[key].mistakes)||0,mistakes)}:{count:1,mistakes};
