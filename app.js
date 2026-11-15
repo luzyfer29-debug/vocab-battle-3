@@ -1124,7 +1124,7 @@ ffd166;font-weight:750}.activity-state.is-done{color:#8cebd8;font-weight:750}.ac
 .dashboard-simple-activity{margin-top:18px!important;padding:18px!important;border:1px solid rgba(207,255,224,.24)!important;border-radius:18px!important;background:linear-gradient(145deg,rgba(7,54,36,.56),rgba(8,44,31,.3))!important}
 .dashboard-simple-activity h3{display:flex;align-items:center;gap:10px;margin:0 0 16px!important;font-size:20px!important}
 .dashboard-simple-activity h3:before{content:"";width:5px;height:24px;border-radius:9px;background:#8ff0b3;box-shadow:0 0 12px #6bdd9866}
-.live-simple-list{display:grid;gap:10px;overflow:hidden}
+.live-simple-list{display:grid;gap:10px;overflow:visible;min-width:0}
 .live-simple-head,.live-simple-row{display:grid;grid-template-columns:minmax(0,2.1fr) minmax(145px,1.15fr) minmax(110px,.85fr) minmax(175px,1.15fr);gap:14px;align-items:center}
 .live-simple-head{padding:0 16px 3px;color:#a9d9bd;font-size:12px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
 .live-simple-row{position:relative;padding:15px 16px;border:1px solid rgba(182,239,200,.28);border-radius:15px;background:linear-gradient(110deg,rgba(25,105,68,.8),rgba(13,70,48,.88));box-shadow:0 5px 14px rgba(0,0,0,.12);transition:transform .16s ease,border-color .16s ease,background .16s ease}
@@ -1140,14 +1140,14 @@ ffd166;font-weight:750}.activity-state.is-done{color:#8cebd8;font-weight:750}.ac
  .live-simple-head{display:none}
  .live-simple-list{gap:10px}
  .live-simple-row{grid-template-columns:minmax(0,1fr);gap:0;padding:13px 14px;border-radius:14px}
- .live-simple-row>span{display:grid;grid-template-columns:minmax(78px,30%) minmax(0,1fr);gap:9px;align-items:center;padding:8px 0;font-size:13px}
+ .live-simple-row>span{display:block;min-width:0;padding:8px 0;font-size:13px;overflow-wrap:anywhere}
  .live-simple-row>span+span{border-top:1px solid rgba(195,246,211,.14)}
- .live-simple-row>span:before{content:attr(data-label);font-size:11px;font-weight:800;letter-spacing:.02em;color:#b9e6c8;line-height:1.35}
+ .live-simple-row>span:before{content:attr(data-label);display:block;margin:0 0 4px;font-size:11px;font-weight:800;letter-spacing:.02em;color:#b9e6c8;line-height:1.35}
  .live-simple-row>.live-simple-what{grid-column:auto;padding:5px 0 10px;border-bottom:1px solid rgba(195,246,211,.23);font-size:15px!important}
  .live-simple-row>.live-simple-what:before{color:#d2f4de}
- .live-simple-row>span[data-label="Fehler"],.live-simple-row>span[data-label="Verbessert?"]{display:grid}
+ .live-simple-row>span[data-label="Fehler"],.live-simple-row>span[data-label="Verbessert?"]{display:block}
  .live-simple-row>span[data-label="Wann"]{font-variant-numeric:tabular-nums}
- .live-simple-row>span .live-answer-details{grid-column:1 / -1;width:100%;min-width:0;margin-top:10px}.live-answer-table-wrap{overflow-x:auto!important}
+ .live-simple-row>span .live-answer-details{width:100%;min-width:0;margin-top:10px}.live-simple-answer-row{min-width:0;max-width:100%;overflow:hidden}.live-answer-table-wrap{overflow:visible!important}.live-answer-table-wrap table{display:block;width:100%!important;min-width:0!important;table-layout:fixed!important}.live-answer-table-wrap thead{display:none!important}.live-answer-table-wrap tbody,.live-answer-table-wrap tr{display:block;width:100%}.live-answer-table-wrap tr{margin:8px 0;padding:8px;border:1px solid rgba(195,246,211,.2);border-radius:10px;background:rgba(7,54,36,.22)}.live-answer-table-wrap td{display:block;width:100%;padding:5px 2px!important;white-space:normal;overflow-wrap:anywhere}.live-answer-table-wrap td+td{border-top:1px solid rgba(195,246,211,.14)}.live-answer-table-wrap td:nth-child(1):before{content:"Aufgabe: ";font-weight:800;color:#b9e6c8}.live-answer-table-wrap td:nth-child(2):before{content:"Eingegeben: ";font-weight:800;color:#b9e6c8}.live-answer-table-wrap td:nth-child(3):before{content:"Rückmeldung: ";font-weight:800;color:#b9e6c8}
  .live-simple-row>span[data-label="Wann"] span{white-space:nowrap}
 }.dashboard-live-toolbar{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:8px 12px!important;margin:14px 0 8px!important}
 .dashboard-live-current{font-size:15px;font-weight:750;color:#fff}
