@@ -1011,7 +1011,7 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
     return '<div class="live-error-item"><strong>'+esc(item?.prompt||'Aufgabe')+'</strong><p><strong>Antwort von '+esc(name)+':</strong> '+esc(submitted||'Im ursprünglichen Versuch nicht gespeichert')+'</p><p><strong>Richtige Antwort:</strong> '+esc(expected)+'</p><p class="'+(item?.resolved?'good':'error')+'">'+(item?.resolved?'✅ Später richtig wiederholt':'❌ Noch offen')+'</p></div>';
    }).join(''):'';
    const errorReview=isFrenchExercise&&frenchErrorRows?'<details class="live-answer-details french-error-review"><summary>Fehler ansehen · '+errors.length+'</summary>'+frenchErrorRows+'</details>':'';
-   const answerList=answerRows.length?'<details class="live-answer-details" data-live-key="answers-'+esc(name)+'-'+esc(id)+'"><summary>Eingaben ansehen · '+answerRows.length+'</summary><div class="live-answer-card-list">'+answerRows.join('')+'</div></details>':'';
+   const answerList=answerRows.length?'<details class="live-answer-details" data-live-key="answers-'+esc(name)+'-'+esc(id)+'"><summary>Eingaben ansehen · '+answerRows.length+'</summary><div class="live-answer-card-list">'+answerRows.map(row=>row.html).join('')+'</div></details>':'';
    const answerDetails=(isFrenchExercise?errorReview:'')+answerList;
    rows.push({name,id,what,when,errorText,improvedText,answerDetails,errorReview:!!errorReview});
   }
