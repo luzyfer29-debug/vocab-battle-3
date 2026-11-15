@@ -958,11 +958,11 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
    const errorText=errors.length?errors.length+' Aufgaben mit Fehlern · '+unresolved+' noch offen':'Keine Fehler';
    const improvedText=errors.length?improved+' von '+errors.length+' danach richtig wiederholt':'Nicht nötig – fehlerfrei';
    const what=id.startsWith('english_grammar_')?learningActivityTitle(id):String(live.taskTitle||learningActivityTitle(id));
-   const checks=entry.answerChecks||{},answers=Array.isArray(live.draftAnswers)?live.draftAnswers:[],prompts=Array.isArray(live.draftPrompts)?live.draftPrompts:[],length=Math.max(answers.length,prompts.length,Object.keys(checks).length),answerRows=[],wasChecked=/geprüft|ausgewertet/i.test(String(live.status||''))||(Number(live.total)>0&&Number(live.done)>=Number(live.total))||(Object.keys(checks).length>0&&prompts.length>0);
+   const checks=entry.answerChecks||{},answers=Array.isArray(live.draftAnswers)?live.draftAnswers:[],prompts=Array.isArray(live.draftPrompts)?live.draftPrompts:[],length=Math.max(answers.length,prompts.length,Object.keys(checks).length),answerRows=[];
    for(let index=0;index<length;index++){
-    const check=checks[String(index)]||{},answer=String(check.submittedAnswer||answers[index]||'').trim();
-    if(!answer&&!check.attempted&&!wasChecked)continue;
-    const prompt=String(check.prompt||prompts[index]||('Aufgabe '+(index+1))),accepted=Array.isArray(check.accepted)&&check.accepted.length?'<small>Erwartet: '+esc(check.accepted.join(' / '))+'</small>':'',answerStatus=check.attempted?(check.correct?'✅ richtig':'❌ falsch'):(answer?'✍️ Entwurf':'— Nichts eingegeben');
+    const check=checks[String(index)]||{},answer=String(check.submittedAnswer||answers[index]||'').trim(),prompt=String(check.prompt||prompts[index]||'');
+    if(!answer&&!check.attempted&&!prompt)continue;
+    const accepted=Array.isArray(check.accepted)&&check.accepted.length?'<small>Erwartet: '+esc(check.accepted.join(' / '))+'</small>':'',answerStatus=check.attempted?(check.correct?'✅ richtig':'❌ falsch'):(answer?'✍️ Entwurf':'— Nichts eingegeben');
     answerRows.push('<tr><td>'+(index+1)+'. '+esc(prompt)+'</td><td>'+esc(answer||'(leer)')+'</td><td>'+answerStatus+accepted+'</td></tr>');
    }
    const isFrenchExercise=id.startsWith('french_');
