@@ -953,7 +953,7 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
  }
  rows.sort((a,b)=>b.when-a.when);
  if(!rows.length)return '<p class="muted">Noch keine gespeicherten Lernaktivitäten.</p>';
- return '<div class="live-simple-list"><div class="live-simple-head"><span>Was</span><span>Wann</span><span>Fehler</span><span>Verbessert?</span></div>'+rows.map(row=>'<div class="live-simple-row"><span class="live-simple-what" data-label="Was">'+esc(row.what)+'</span><span data-label="Wann">'+evaluationDate(row.when)+'</span><span data-label="Fehler">'+esc(row.errorText)+(row.errorReview?row.answerDetails:'')+'</span><span data-label="Verbessert?">'+esc(row.improvedText)+(row.errorReview?'':row.answerDetails)+'</span></div>').join('')+'</div>';
+ return '<div class="live-simple-list"><div class="live-simple-head"><span>Was</span><span>Wann</span><span>Fehler</span><span>Verbessert?</span></div>'+rows.map(row=>'<div class="live-simple-row"><span class="live-simple-what" data-label="Was">'+esc(row.what)+'</span><span data-label="Wann">'+evaluationDate(row.when)+'</span><span data-label="Fehler">'+esc(row.errorText)+(row.errorReview?row.answerDetails:'')+'</span><span data-label="Verbessert?">'+esc(row.improvedText)+'</span></div>'+(row.errorReview?'':row.answerDetails?'<div class="live-simple-answer-row">'+row.answerDetails+'</div>':'')).join('')+'</div>';
 }
 
 function renderDashboard(englishEntries,mathEntries,activityData={},seriesData={}){
