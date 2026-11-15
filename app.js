@@ -218,30 +218,39 @@ function dailyProgressFromActivity(activity,dayKey){
  const progress={};
  for(const [exercise,entry] of Object.entries(activity||{})){
   if(isRemovedVocabBattleActivity(exercise))continue;
-  let exerciseUpdatedAt=0;const items={},checks=entry?.answerChecks&&typeof entry.answerChecks==="object"?entry.answerChecks:{};
-  for(const [index,item] of Object.entries(checks)){
+  let exerciseUpdatedAt=0;const items={},checks=entry?.answerChecks&&typeof entry.answerChecks==="object"?entry.answerChecks:{},events=entry?.answerEvents&&typeof entry.answerEvents==="object"?entry.answerEvents:{},eventsByIndex=new Set();
+  for(const [eventId,item] of Object.entries(events)){
    if(item?.attempted!==true)continue;
+   const checkedAt=Number(item.checkedAt)||Number(item.eventAt)||0,wrongAt=Number(item.lastWrongAt)||0;exerciseUpdatedAt=Math.max(exerciseUpdatedAt,checkedAt);
+   const touchedToday=item.dayKey===dayKey||(checkedAt>0&&activityPeriodKeys(checkedAt).dayKey===dayKey);
+   if(!touchedToday)continue;
+   const key="attempt_"+String(eventId).replace(/[^A-Za-z0-9_-]/g,"_");
+   items[key]={count:1,mistakes:item.correct===false?1:(wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey?1:0)};
+   if(item.index!==undefined)eventsByIndex.add(String(item.index));
+  }
+  for(const [index,item] of Object.entries(checks)){
+   if(item?.attempted!==true||(item.eventId&&events[item.eventId]))continue;
    const checkedAt=Number(item.checkedAt)||0,wrongAt=Number(item.lastWrongAt)||0;exerciseUpdatedAt=Math.max(exerciseUpdatedAt,checkedAt);
    const touchedToday=item.dayKey===dayKey||(checkedAt>0&&activityPeriodKeys(checkedAt).dayKey===dayKey);
    if(!touchedToday)continue;
-   const key=dailyAnswerItemKey(index,item.prompt||item.topic||"");
+   const key="legacy_"+dailyAnswerItemKey(index,item.prompt||item.topic||"");
    items[key]={count:1,mistakes:wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey?1:0};
   }
   for(const [index,item] of Object.entries(entry?.errorItems||{})){
-   if(checks[index]||item?.attempted!==true||item?.source==='battle'||item?.source==='live_battle'||isFalsePositiveResolvedLearningRecord(item))continue;
+   if(checks[index]||eventsByIndex.has(String(index))||item?.attempted!==true||item?.source==='battle'||item?.source==='live_battle'||isFalsePositiveResolvedLearningRecord(item))continue;
    const wrongAt=Number(item.lastWrongAt)||0,resolvedAt=Number(item.resolvedAt)||0;exerciseUpdatedAt=Math.max(exerciseUpdatedAt,wrongAt,resolvedAt);
    const touchedToday=item.dayKey===dayKey||(wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey)||(resolvedAt>0&&activityPeriodKeys(resolvedAt).dayKey===dayKey);
    if(!touchedToday)continue;
-   const key=dailyAnswerItemKey(index,item.prompt||item.topic||"");
+   const key="legacy_"+dailyAnswerItemKey(index,item.prompt||item.topic||"");
    items[key]={count:1,mistakes:wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey?1:0};
   }
-  // Vocabulary live state records how many indexed questions were completed even
-  // when older clients failed to write answerChecks or the daily counter row.
   const vocabMatch=/^english_vocab_battle([1-3])$/.exec(exercise),liveAt=Number(entry?.live?.updatedAt)||Number(entry?.lastAt)||0;
   if(vocabMatch&&entry?.dayKey===dayKey&&liveAt>0&&activityPeriodKeys(liveAt).dayKey===dayKey){
    const battle=Number(vocabMatch[1])-1,questions=BATTLES[battle]||[],done=Math.max(0,Math.min(30,Number(entry?.live?.done)||0));exerciseUpdatedAt=Math.max(exerciseUpdatedAt,liveAt);
    for(let index=0;index<done;index++){
-    const q=questions[index],check=checks[String(index)],error=entry?.errorItems?.[String(index)],prompt=check?.prompt||q?.prompt||q?.q||q?.word||`Vokabeln ${battle+1} · Aufgabe ${index+1}`,key=dailyAnswerItemKey(index,prompt);
+    const check=checks[String(index)],checkAt=Number(check?.checkedAt)||0,checkedToday=check?.attempted===true&&(check.dayKey===dayKey||(checkAt>0&&activityPeriodKeys(checkAt).dayKey===dayKey));
+    if(eventsByIndex.has(String(index))||checkedToday)continue;
+    const q=questions[index],error=entry?.errorItems?.[String(index)],prompt=check?.prompt||q?.prompt||q?.q||q?.word||`Vokabeln ${battle+1} · Aufgabe ${index+1}`,key="legacy_"+dailyAnswerItemKey(index,prompt);
     const wrongAt=Number(check?.lastWrongAt||error?.lastWrongAt)||0,wrongToday=wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey&&!isFalsePositiveResolvedLearningRecord(error);
     const mistakes=check?.attempted===true?Number(wrongToday):Number(error?.attempted===true&&wrongToday);
     items[key]={count:1,mistakes};
@@ -304,10 +313,11 @@ async function repairDailyAnswerCounters(dayKey){
      if(!old||at>=oldAt)errors[index]=item;
     }
     const checks={...(prior.answerChecks||{})};
-    for(const [index,item] of Object.entries(entry?.answerChecks||{})){
-     const old=checks[index];if(!old||Number(item?.checkedAt||0)>=Number(old?.checkedAt||0))checks[index]=item;
-    }
-    merged[exercise]={...prior,...newest,answerChecks:checks,errorItems:errors};
+    const checks={...(prior.answerChecks||{})};
+    for(const [index,item] of Object.entries(entry?.answerChecks||{})){const old=checks[index];if(!old||Number(item?.checkedAt||0)>=Number(old?.checkedAt||0))checks[index]=item;}
+    const answerEvents={...(prior.answerEvents||{})};
+    for(const [id,item] of Object.entries(entry?.answerEvents||{})){const old=answerEvents[id];if(!old||Number(item?.checkedAt||item?.eventAt||0)>=Number(old?.checkedAt||old?.eventAt||0))answerEvents[id]=item;}
+    merged[exercise]={...prior,...newest,answerChecks:checks,errorItems:errors,answerEvents};
    }
    return merged;
   },{});
