@@ -970,7 +970,7 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
    const errorText=errors.length?errors.length+' Aufgaben mit Fehlern · '+unresolved+' noch offen':'Keine Fehler';
    const improvedText=errors.length?improved+' von '+errors.length+' danach richtig wiederholt':'Nicht nötig – fehlerfrei';
    const what=id.startsWith('english_grammar_')?learningActivityTitle(id):String(live.taskTitle||learningActivityTitle(id));
-   const checks=entry.answerChecks||{},events=Object.values(entry.answerEvents||{}).filter(item=>item?.attempted===true),answers=Array.isArray(live.draftAnswers)?live.draftAnswers:[],prompts=Array.isArray(live.draftPrompts)?live.draftPrompts:[],draftTimes=Array.isArray(live.draftUpdatedAt)?live.draftUpdatedAt:[],answerRows=[],latestCheckAtByIndex={};
+   const checks=entry.answerChecks||{},events=Object.values(entry.answerEvents||{}).filter(item=>item?.attempted===true),answers=Array.isArray(live.draftAnswers)?live.draftAnswers:[],prompts=Array.isArray(live.draftPrompts)?live.draftPrompts:[],draftTimes=Array.isArray(live.draftUpdatedAt)?live.draftUpdatedAt:[],answerRows=[],seenAttempts=new Set(),latestCheckAtByIndex={};
    for(const event of events){const index=String(event.index??''),at=Number(event.checkedAt)||Number(event.eventAt)||0;latestCheckAtByIndex[index]=Math.max(latestCheckAtByIndex[index]||0,at);}
    for(const [index,check] of Object.entries(checks)){const at=Number(check?.checkedAt)||0;latestCheckAtByIndex[index]=Math.max(latestCheckAtByIndex[index]||0,at);}
    const expectedText=value=>Array.isArray(value)&&value.length?value.map(String).join(' / '):String(value||'—');
@@ -983,20 +983,27 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
     const error=entry.errorItems?.[index],resolved=event.resolved===true||(event.correct===false&&error?.resolved===true&&Number(error.resolvedAt)>at);
     const status=event.correct===true?'✅ Richtig':resolved?'🔁 Falsch – später korrigiert':'❌ Falsch – noch nicht korrigiert';
     const expected=event.accepted||(Number(check.checkedAt)===at?check.accepted:null)||refereeExpectedAnswers(id,index);
-    answerRows.push(answerCard(at,index,event.prompt||check.prompt||prompts[Number(index)]||'',answer,expected,status));
+    answerRows.push({at,html:answerCard(at,index,event.prompt||check.prompt||prompts[Number(index)]||'',answer,expected,status)});seenAttempts.add(index+'_'+at);
     if(event.eventId)seenEvents.add(String(event.eventId));
    });
+   for(const [index,item] of Object.entries(entry.errorItems||{})){
+    const at=Number(item?.lastWrongAt)||0,answer=String(item?.submittedAnswer||'').trim();
+    if(!at||!answer||seenAttempts.has(String(index)+'_'+at))continue;
+    const check=checks[String(index)]||{},expected=item?.answer||check.accepted||refereeExpectedAnswers(id,index),status=item?.resolved?'🔁 Falsch – später korrigiert':'❌ Falsch – noch nicht korrigiert';
+    answerRows.push({at,html:answerCard(at,index,item?.prompt||check.prompt||prompts[Number(index)]||'',answer,expected,status)});seenAttempts.add(String(index)+'_'+at);
+   }
    for(const [index,check] of Object.entries(checks)){
     if(!check?.attempted||!String(check.submittedAnswer||'').trim()||(check.eventId&&seenEvents.has(String(check.eventId))))continue;
     const at=Number(check.checkedAt)||0,status=check.correct===true?'✅ Richtig':check.correct===false?'❌ Falsch – noch nicht korrigiert':'Geprüft';
-    answerRows.push(answerCard(at,index,check.prompt||prompts[Number(index)]||'',String(check.submittedAnswer).trim(),check.accepted,status));
+    answerRows.push({at,html:answerCard(at,index,check.prompt||prompts[Number(index)]||'',String(check.submittedAnswer).trim(),check.accepted||refereeExpectedAnswers(id,index),status)});
    }
    for(let index=0;index<answers.length;index++){
     const answer=String(answers[index]||'').trim(),at=Number(draftTimes[index])||Number(live.updatedAt)||0;
     if(!answer||at<=(latestCheckAtByIndex[String(index)]||0))continue;
     const latest=events.filter(event=>String(event.index)===String(index)).sort((a,b)=>(Number(b.checkedAt)||Number(b.eventAt)||0)-(Number(a.checkedAt)||Number(a.eventAt)||0))[0],check=checks[String(index)]||{};
-    answerRows.push(answerCard(at,index,prompts[index]||latest?.prompt||check.prompt||'',answer,latest?.accepted||check.accepted||refereeExpectedAnswers(id,index),'✍️ Noch nicht geprüft'));
+    answerRows.push({at,html:answerCard(at,index,prompts[index]||latest?.prompt||check.prompt||'',answer,latest?.accepted||check.accepted||refereeExpectedAnswers(id,index),'✍️ Noch nicht geprüft')});
    }
+   answerRows.sort((a,b)=>b.at-a.at);
    const isFrenchExercise=id.startsWith('french_');
    const frenchErrorRows=isFrenchExercise?errors.map(([index,item])=>{
     const matchingCheck=Object.values(checks).find(check=>String(check?.prompt||'')===String(item?.prompt||'')&&Number(check?.updatedAt||0)===Number(item?.lastWrongAt||0));
