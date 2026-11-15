@@ -826,7 +826,7 @@ function learningActivityTitle(id){
 function refereeExpectedAnswers(exercise,index){
  const i=Number(index);if(!Number.isInteger(i)||i<0)return null;
  let question=null;
- const grammar=String(exercise).match(/^english_grammar_([12])_task(\\d+)$/);
+ const grammar=String(exercise).match(/^english_grammar_([12])_task(\d+)$/);
  if(grammar){const task=GRAMMAR[Number(grammar[1])-1]?.tasks[Number(grammar[2])-1];if(Array.isArray(task?.items?.[i]))return task.items[i][2]||null;if(task?.open?.[i])return ['Beispiel: '+task.open[i]];}
  const vocab=String(exercise).match(/^english_vocab_work(_station2)?_page([12])$/);
  if(vocab){const bank=vocab[1]?VOCAB_WORK_STATION2_BATTLE_QUESTIONS:VOCAB_WORK_BATTLE_QUESTIONS;question=bank.filter(item=>item.title.startsWith('Seite '+vocab[2]+' ·'))[i];}
