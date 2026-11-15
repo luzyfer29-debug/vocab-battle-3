@@ -17,7 +17,7 @@ const ADMIN_UID='M41x9WNoHAfqpSmyrztAgf2IZYC3';
 let resetUnsubscribe=null,resetState={},resetReady=false;
 let db,uid='',code='',role='',slot='',room=null,unsubscribe=null,solo=null,joinExpectedRoomType='';
 let auth=null,authSignInPromise=null,firebaseInitPromise=null;
-let gbCode='',gbSlot='',gbRoom=null,gbOff=null,gbTimer=null,gbDraft='',gbDraftKey='',wbDraft='',wbDraftKey='';
+let gbCode='',gbRole='',gbSlot='',gbRoom=null,gbOff=null,gbTimer=null,gbDraft='',gbDraftKey='',wbDraft='',wbDraftKey='';
 let clock=null,busy=false,previousStageKey='',lastClockText='';
 let listeningRun=null,listeningSyncWarned=false,readingLearningSyncWarned=false,writingIndex=0,writingModelVisible=false,writingSyncTimer=null;
 let readingBattleLanguage='en';
@@ -1087,7 +1087,7 @@ async function enter(){
    let s=Object.keys(r.slots||{}).find(k=>r.slots[k]?.name===name&&r.slots[k]?.uid===uid);
    if(!s){if(meta.stage!=='lobby'){msg('Das Battle läuft bereits. Bitte den nächsten Raum abwarten.',true);return;}s=String(names.indexOf(name)+1);if(r.slots?.[s]){msg('Dieser Name ist schon vergeben. Bitte anderen Namen wählen.',true);return;}msg('Du wirst in den Warteraum eingetragen …');const slotWrite=set(ref(db,`grammarRooms/${c}/slots/${s}`),{name,uid,score:0});slotWrite.catch(e=>msg('Eintrag konnte nicht gespeichert werden: '+e.message,true));}
    status.textContent='';if(meta.kind==='writing'){wbCode=c;wbSlot=s;wbListen();return;}
-   if(meta.kind==='vocab-work'||meta.kind==='vocab-work-station2'||meta.station!==undefined){gbCode=c;gbSlot=s;gbListen();return;}
+   if(meta.kind==='vocab-work'||meta.kind==='vocab-work-station2'||meta.station!==undefined){gbCode=c;gbRole='player';gbSlot=s;gbListen();return;}
   }
   msg('Raumcode nicht gefunden. Prüfe die sechs Ziffern.',true);
  }catch(e){msg('Beitritt fehlgeschlagen: '+e.message,true);}finally{const button=document.querySelector('[data-action="enter"]');if(button&&app.contains(button)){button.disabled=false;button.textContent='Beitreten';}}
