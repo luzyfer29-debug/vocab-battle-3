@@ -153,7 +153,7 @@ const SOLO_NAMES=['Luca','Talea','Nele'];
 const RANKED_NAMES=['Luca','Talea','Nele'];
 const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:{count:50,baselineAnswers:36},Talea:{count:6,baselineAnswers:4}}},'2026-11-05':{english:{Luca:{count:111,baselineAnswers:66}}},'2026-11-06':{english:{Luca:{count:26,baselineAnswers:26}}}};
 const DAILY_WIN_EXCLUDED_DAYS={'2026-11-02':'Lern- und Battle-Antworten sind an diesem Tag nicht verlässlich getrennt; der Tagessieg wurde manuell Luca gutgeschrieben.'};
-const DAILY_WINNER_OVERRIDES={'2026-11-02':{Luca:1}}; const DAILY_WINNER_DAY_OVERRIDES={'2026-11-02':['Luca'],'2026-11-03':['Luca'],'2026-11-04':['Luca'],'2026-11-05':['Luca'],'2026-11-06':['Luca'],'2026-11-07':['Talea'],'2026-11-09':['Talea'],'2026-11-10':['Luca']};
+const DAILY_WINNER_OVERRIDES={'2026-11-02':{Luca:1},'2026-11-13':{Luca:1}}; const DAILY_WINNER_DAY_OVERRIDES={'2026-11-02':['Luca'],'2026-11-03':['Luca'],'2026-11-04':['Luca'],'2026-11-05':['Luca'],'2026-11-06':['Luca'],'2026-11-07':['Talea'],'2026-11-09':['Talea'],'2026-11-10':['Luca']};
 function applyDailyCounterOverride(totals,dayKey,subject){for(const [name,setting] of Object.entries(DAILY_COUNTER_OVERRIDES[dayKey]?.[subject]||{})){const row=totals[name]||(totals[name]={name,attempts:0,checkedAttempts:0,mistakes:0}),count=Number(typeof setting==='number'?setting:setting?.count)||0,baselineAnswers=Number(typeof setting==='number'?0:setting?.baselineAnswers)||0,current=Number(row.attempts)||0;row.attempts=count+Math.max(0,current-baselineAnswers);row.manualAdjustment=true;}}
 let activitySyncWarned=false;
 function activityPeriodKeys(timestamp=Date.now()){
