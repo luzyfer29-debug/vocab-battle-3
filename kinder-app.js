@@ -335,7 +335,7 @@ function weeklyDailyWins(days,weekKey=''){
   const rows=RANKED_NAMES.map(name=>{
    let attempts=0,checkedAttempts=0,mistakes=0;
    for(const subject of ['english','math']){
-    const byUid=day?.[subject]?.[name]||{},canonical=byUid?.[ADMIN_UID],sourceRows=dayKey===todayKey?(canonical&&Number(canonical.dailyRepairVersion)>=8?[canonical]:[]):Object.values(byUid);
+    const byUid=day?.[subject]?.[name]||{},canonical=byUid?.[ADMIN_UID],sourceRows=dayKey===todayKey&&canonical&&Number(canonical.dailyRepairVersion)>=8?[canonical]:Object.values(byUid);
     for(const row of sourceRows){const totals=dailyRowTotals(row);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;}
    }
    const setting=DAILY_COUNTER_OVERRIDES[dayKey]?.english?.[name];
