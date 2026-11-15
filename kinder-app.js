@@ -532,6 +532,7 @@ async function showChildDailyWeeklyOverview(){
  try{
   await ensureFirebaseAuth();
   const {dayKey,weekKey}=activityPeriodKeys(),dateLabel=new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',dateStyle:'full'}).format(new Date()),days=isoWeekDays(weekKey);
+  await backfillTodayEnglishAnswers(dayKey);await backfillTodayEnglishVocabProgress(dayKey);
   let [todaySnap,weekRows]=await Promise.all([get(ref(db,'learningDailyLeaderboard/'+dayKey)),Promise.all(days.map(day=>get(ref(db,'learningDailyLeaderboard/'+day))))]);
   let today=todaySnap.val()||{};
   if(!Object.keys(today).length){await new Promise(resolve=>setTimeout(resolve,350));today=(await get(ref(db,'learningDailyLeaderboard/'+dayKey))).val()||{};}
