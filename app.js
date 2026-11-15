@@ -978,7 +978,7 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
    const seenEvents=new Set();
    events.sort((a,b)=>(Number(b.checkedAt)||Number(b.eventAt)||0)-(Number(a.checkedAt)||Number(a.eventAt)||0)).forEach(event=>{
     const index=String(event.index??''),check=checks[index]||{},at=Number(event.checkedAt)||Number(event.eventAt)||0;
-    const answer=String(event.submittedAnswer??(Number(check.checkedAt)===at?check.submittedAnswer:'')??'').trim();
+    const error=entry.errorItems?.[index],fallbackAnswer=Number(check.checkedAt)===at?check.submittedAnswer:(Number(error?.lastWrongAt)===at?error?.submittedAnswer:''),answer=String(event.submittedAnswer??fallbackAnswer??'').trim();
     if(!answer)return;
     const error=entry.errorItems?.[index],resolved=event.resolved===true||(event.correct===false&&error?.resolved===true&&Number(error.resolvedAt)>at);
     const status=event.correct===true?'✅ Richtig':resolved?'🔁 Falsch – später korrigiert':'❌ Falsch – noch nicht korrigiert';
@@ -1004,7 +1004,7 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
     return '<div class="live-error-item"><strong>'+esc(item?.prompt||'Aufgabe')+'</strong><p><strong>Antwort von '+esc(name)+':</strong> '+esc(submitted||'Im ursprünglichen Versuch nicht gespeichert')+'</p><p><strong>Richtige Antwort:</strong> '+esc(expected)+'</p><p class="'+(item?.resolved?'good':'error')+'">'+(item?.resolved?'✅ Später richtig wiederholt':'❌ Noch offen')+'</p></div>';
    }).join(''):'';
    const errorReview=isFrenchExercise&&frenchErrorRows?'<details class="live-answer-details french-error-review"><summary>Fehler ansehen · '+errors.length+'</summary>'+frenchErrorRows+'</details>':'';
-   const answerList=answerRows.length?'<details class="live-answer-details"><summary>Eingaben ansehen · '+answerRows.length+'</summary><div class="live-answer-card-list">'+answerRows.join('')+'</div></details>':'';
+   const answerList=answerRows.length?'<details class="live-answer-details" data-live-key="answers-'+esc(name)+'-'+esc(id)+'"><summary>Eingaben ansehen · '+answerRows.length+'</summary><div class="live-answer-card-list">'+answerRows.join('')+'</div></details>':'';
    const answerDetails=(isFrenchExercise?errorReview:'')+answerList;
    rows.push({name,id,what,when,errorText,improvedText,answerDetails,errorReview:!!errorReview});
   }
