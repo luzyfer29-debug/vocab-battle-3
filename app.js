@@ -876,17 +876,11 @@ function mergeLearningActivityEntries(first,second){
  if(!second)return first;
  const firstAt=Number(first.lastAt||0),secondAt=Number(second.lastAt||0),base=secondAt>=firstAt?second:first,errors={...(first.errorItems||{})};
  for(const [key,item] of Object.entries(second.errorItems||{})){const old=errors[key],at=Number(item?.resolvedAt||item?.lastWrongAt||0),oldAt=Number(old?.resolvedAt||old?.lastWrongAt||0);if(!old||at>=oldAt)errors[key]=item;}
- const firstLive=first.live||{},secondLive=second.live||{},liveBase=Number(secondLive.updatedAt||0)>=Number(firstLive.updatedAt||0)?secondLive:firstLive;
- const firstAnswers=Array.isArray(firstLive.draftAnswers)?firstLive.draftAnswers:[],secondAnswers=Array.isArray(secondLive.draftAnswers)?secondLive.draftAnswers:[],firstTimes=Array.isArray(firstLive.draftUpdatedAt)?firstLive.draftUpdatedAt:[],secondTimes=Array.isArray(secondLive.draftUpdatedAt)?secondLive.draftUpdatedAt:[],answerLength=Math.max(firstAnswers.length,secondAnswers.length),draftAnswers=[],draftUpdatedAt=[];
- for(let index=0;index<answerLength;index++){
-  const a=String(firstAnswers[index]||''),b=String(secondAnswers[index]||''),at=Number(firstTimes[index])||Number(firstLive.updatedAt)||firstAt,bt=Number(secondTimes[index])||Number(secondLive.updatedAt)||secondAt,useSecond=b.trim()&&(!a.trim()||bt>=at);
-  draftAnswers[index]=useSecond?secondAnswers[index]:(a.trim()?firstAnswers[index]:secondAnswers[index]||firstAnswers[index]||'');
-  draftUpdatedAt[index]=useSecond?bt:(a.trim()?at:bt||at);
- }
- const firstPrompts=Array.isArray(firstLive.draftPrompts)?firstLive.draftPrompts:[],secondPrompts=Array.isArray(secondLive.draftPrompts)?secondLive.draftPrompts:[],promptLength=Math.max(firstPrompts.length,secondPrompts.length),draftPrompts=Array.from({length:promptLength},(_,index)=>firstPrompts[index]||secondPrompts[index]||'');
- const live={...liveBase};
- if(answerLength){live.draftAnswers=draftAnswers;live.draftUpdatedAt=draftUpdatedAt;}
- if(promptLength)live.draftPrompts=draftPrompts;
+ const firstLive=first.live||{},secondLive=second.live||{},live=Number(secondLive.updatedAt||0)>=Number(firstLive.updatedAt||0)?{...secondLive}:{...firstLive};
+ const answerSource=Array.isArray(live.draftAnswers)?live:(Array.isArray(firstLive.draftAnswers)?firstLive:Array.isArray(secondLive.draftAnswers)?secondLive:null);
+ if(answerSource){live.draftAnswers=[...answerSource.draftAnswers];live.draftUpdatedAt=Array.isArray(answerSource.draftUpdatedAt)?[...answerSource.draftUpdatedAt]:[];}
+ const promptSource=Array.isArray(live.draftPrompts)?live:(Array.isArray(firstLive.draftPrompts)?firstLive:Array.isArray(secondLive.draftPrompts)?secondLive:null);
+ if(promptSource)live.draftPrompts=[...promptSource.draftPrompts];
  const checks={...(first.answerChecks||{})};
  for(const [index,item] of Object.entries(second.answerChecks||{})){const old=checks[index];if(!old||Number(item?.checkedAt||0)>=Number(old?.checkedAt||0))checks[index]=item;}
  const answerEvents={...(first.answerEvents||{})};
@@ -958,9 +952,9 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
    const errorText=errors.length?errors.length+' Aufgaben mit Fehlern · '+unresolved+' noch offen':'Keine Fehler';
    const improvedText=errors.length?improved+' von '+errors.length+' danach richtig wiederholt':'Nicht nötig – fehlerfrei';
    const what=id.startsWith('english_grammar_')?learningActivityTitle(id):String(live.taskTitle||learningActivityTitle(id));
-   const checks=entry.answerChecks||{},answers=Array.isArray(live.draftAnswers)?live.draftAnswers:[],prompts=Array.isArray(live.draftPrompts)?live.draftPrompts:[],length=Math.max(answers.length,prompts.length,Object.keys(checks).length),answerRows=[];
+   const checks=entry.answerChecks||{},answers=Array.isArray(live.draftAnswers)?live.draftAnswers:[],prompts=Array.isArray(live.draftPrompts)?live.draftPrompts:[],length=Math.max(answers.length,prompts.length,Object.keys(checks).length),answerRows=[],sessions=Array.isArray(entry.sessions)?entry.sessions:[],currentRunStart=sessions.reduce((latest,session)=>Math.max(latest,Number(session.startedAt)||0),0);
    for(let index=0;index<length;index++){
-    const check=checks[String(index)]||{},answer=String(check.submittedAnswer||answers[index]||'').trim(),prompt=String(check.prompt||prompts[index]||'');
+    const storedCheck=checks[String(index)]||{},check=!currentRunStart||Number(storedCheck.checkedAt||0)>=currentRunStart?storedCheck:{},answer=String(answers[index]||check.submittedAnswer||'').trim(),prompt=String(check.prompt||prompts[index]||'');
     if(!answer)continue;
     const accepted=Array.isArray(check.accepted)&&check.accepted.length?'<small>Erwartet: '+esc(check.accepted.join(' / '))+'</small>':'',answerStatus=check.attempted?(check.correct?'✅ richtig':'❌ falsch'):'✍️ Entwurf';
     answerRows.push('<tr><td>'+(index+1)+'. '+esc(prompt)+'</td><td>'+esc(answer||'(leer)')+'</td><td>'+answerStatus+accepted+'</td></tr>');
