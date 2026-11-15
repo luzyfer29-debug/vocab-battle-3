@@ -184,7 +184,7 @@ function dailyProgressFromActivity(activity,dayKey){
    const touchedToday=item.dayKey===dayKey||(checkedAt>0&&activityPeriodKeys(checkedAt).dayKey===dayKey);
    if(!touchedToday)continue;
    const key="attempt_"+String(eventId).replace(/[^A-Za-z0-9_-]/g,"_");
-   items[key]={count:1,mistakes:item.correct===false?1:(wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey?1:0)};
+   items[key]={count:1,mistakes:item.correct===false?1:(wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey?1:0),answerIndex:String(item.index??"")};
    if(item.index!==undefined)eventsByIndex.add(String(item.index));
   }
   for(const [index,item] of Object.entries(checks)){
@@ -193,7 +193,7 @@ function dailyProgressFromActivity(activity,dayKey){
    const touchedToday=item.dayKey===dayKey||(checkedAt>0&&activityPeriodKeys(checkedAt).dayKey===dayKey);
    if(!touchedToday)continue;
    const key="legacy_"+dailyAnswerItemKey(index,item.prompt||item.topic||"");
-   items[key]={count:1,mistakes:wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey?1:0};
+   items[key]={count:1,mistakes:wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey?1:0,answerIndex:String(index)};
   }
   for(const [index,item] of Object.entries(entry?.errorItems||{})){
    if(checks[index]||eventsByIndex.has(String(index))||item?.attempted!==true||item?.source==='battle'||item?.source==='live_battle'||isFalsePositiveResolvedLearningRecord(item))continue;
