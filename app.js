@@ -228,7 +228,7 @@ function dailyProgressFromActivity(activity,dayKey){
   if(isRemovedVocabBattleActivity(exercise))continue;
   let exerciseUpdatedAt=0;const items={},checks=entry?.answerChecks&&typeof entry.answerChecks==="object"?entry.answerChecks:{},events=entry?.answerEvents&&typeof entry.answerEvents==="object"?entry.answerEvents:{},eventsByIndex=new Set();
   for(const [eventId,item] of Object.entries(events)){
-   if(item?.attempted!==true)continue;
+   if(item?.attempted!==true||!String(item?.submittedAnswer||'').trim())continue;
    const checkedAt=Number(item.checkedAt)||Number(item.eventAt)||0,wrongAt=Number(item.lastWrongAt)||0;exerciseUpdatedAt=Math.max(exerciseUpdatedAt,checkedAt);if(!isWithinDailyCountWindow(checkedAt,dayKey))continue;
    const touchedToday=item.dayKey===dayKey||(checkedAt>0&&activityPeriodKeys(checkedAt).dayKey===dayKey);
    if(!touchedToday)continue;
@@ -237,7 +237,7 @@ function dailyProgressFromActivity(activity,dayKey){
    if(item.index!==undefined)eventsByIndex.add(String(item.index));
   }
   for(const [index,item] of Object.entries(checks)){
-   if(item?.attempted!==true||(item.eventId&&events[item.eventId]))continue;
+   if(item?.attempted!==true||!String(item?.submittedAnswer||'').trim()||(item.eventId&&events[item.eventId]))continue;
    const checkedAt=Number(item.checkedAt)||0,wrongAt=Number(item.lastWrongAt)||0;exerciseUpdatedAt=Math.max(exerciseUpdatedAt,checkedAt);if(!isWithinDailyCountWindow(checkedAt,dayKey))continue;
    const touchedToday=item.dayKey===dayKey||(checkedAt>0&&activityPeriodKeys(checkedAt).dayKey===dayKey);
    if(!touchedToday)continue;
@@ -246,7 +246,7 @@ function dailyProgressFromActivity(activity,dayKey){
   }
   for(const [index,item] of Object.entries(entry?.errorItems||{})){
    const check=checks[index],checkAt=Number(check?.checkedAt)||0,checkToday=check?.attempted===true&&(check.dayKey===dayKey||(checkAt>0&&activityPeriodKeys(checkAt).dayKey===dayKey));
-   if(checkToday||eventsByIndex.has(String(index))||item?.attempted!==true||item?.source==='battle'||item?.source==='live_battle'||isFalsePositiveResolvedLearningRecord(item))continue;
+   if(checkToday||eventsByIndex.has(String(index))||item?.attempted!==true||!String(item?.submittedAnswer||'').trim()||item?.source==='battle'||item?.source==='live_battle'||isFalsePositiveResolvedLearningRecord(item))continue;
    const wrongAt=Number(item.lastWrongAt)||0,resolvedAt=Number(item.resolvedAt)||0;exerciseUpdatedAt=Math.max(exerciseUpdatedAt,wrongAt,resolvedAt);
    const touchedToday=item.dayKey===dayKey||(wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey)||(resolvedAt>0&&activityPeriodKeys(resolvedAt).dayKey===dayKey);
    if(!touchedToday||!isWithinDailyCountWindow(wrongAt||resolvedAt,dayKey))continue;
