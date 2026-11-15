@@ -390,8 +390,8 @@ function childLearningDailyBreakdown(days,weekKey=''){
   const dayKey=isoWeekDays(weekKey)[index]||'';
   const rows=RANKED_NAMES.map(name=>{
    let attempts=0,checkedAttempts=0,mistakes=0;
-   for(const subject of ['english','math']){
-    const byUid=data?.[subject]?.[name]||{},totals=mergeDailyCounterRows(byUid,dayKey);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;
+   for(const subject of ['english','math'])for(const row of Object.values(data?.[subject]?.[name]||{})){
+    const totals=dailyRowTotals(row);attempts+=totals.attempts;checkedAttempts+=totals.checkedAttempts;mistakes+=totals.mistakes;
    }
    if(dayKey>=DAILY_COUNT_WINDOW_START_DAY)attempts=checkedAttempts;
    const setting=DAILY_COUNTER_OVERRIDES[dayKey]?.english?.[name];
