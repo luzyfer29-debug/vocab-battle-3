@@ -237,7 +237,8 @@ function dailyProgressFromActivity(activity,dayKey){
    items[key]={count:1,mistakes:wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey?1:0,answerIndex:String(index)};
   }
   for(const [index,item] of Object.entries(entry?.errorItems||{})){
-   if(checks[index]||eventsByIndex.has(String(index))||item?.attempted!==true||item?.source==='battle'||item?.source==='live_battle'||isFalsePositiveResolvedLearningRecord(item))continue;
+   const check=checks[index],checkAt=Number(check?.checkedAt)||0,checkToday=check?.attempted===true&&(check.dayKey===dayKey||(checkAt>0&&activityPeriodKeys(checkAt).dayKey===dayKey));
+   if(checkToday||eventsByIndex.has(String(index))||item?.attempted!==true||item?.source==='battle'||item?.source==='live_battle'||isFalsePositiveResolvedLearningRecord(item))continue;
    const wrongAt=Number(item.lastWrongAt)||0,resolvedAt=Number(item.resolvedAt)||0;exerciseUpdatedAt=Math.max(exerciseUpdatedAt,wrongAt,resolvedAt);
    const touchedToday=item.dayKey===dayKey||(wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey)||(resolvedAt>0&&activityPeriodKeys(resolvedAt).dayKey===dayKey);
    if(!touchedToday)continue;
