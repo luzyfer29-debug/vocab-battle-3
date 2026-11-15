@@ -974,13 +974,34 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
    const errorText=errors.length?errors.length+' Aufgaben mit Fehlern · '+unresolved+' noch offen':'Keine Fehler';
    const improvedText=errors.length?improved+' von '+errors.length+' danach richtig wiederholt':'Nicht nötig – fehlerfrei';
    const what=id.startsWith('english_grammar_')?learningActivityTitle(id):String(live.taskTitle||learningActivityTitle(id));
-   const checks=entry.answerChecks||{},answers=Array.isArray(live.draftAnswers)?live.draftAnswers:[],prompts=Array.isArray(live.draftPrompts)?live.draftPrompts:[],length=Math.max(answers.length,prompts.length,Object.keys(checks).length),answerRows=[],sessions=Array.isArray(entry.sessions)?entry.sessions:[],currentRunStart=sessions.reduce((latest,session)=>Math.max(latest,Number(session.startedAt)||0),0);
-   for(let index=0;index<length;index++){
-    const storedCheck=checks[String(index)]||{},check=!currentRunStart||Number(storedCheck.checkedAt||0)>=currentRunStart?storedCheck:{},answer=String(answers[index]||check.submittedAnswer||'').trim(),prompt=String(check.prompt||prompts[index]||'');
-    if(!answer)continue;
-    const accepted=Array.isArray(check.accepted)&&check.accepted.length?'<small>Erwartet: '+esc(check.accepted.join(' / '))+'</small>':'',answerStatus=check.attempted?(check.correct?'✅ richtig':'❌ falsch'):'✍️ Entwurf';
-    answerRows.push('<tr><td>'+(index+1)+'. '+esc(prompt)+'</td><td>'+esc(answer||'(leer)')+'</td><td>'+answerStatus+accepted+'</td></tr>');
+   const checks=entry.answerChecks||{},events=Object.values(entry.answerEvents||{}).filter(item=>item?.attempted===true),answers=Array.isArray(live.draftAnswers)?live.draftAnswers:[],prompts=Array.isArray(live.draftPrompts)?live.draftPrompts:[],draftTimes=Array.isArray(live.draftUpdatedAt)?live.draftUpdatedAt:[],answerRows=[],latestCheckAtByIndex={};
+   for(const event of events){const index=String(event.index??''),at=Number(event.checkedAt)||Number(event.eventAt)||0;latestCheckAtByIndex[index]=Math.max(latestCheckAtByIndex[index]||0,at);}
+   for(const [index,check] of Object.entries(checks)){const at=Number(check?.checkedAt)||0;latestCheckAtByIndex[index]=Math.max(latestCheckAtByIndex[index]||0,at);}
+   const expectedText=value=>Array.isArray(value)&&value.length?value.map(String).join(' / '):'—';
+   const answerCard=(at,index,prompt,answer,expected,status)=>'<article class="live-answer-card"><div class="live-answer-card-head"><strong>Aufgabe '+(Number(index)+1)+'. '+esc(prompt||'Lernaufgabe')+'</strong><time>'+esc(at?evaluationDate(at):'Zeit unbekannt')+'</time></div><p><b>Eingegeben:</b> '+esc(answer)+'</p><p><b>Richtig wäre:</b> '+esc(expectedText(expected))+'</p><p><b>Status:</b> '+esc(status)+'</p></article>';
+   const seenEvents=new Set();
+   events.sort((a,b)=>(Number(b.checkedAt)||Number(b.eventAt)||0)-(Number(a.checkedAt)||Number(a.eventAt)||0)).forEach(event=>{
+    const index=String(event.index??''),check=checks[index]||{},at=Number(event.checkedAt)||Number(event.eventAt)||0;
+    const answer=String(event.submittedAnswer??(Number(check.checkedAt)===at?check.submittedAnswer:'')??'').trim();
+    if(!answer)return;
+    const error=entry.errorItems?.[index],resolved=event.resolved===true||(event.correct===false&&error?.resolved===true&&Number(error.resolvedAt)>at);
+    const status=event.correct===true?'✅ Richtig':resolved?'🔁 Falsch – später korrigiert':'❌ Falsch – noch nicht korrigiert';
+    const expected=Array.isArray(event.accepted)?event.accepted:(Number(check.checkedAt)===at?check.accepted:null);
+    answerRows.push(answerCard(at,index,event.prompt||check.prompt||prompts[Number(index)]||'',answer,expected,status));
+    if(event.eventId)seenEvents.add(String(event.eventId));
+   });
+   for(const [index,check] of Object.entries(checks)){
+    if(!check?.attempted||!String(check.submittedAnswer||'').trim()||(check.eventId&&seenEvents.has(String(check.eventId))))continue;
+    const at=Number(check.checkedAt)||0,status=check.correct===true?'✅ Richtig':check.correct===false?'❌ Falsch – noch nicht korrigiert':'Geprüft';
+    answerRows.push(answerCard(at,index,check.prompt||prompts[Number(index)]||'',String(check.submittedAnswer).trim(),check.accepted,status));
    }
+   for(let index=0;index<answers.length;index++){
+    const answer=String(answers[index]||'').trim(),at=Number(draftTimes[index])||Number(live.updatedAt)||0;
+    if(!answer||at<=(latestCheckAtByIndex[String(index)]||0))continue;
+    const latest=events.filter(event=>String(event.index)===String(index)).sort((a,b)=>(Number(b.checkedAt)||Number(b.eventAt)||0)-(Number(a.checkedAt)||Number(a.eventAt)||0))[0],check=checks[String(index)]||{};
+    answerRows.push(answerCard(at,index,prompts[index]||latest?.prompt||check.prompt||'',answer,latest?.accepted||check.accepted,'✍️ Noch nicht geprüft'));
+   }
+   answerRows.sort((a,b)=>0);
    const isFrenchExercise=id.startsWith('french_');
    const frenchErrorRows=isFrenchExercise?errors.map(([index,item])=>{
     const matchingCheck=Object.values(checks).find(check=>String(check?.prompt||'')===String(item?.prompt||'')&&Number(check?.updatedAt||0)===Number(item?.lastWrongAt||0));
@@ -988,8 +1009,8 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
     return '<div class="live-error-item"><strong>'+esc(item?.prompt||'Aufgabe')+'</strong><p><strong>Antwort von '+esc(name)+':</strong> '+esc(submitted||'Im ursprünglichen Versuch nicht gespeichert')+'</p><p><strong>Richtige Antwort:</strong> '+esc(expected)+'</p><p class="'+(item?.resolved?'good':'error')+'">'+(item?.resolved?'✅ Später richtig wiederholt':'❌ Noch offen')+'</p></div>';
    }).join(''):'';
    const errorReview=isFrenchExercise&&frenchErrorRows?'<details class="live-answer-details french-error-review"><summary>Fehler ansehen · '+errors.length+'</summary>'+frenchErrorRows+'</details>':'';
-   const frenchAllAnswers=isFrenchExercise&&answerRows.length?'<details class="live-answer-details" open><summary>Alle Antworten ansehen · '+answerRows.length+'</summary><div class="live-answer-table-wrap"><table><thead><tr><th>Aufgabe</th><th>Antwort von '+esc(name)+'</th><th>Rückmeldung</th></tr></thead><tbody>'+answerRows.join('')+'</tbody></table></div></div>':'';
-   const answerDetails=isFrenchExercise?errorReview+frenchAllAnswers:(answerRows.length?'<div class="live-answer-details"><strong class="live-answer-heading">Eingaben · '+answerRows.length+'</strong><div class="live-answer-table-wrap"><table><thead><tr><th>Aufgabe</th><th>Eingegeben</th><th>Rückmeldung</th></tr></thead><tbody>'+answerRows.join('')+'</tbody></table></div></div>':'');
+   const answerList=answerRows.length?'<details class="live-answer-details"><summary>Eingaben ansehen · '+answerRows.length+'</summary><div class="live-answer-card-list">'+answerRows.join('')+'</div></details>':'';
+   const answerDetails=(isFrenchExercise?errorReview:'')+answerList;
    rows.push({name,id,what,when,errorText,improvedText,answerDetails,errorReview:!!errorReview});
   }
  }
@@ -1173,7 +1194,7 @@ ffd166;font-weight:750}.activity-state.is-done{color:#8cebd8;font-weight:750}.ac
 .live-simple-row:hover{transform:translateY(-1px);border-color:rgba(213,255,226,.62);background:linear-gradient(110deg,rgba(31,121,77,.88),rgba(15,79,54,.92))}
 .live-simple-row>span{min-width:0;overflow-wrap:anywhere;color:#eefbf2;font-size:14px;line-height:1.4}
 .live-simple-what{font-weight:800!important;color:#fff!important;font-size:15px!important}
-.live-answer-details{display:block;min-width:0;max-width:100%}.live-answer-table-wrap{display:block;width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}.live-answer-table-wrap table{width:100%;min-width:560px;border-collapse:collapse;table-layout:auto}.live-answer-table-wrap th,.live-answer-table-wrap td{padding:8px 10px;text-align:left;vertical-align:top;white-space:normal;overflow-wrap:break-word}
+.live-answer-details{display:block;min-width:0;max-width:100%}.live-answer-details>summary{cursor:pointer;padding:10px 0;color:#c8f2d5;font-weight:800}.live-answer-card-list{display:grid;gap:9px}.live-answer-card{padding:11px 12px;border:1px solid rgba(182,239,200,.24);border-radius:12px;background:rgba(5,51,34,.5);overflow-wrap:anywhere}.live-answer-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.live-answer-card-head strong{line-height:1.4}.live-answer-card-head time{flex:0 0 auto;color:#b9e6c8;font-size:12px}.live-answer-card p{margin:7px 0 0;line-height:1.4}.live-answer-card b{color:#c8f2d5}
 .live-simple-row>span[data-label="Fehler"],.live-simple-row>span[data-label="Verbessert?"]{display:flex;align-items:center;gap:7px}
 .live-simple-row>span[data-label="Fehler"]:before,.live-simple-row>span[data-label="Verbessert?"]:before{content:"";flex:0 0 8px;width:8px;height:8px;border-radius:50%;background:#baf2cd;box-shadow:0 0 8px currentColor}
 @media(max-width:700px){
