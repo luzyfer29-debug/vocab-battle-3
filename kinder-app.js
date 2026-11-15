@@ -177,23 +177,30 @@ function dailyProgressFromActivity(activity,dayKey){
  const progress={};
  for(const [exercise,entry] of Object.entries(activity||{})){
   if(isRemovedVocabBattleActivity(exercise))continue;
-  let exerciseUpdatedAt=0;const items={},checks=entry?.answerChecks&&typeof entry.answerChecks==="object"?entry.answerChecks:{};
-  for(const [index,item] of Object.entries(checks)){
+  let exerciseUpdatedAt=0;const items={},checks=entry?.answerChecks&&typeof entry.answerChecks==="object"?entry.answerChecks:{},events=entry?.answerEvents&&typeof entry.answerEvents==="object"?entry.answerEvents:{},eventsByIndex=new Set();
+  for(const [eventId,item] of Object.entries(events)){
    if(item?.attempted!==true)continue;
+   const checkedAt=Number(item.checkedAt)||Number(item.eventAt)||0,wrongAt=Number(item.lastWrongAt)||0;exerciseUpdatedAt=Math.max(exerciseUpdatedAt,checkedAt);
+   const touchedToday=item.dayKey===dayKey||(checkedAt>0&&activityPeriodKeys(checkedAt).dayKey===dayKey);
+   if(!touchedToday)continue;
+   const key="attempt_"+String(eventId).replace(/[^A-Za-z0-9_-]/g,"_");
+   items[key]={count:1,mistakes:item.correct===false?1:(wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey?1:0)};
+   if(item.index!==undefined)eventsByIndex.add(String(item.index));
+  }
+  for(const [index,item] of Object.entries(checks)){
+   if(item?.attempted!==true||(item.eventId&&events[item.eventId]))continue;
    const checkedAt=Number(item.checkedAt)||0,wrongAt=Number(item.lastWrongAt)||0;exerciseUpdatedAt=Math.max(exerciseUpdatedAt,checkedAt);
    const touchedToday=item.dayKey===dayKey||(checkedAt>0&&activityPeriodKeys(checkedAt).dayKey===dayKey);
    if(!touchedToday)continue;
-   const key=dailyAnswerItemKey(index,item.prompt||item.topic||"");
-   const wrongToday=wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey;
-   items[key]={count:1,mistakes:wrongToday?1:0};
+   const key="legacy_"+dailyAnswerItemKey(index,item.prompt||item.topic||"");
+   items[key]={count:1,mistakes:wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey?1:0};
   }
-  // Read legacy real errors until the per-answer check record has been written.
   for(const [index,item] of Object.entries(entry?.errorItems||{})){
-   if(checks[index]||item?.attempted!==true||isFalsePositiveResolvedLearningRecord(item))continue;
+   if(checks[index]||eventsByIndex.has(String(index))||item?.attempted!==true||item?.source==='battle'||item?.source==='live_battle'||isFalsePositiveResolvedLearningRecord(item))continue;
    const wrongAt=Number(item.lastWrongAt)||0,resolvedAt=Number(item.resolvedAt)||0;exerciseUpdatedAt=Math.max(exerciseUpdatedAt,wrongAt,resolvedAt);
    const touchedToday=item.dayKey===dayKey||(wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey)||(resolvedAt>0&&activityPeriodKeys(resolvedAt).dayKey===dayKey);
    if(!touchedToday)continue;
-   const key=dailyAnswerItemKey(index,item.prompt||item.topic||"");
+   const key="legacy_"+dailyAnswerItemKey(index,item.prompt||item.topic||"");
    items[key]={count:1,mistakes:wrongAt>0&&activityPeriodKeys(wrongAt).dayKey===dayKey?1:0};
   }
   const values=Object.values(items),count=values.length,mistakes=values.reduce((n,item)=>n+(Number(item.mistakes)||0),0);
@@ -250,9 +257,9 @@ async function prepareDailyCounterV3(name,subject,eventAt,path){
   return value;
  });
 }
-async function updateDailyLeaderboard(name,subject,eventAt,wrong,exercise,index,prompt){
+async function updateDailyLeaderboard(name,subject,eventAt,wrong,exercise,index,prompt,attemptId){
  if(!db||!uid||!RANKED_NAMES.includes(name)||!["english","math"].includes(subject)||!exercise)return false;
- const {dayKey}=activityPeriodKeys(eventAt),path="learningDailyLeaderboard/"+dayKey+"/"+subject+"/"+name+"/"+uid,key=dailyAnswerItemKey(index,prompt);
+ const {dayKey}=activityPeriodKeys(eventAt),path="learningDailyLeaderboard/"+dayKey+"/"+subject+"/"+name+"/"+uid,key=String(attemptId||('attempt_'+eventAt+'_'+index)).replace(/[^A-Za-z0-9_-]/g,'_');
  try{
   await prepareDailyCounterV3(name,subject,eventAt,path);
   await runTransaction(ref(db,path),current=>{
@@ -683,7 +690,7 @@ async function cleanupFalsePositiveLearningErrors(name,subject){
 }
 async function recordLearningError(name,subject,exercise,index,topic,q,correct,occurredAt=Date.now()){
  if(!db||!uid||!SOLO_NAMES.includes(name)||!exercise)return false;
- const eventAt=Number(occurredAt)||Date.now(),path=`learningActivity/${uid}/${name}/${exercise}`;
+ const eventAt=Number(occurredAt)||Date.now(),path=`learningActivity/${uid}/${name}/${exercise}`,attemptId='attempt_'+eventAt+'_'+String(index).replace(/[^A-Za-z0-9_-]/g,'_')+'_'+Math.random().toString(36).slice(2,10);
  // Save every checked answer for counting; only actual wrong answers enter the error list.
  let activitySaved=false;
  try{
@@ -696,8 +703,9 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
    value.lastAt=Math.max(Number(value.lastAt)||0,eventAt);
    const checks={...(value.answerChecks||{})},previous=checks[key]||{},errors={...(value.errorItems||{})},old=errors[key];
    const previousWrongAt=Number(previous.lastWrongAt)||0,wrongAt=correct?previousWrongAt:eventAt;
-   checks[key]={attempted:true,source:"answer_check",subject,topic,prompt:String(q?.prompt||q?.q||q?.word||topic||""),submittedAnswer:String(q?.submittedAnswer||""),accepted:Array.isArray(q?.accepted)?q.accepted.map(String):null,dayKey,weekKey,checkedAt:eventAt,lastWrongAt:wrongAt,correct:!!correct};
+   checks[key]={attempted:true,source:"answer_check",subject,topic,prompt:String(q?.prompt||q?.q||q?.word||topic||""),submittedAnswer:String(q?.submittedAnswer||""),accepted:Array.isArray(q?.accepted)?q.accepted.map(String):null,dayKey,weekKey,checkedAt:eventAt,lastWrongAt:wrongAt,correct:!!correct,eventId:attemptId};
    value.answerChecks=checks;
+   const answerEvents={...(value.answerEvents||{})};answerEvents[attemptId]={attempted:true,source:"answer_check",subject,topic,index:Number(index),prompt:String(q?.prompt||q?.q||q?.word||topic||""),dayKey,weekKey,checkedAt:eventAt,eventAt,lastWrongAt:wrongAt,correct:!!correct};value.answerEvents=answerEvents;
    if(correct){
     if(old&&isFalsePositiveResolvedLearningRecord(old)){delete errors[key];changedItem=null;}
     else if(old){changedItem={...old,resolved:true,resolvedAt:Math.max(eventAt,Number(old.lastWrongAt)||0)+1};errors[key]=changedItem;}
@@ -708,7 +716,7 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
   activitySaved=true;
   activitySyncWarned=false;
  }catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg(`Lernantwort konnte nicht gespeichert werden (${e.code||e.message||'Firebase-Zugriff verweigert'}).`,true);}}
- const dailySaved=await updateDailyLeaderboard(name,subject,eventAt,!correct,exercise,index,q?.prompt||q?.q||q?.word||topic);
+ const dailySaved=await updateDailyLeaderboard(name,subject,eventAt,!correct,exercise,index,q?.prompt||q?.q||q?.word||topic,attemptId);
  return activitySaved;
 }
 function childLearningExercises(subject){if(subject==='math')return ['math_rational_battle1','math_rational_battle2','math_rational_battle3','math_rational_cards','math_exam','math_rational_exam','math_proportional_practice','math_proportional_exam1','math_proportional_exam2','math_proportional_exam3',...MATH_PROPORTIONAL_PRACTICE_BLOCKS.map(b=>`math_proportional_practice_${b.id}`),'math_proportional_worksheet','math_proportional_flashcards',...FRACTION_MODULES.map(m=>`math_fraction_${m.id}`)];return ['english_vocab_work_page1','english_vocab_work_page2','english_vocab_work_station2_page1','english_vocab_work_station2_page2','english_listening','english_reading',...GRAMMAR.flatMap((station,s)=>station.tasks.map((_,i)=>`english_grammar_${s+1}_task${i+1}`)),...WRITING_TASKS.map((_,i)=>`english_writing_task${i+1}`)];}
