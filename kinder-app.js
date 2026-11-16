@@ -187,11 +187,21 @@ function learningTimeIsOpen(timestamp=Date.now()){
  const seconds=(Number(parts.hour)||0)*3600+(Number(parts.minute)||0)*60+(Number(parts.second)||0);
  return seconds>=23400&&seconds<=75600;
 }
+function normalizeLearningAnswerForCount(value){return String(value??'').normalize('NFKC').trim().replace(/\s+/g,' ').toLocaleLowerCase('en');}
+function uniqueLearningAnswerEvents(events){
+ const unique=new Map();
+ for(const [eventId,item] of Object.entries(events||{})){
+  if(item?.attempted!==true||!normalizeLearningAnswerForCount(item?.submittedAnswer))continue;
+  const answer=normalizeLearningAnswerForCount(item.submittedAnswer),runId=String(item.runId||'legacy:'+eventId),dayKey=String(item.dayKey||''),index=String(item.index??''),result=item.correct===true?'right':item.correct===false?'wrong':'unknown',signature=[dayKey,runId,index,answer,result].join('|'),at=Math.max(Number(item.checkedAt)||0,Number(item.eventAt)||0,Number(item.resolvedAt)||0),old=unique.get(signature);
+  if(!old||at>=old.at)unique.set(signature,{eventId,item,at});
+ }
+ return Object.fromEntries([...unique.values()].map(({eventId,item})=>[eventId,item]));
+}
 function dailyProgressFromActivity(activity,dayKey){
  const progress={};
  for(const [exercise,entry] of Object.entries(activity||{})){
   if(isRemovedVocabBattleActivity(exercise))continue;
-  let exerciseUpdatedAt=0;const items={},checks=entry?.answerChecks&&typeof entry.answerChecks==="object"?entry.answerChecks:{},events=entry?.answerEvents&&typeof entry.answerEvents==="object"?entry.answerEvents:{},eventsByIndex=new Set();
+  let exerciseUpdatedAt=0;const items={},checks=entry?.answerChecks&&typeof entry.answerChecks==="object"?entry.answerChecks:{},events=uniqueLearningAnswerEvents(entry?.answerEvents||{}),eventsByIndex=new Set();
   for(const [eventId,item] of Object.entries(events)){
    if(item?.attempted!==true||!String(item?.submittedAnswer||'').trim())continue;
    const checkedAt=Number(item.checkedAt)||Number(item.eventAt)||0,wrongAt=Number(item.lastWrongAt)||0;exerciseUpdatedAt=Math.max(exerciseUpdatedAt,checkedAt);if(!isWithinDailyCountWindow(checkedAt,dayKey))continue;
@@ -702,16 +712,20 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
  const eventAt=Number(occurredAt)||Date.now(),path=`learningActivity/${uid}/${name}/${exercise}`,acceptedAnswers=Array.isArray(q?.accepted)?q.accepted.map(String):(Array.isArray(q?.options)&&Number.isInteger(q?.correct)&&q.options[q.correct]!==undefined?[String(q.options[q.correct])]:(q?.answer!==undefined?[String(q.answer)]:null));
  let attemptId='';
  // Save every checked answer for counting; only actual wrong answers enter the error list.
- let activitySaved=false;
+ let activitySaved=false,duplicateInput=false;
  try{
   let changedItem=null;
   await runTransaction(ref(db,path),current=>{
+   duplicateInput=false;
    const value=current&&typeof current==="object"?{...current}:{};
    const {dayKey,weekKey}=activityPeriodKeys(eventAt),key=String(index);
    if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}
    if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}
    value.lastAt=Math.max(Number(value.lastAt)||0,eventAt);
    const checks={...(value.answerChecks||{})},previous=checks[key]||{},errors={...(value.errorItems||{})},old=errors[key],sessions=Array.isArray(value.sessions)?value.sessions:[],lastSession=sessions[sessions.length-1]||{},runId=activeLearningRunIds.get(path)||String(lastSession.runId||('run_'+(Number(lastSession.startedAt)||eventAt)+'_'+String(uid).replace(/[^A-Za-z0-9_-]/g,'_'))),sameRun=Boolean(previous.attempted&&(previous.runId===runId||(!previous.runId&&Number(lastSession.startedAt)>0&&Number(previous.checkedAt)>=Number(lastSession.startedAt)))),wrongAt=correct?0:eventAt;
+   const sameCheckedAnswer=sameRun&&previous.eventId&&normalizeLearningAnswerForCount(previous.submittedAnswer)===normalizeLearningAnswerForCount(q?.submittedAnswer)&&previous.correct===Boolean(correct);
+    if(sameCheckedAnswer){attemptId=String(previous.eventId);duplicateInput=true;return current;}
+
    attemptId='attempt_'+String(uid).replace(/[^A-Za-z0-9_-]/g,'_')+'_'+String(runId).replace(/[^A-Za-z0-9_-]/g,'_')+'_'+dayKey+'_'+String(index).replace(/[^A-Za-z0-9_-]/g,'_')+'_'+eventAt+'_'+Math.random().toString(36).slice(2,8);
    checks[key]={attempted:true,source:"answer_check",subject,topic,prompt:String(q?.prompt||q?.q||q?.word||topic||""),submittedAnswer:String(q?.submittedAnswer||""),accepted:acceptedAnswers,dayKey,weekKey,checkedAt:eventAt,lastWrongAt:wrongAt,correct:!!correct,eventId:attemptId,runId};
    value.answerChecks=checks;
@@ -728,7 +742,7 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
   activitySaved=true;
   activitySyncWarned=false;
  }catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg(`Lernantwort konnte nicht gespeichert werden (${e.code||e.message||'Firebase-Zugriff verweigert'}).`,true);}}
- const dailySaved=await updateDailyLeaderboard(name,subject,eventAt,!correct,exercise,index,q?.prompt||q?.q||q?.word||topic,attemptId);
+ const dailySaved=duplicateInput?true:await updateDailyLeaderboard(name,subject,eventAt,!correct,exercise,index,q?.prompt||q?.q||q?.word||topic,attemptId);
  return activitySaved;
 }
 function childLearningExercises(subject){if(subject==='math')return ['math_rational_battle1','math_rational_battle2','math_rational_battle3','math_rational_cards','math_exam','math_rational_exam','math_proportional_practice','math_proportional_exam1','math_proportional_exam2','math_proportional_exam3',...MATH_PROPORTIONAL_PRACTICE_BLOCKS.map(b=>`math_proportional_practice_${b.id}`),'math_proportional_worksheet','math_proportional_flashcards',...FRACTION_MODULES.map(m=>`math_fraction_${m.id}`)];return ['english_vocab_work_page1','english_vocab_work_page2','english_vocab_work_station2_page1','english_vocab_work_station2_page2','english_listening','english_reading',...GRAMMAR.flatMap((station,s)=>station.tasks.map((_,i)=>`english_grammar_${s+1}_task${i+1}`)),...WRITING_TASKS.map((_,i)=>`english_writing_task${i+1}`)];}

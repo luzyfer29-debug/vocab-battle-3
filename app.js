@@ -222,11 +222,21 @@ function isWithinDailyCountWindow(timestamp,dayKey){
  const seconds=(Number(parts.hour)||0)*3600+(Number(parts.minute)||0)*60+(Number(parts.second)||0);
  return seconds>=23400&&seconds<=75600;
 }
+function normalizeLearningAnswerForCount(value){return String(value??'').normalize('NFKC').trim().replace(/\s+/g,' ').toLocaleLowerCase('en');}
+function uniqueLearningAnswerEvents(events){
+ const unique=new Map();
+ for(const [eventId,item] of Object.entries(events||{})){
+  if(item?.attempted!==true||!normalizeLearningAnswerForCount(item?.submittedAnswer))continue;
+  const answer=normalizeLearningAnswerForCount(item.submittedAnswer),runId=String(item.runId||'legacy:'+eventId),dayKey=String(item.dayKey||''),index=String(item.index??''),result=item.correct===true?'right':item.correct===false?'wrong':'unknown',signature=[dayKey,runId,index,answer,result].join('|'),at=Math.max(Number(item.checkedAt)||0,Number(item.eventAt)||0,Number(item.resolvedAt)||0),old=unique.get(signature);
+  if(!old||at>=old.at)unique.set(signature,{eventId,item,at});
+ }
+ return Object.fromEntries([...unique.values()].map(({eventId,item})=>[eventId,item]));
+}
 function dailyProgressFromActivity(activity,dayKey){
  const progress={};
  for(const [exercise,entry] of Object.entries(activity||{})){
   if(isRemovedVocabBattleActivity(exercise))continue;
-  let exerciseUpdatedAt=0;const items={},checks=entry?.answerChecks&&typeof entry.answerChecks==="object"?entry.answerChecks:{},events=entry?.answerEvents&&typeof entry.answerEvents==="object"?entry.answerEvents:{},eventsByIndex=new Set();
+  let exerciseUpdatedAt=0;const items={},checks=entry?.answerChecks&&typeof entry.answerChecks==="object"?entry.answerChecks:{},events=uniqueLearningAnswerEvents(entry?.answerEvents||{}),eventsByIndex=new Set();
   for(const [eventId,item] of Object.entries(events)){
    if(item?.attempted!==true||!String(item?.submittedAnswer||'').trim())continue;
    const checkedAt=Number(item.checkedAt)||Number(item.eventAt)||0,wrongAt=Number(item.lastWrongAt)||0;exerciseUpdatedAt=Math.max(exerciseUpdatedAt,checkedAt);if(!isWithinDailyCountWindow(checkedAt,dayKey))continue;
@@ -422,7 +432,7 @@ async function repairDailyAnswerCounters(dayKey){
    }
    if(Object.keys(items).length){target.items=items;target.count=Object.values(items).filter(item=>Number(item?.count)>0).length;target.updatedAt=Date.now();submittedByExercise[exercise]=target;}
   }
-  const submitted=dailySubmittedCount(submittedByExercise,progress),unverified=Math.max(0,...Object.values(existing).map(row=>Number(row?.unverifiedLegacyDailyCount)||Number(row?.attempts)||0)),computedAttempts=totals.checked+submitted,legacySubmitted=Math.max(0,unverified-computedAttempts);
+  const submitted=dailySubmittedCount(submittedByExercise,progress),unverified=Math.max(0,...Object.values(existing).map(row=>Number(row?.unverifiedLegacyDailyCount)||((Number(row?.answerCounterVersion)===3)?0:(Number(row?.attempts)||0)))),computedAttempts=totals.checked+submitted,legacySubmitted=Math.max(0,unverified-computedAttempts);
   daily[subject]=daily[subject]||{};
   daily[subject][name]={"learning-activity":{name,attempts:computedAttempts+legacySubmitted,checkedAttempts:totals.checked,mistakes:totals.mistakes,submittedAttempts:submitted,legacySubmittedAttempts:legacySubmitted,answerCounterVersion:3,dailyRepairVersion:13,progressByExercise:progress,submittedByExercise,unverifiedLegacyDailyCount:unverified}};
  }
@@ -965,14 +975,14 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
   const cutoff=Number(liveClearTimes()[name])||0;
   for(const [id,entry] of Object.entries(byExercise)){
    const live=entry.live||{},when=Number(entry.lastAt||live.updatedAt||0);if(when<=cutoff)continue;
-   const submittedForIndex=index=>{const key=String(index),item=entry.errorItems?.[key],check=entry.answerChecks?.[key],events=Object.values(entry.answerEvents||{}).filter(event=>String(event?.index)===key&&String(event?.submittedAnswer||'').trim()).sort((a,b)=>(Number(b.checkedAt)||Number(b.eventAt)||0)-(Number(a.checkedAt)||Number(a.eventAt)||0));return String(events[0]?.submittedAnswer||item?.submittedAnswer||check?.submittedAnswer||'').trim();};
+   const submittedForIndex=index=>{const key=String(index),item=entry.errorItems?.[key],check=entry.answerChecks?.[key],events=Object.values(uniqueLearningAnswerEvents(entry.answerEvents||{})).filter(event=>String(event?.index)===key&&String(event?.submittedAnswer||'').trim()).sort((a,b)=>(Number(b.checkedAt)||Number(b.eventAt)||0)-(Number(a.checkedAt)||Number(a.eventAt)||0));return String(events[0]?.submittedAnswer||item?.submittedAnswer||check?.submittedAnswer||'').trim();};
    const enteredIndexes=new Set([...Object.keys(entry.errorItems||{}),...Object.keys(entry.answerChecks||{}),...Object.values(entry.answerEvents||{}).map(event=>String(event?.index??''))].filter(index=>submittedForIndex(index)));
    const errors=Object.entries(entry.errorItems||{}).filter(([index,item])=>{const wrongAt=Number(item?.lastWrongAt)||0,resolvedAt=Number(item?.resolvedAt)||0,check=entry.answerChecks?.[index],correctFirst=check?.attempted===true&&check?.correct===true&&!wrongAt;return enteredIndexes.has(String(index))&&item?.source!=='live_battle'&&item?.source!=='battle'&&!correctFirst&&!(item?.resolved===true&&wrongAt>0&&resolvedAt===wrongAt+1);});
    const unresolved=errors.filter(([,item])=>!item?.resolved).length,improved=errors.length-unresolved;
    const errorText=errors.length?errors.length+' Aufgaben mit Fehlern · '+unresolved+' noch offen':'Keine Fehler';
    const improvedText=errors.length?improved+' von '+errors.length+' danach richtig wiederholt':'Nicht nötig – fehlerfrei';
    const what=id.startsWith('english_grammar_')?learningActivityTitle(id):String(live.taskTitle||learningActivityTitle(id));
-   const checks=entry.answerChecks||{},events=Object.values(entry.answerEvents||{}).filter(item=>item?.attempted===true),answers=Array.isArray(live.draftAnswers)?live.draftAnswers:[],prompts=Array.isArray(live.draftPrompts)?live.draftPrompts:[],draftTimes=Array.isArray(live.draftUpdatedAt)?live.draftUpdatedAt:[],answerRows=[],seenAttempts=new Set(),latestCheckAtByIndex={};
+   const checks=entry.answerChecks||{},events=Object.values(uniqueLearningAnswerEvents(entry.answerEvents||{})).filter(item=>item?.attempted===true),answers=Array.isArray(live.draftAnswers)?live.draftAnswers:[],prompts=Array.isArray(live.draftPrompts)?live.draftPrompts:[],draftTimes=Array.isArray(live.draftUpdatedAt)?live.draftUpdatedAt:[],answerRows=[],seenAttempts=new Set(),latestCheckAtByIndex={};
    for(const event of events){const index=String(event.index??''),at=Number(event.checkedAt)||Number(event.eventAt)||0;latestCheckAtByIndex[index]=Math.max(latestCheckAtByIndex[index]||0,at);}
    for(const [index,check] of Object.entries(checks)){const at=Number(check?.checkedAt)||0;latestCheckAtByIndex[index]=Math.max(latestCheckAtByIndex[index]||0,at);}
    const expectedText=value=>Array.isArray(value)&&value.length?value.map(String).join(' / '):String(value||'—');
