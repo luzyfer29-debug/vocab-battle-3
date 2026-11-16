@@ -393,9 +393,11 @@ async function repairDailyAnswerCounters(dayKey){
   // Preserve auditable vocabulary answers recovered from this day's saved solo progress.
   for(const row of Object.values(existing))for(const [exercise,entry] of Object.entries(row?.progressByExercise||{})){
    if(entry?.backfilledFromSavedProgress!==true)continue;
-   const prior=progress[exercise]||{items:{}},items={...(prior.items||{})};
+   const prior=progress[exercise]||{items:{}},items={...(prior.items||{})},currentDay=dayKey===activityDateKeys().dayKey,eventIndexes=new Set(Object.values(childActivity[exercise]?.answerEvents||{}).filter(item=>item?.attempted===true&&(item.dayKey===dayKey||activityPeriodKeys(Number(item.checkedAt)||Number(item.eventAt)||0).dayKey===dayKey)).map(item=>String(item.index)));
    for(const [key,item] of Object.entries(entry.items||{})){
-    const old=items[key];if(!old)items[key]=item;else if(Number(item?.mistakes)>Number(old?.mistakes||0))items[key]={...old,mistakes:Number(item.mistakes)||0};
+    const index=String(item?.answerIndex??(String(key).startsWith('legacy_')?String(key).split('_')[1]:String(key).split('_')[0])),old=items[key];
+    if(currentDay&&eventIndexes.has(index))continue;
+    if(!old)items[key]=item;else if(Number(item?.mistakes)>Number(old?.mistakes||0))items[key]={...old,mistakes:Number(item.mistakes)||0};
    }
    prior.items=items;prior.count=Object.keys(items).length;prior.mistakes=Object.values(items).reduce((sum,item)=>sum+(Number(item.mistakes)||0),0);prior.updatedAt=Math.max(Number(prior.updatedAt)||0,Number(entry.updatedAt)||Date.now());progress[exercise]=prior;
   }
