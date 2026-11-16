@@ -432,9 +432,9 @@ async function repairDailyAnswerCounters(dayKey){
    }
    if(Object.keys(items).length){target.items=items;target.count=Object.values(items).filter(item=>Number(item?.count)>0).length;target.updatedAt=Date.now();submittedByExercise[exercise]=target;}
   }
-  const submitted=dailySubmittedCount(submittedByExercise,progress),unverified=Math.max(0,...Object.values(existing).map(row=>Number(row?.unverifiedLegacyDailyCount)||((Number(row?.answerCounterVersion)===3)?0:(Number(row?.attempts)||0)))),computedAttempts=totals.checked+submitted,legacySubmitted=Math.max(0,unverified-computedAttempts);
+  const submitted=dailySubmittedCount(submittedByExercise,progress),unverified=Math.max(0,...Object.values(existing).map(row=>(dayKey===activityDateKeys().dayKey&&Number(row?.answerCounterVersion)===3)?0:(Number(row?.unverifiedLegacyDailyCount)||Number(row?.attempts)||0))),computedAttempts=totals.checked+submitted,legacySubmitted=Math.max(0,unverified-computedAttempts);
   daily[subject]=daily[subject]||{};
-  daily[subject][name]={"learning-activity":{name,attempts:computedAttempts+legacySubmitted,checkedAttempts:totals.checked,mistakes:totals.mistakes,submittedAttempts:submitted,legacySubmittedAttempts:legacySubmitted,answerCounterVersion:3,dailyRepairVersion:13,progressByExercise:progress,submittedByExercise,unverifiedLegacyDailyCount:unverified}};
+  daily[subject][name]={"learning-activity":{name,attempts:computedAttempts+legacySubmitted,checkedAttempts:totals.checked,mistakes:totals.mistakes,submittedAttempts:submitted,legacySubmittedAttempts:legacySubmitted,answerCounterVersion:3,dailyRepairVersion:14,progressByExercise:progress,submittedByExercise,unverifiedLegacyDailyCount:unverified}};
  }
  const manual=DAILY_COUNTER_OVERRIDES[dayKey]||{};
  for(const [subject,children] of Object.entries(manual))for(const [name,setting] of Object.entries(children)){
