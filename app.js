@@ -1038,7 +1038,7 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
     const checkedToday=Object.values(checks).some(check=>check?.attempted===true&&String(check?.submittedAnswer||'').trim()&&isTodayAt(check.checkedAt));
     const eventWorkedToday=events.some(([,event])=>String(event?.submittedAnswer||'').trim()&&isTodayAt(Number(event.checkedAt)||Number(event.eventAt)||0));
     const wrongToday=Object.values(entry.errorItems||{}).some(item=>String(item?.submittedAnswer||'').trim()&&isTodayAt(item.lastWrongAt));
-    const liveWorkedToday=done>0&&isTodayAt(live.updatedAt||when);
+    const liveWorkedToday=(Number(live.done)||0)>0&&isTodayAt(live.updatedAt||when);
     if(!draftWorkedToday&&!checkedToday&&!eventWorkedToday&&!wrongToday&&!liveWorkedToday)continue;
    }
    rows.push({name,id,what,when,errorText,improvedText,answerDetails,errorReview:!!errorReview});
