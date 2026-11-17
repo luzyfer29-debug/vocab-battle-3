@@ -82,8 +82,8 @@ if(!allowedNames.includes(childName)){
    try{
     await runTransaction(ref(db,'learningActivity/'+uid+'/'+childName+'/english_vocab_battle1'),current=>{
      const value=current&&typeof current==='object'?{...current}:{dayKey,dayCount:0,weekKey,weekCount:0,lastAt:now};
-     if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=Number(value.dayCount)||0;}
-     if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=Number(value.weekCount)||0;}
+     if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}
+     if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}
      value.lastAt=Math.max(Number(value.lastAt)||0,now);
      const byDay=value.appUsageByDay&&typeof value.appUsageByDay==='object'?{...value.appUsageByDay}:{};
      byDay[dayKey]=(Number(byDay[dayKey])||0)+delta;
