@@ -51,13 +51,51 @@ if(!allowedNames.includes(childName)){
   ]);
   const app=appModule.initializeApp(firebaseConfig),auth=authModule.getAuth(app),db=databaseModule.getDatabase(app);
   const {onAuthStateChanged,signInAnonymously}=authModule,{ref,runTransaction}=databaseModule;
-  let started=false,uid='',pendingMs=0,lastAt=Date.now(),wasVisible=document.visibilityState==='visible',writing=false;
+  let started=false,uid='',pendingMs=0,lastAt=Date.now(),wasVisible=document.visibilityState==='visible',writing=false,activeRunId='',draftSaveTimer=0,drawingTasks=new Set();
   const exercise='math_proportional_diagrams';
+  const taskCount=9;
+  const activityPath=()=> 'learningActivity/'+uid+'/'+childName+'/'+exercise;
+  async function saveTaskDraft(index,answer){
+   if(!uid||!openAt(Date.now())||index<0||index>=taskCount)return;
+   const now=Date.now(),{dayKey,weekKey}=periodKeys(now),fallback=String(answer||'').trim()?'':(drawingTasks.has(index)?'[Grafik bearbeitet]':'');
+   await runTransaction(ref(db,activityPath()),current=>{
+    const value=current&&typeof current==='object'?{...current}:{dayKey,dayCount:0,weekKey,weekCount:0};
+    if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}
+    if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}
+    const prior=value.live&&typeof value.live==='object'?value.live:{};
+    const answers=Array.isArray(prior.draftAnswers)?[...prior.draftAnswers]:[];
+    const updated=Array.isArray(prior.draftUpdatedAt)?[...prior.draftUpdatedAt]:[];
+    const prompts=Array.isArray(prior.draftPrompts)?[...prior.draftPrompts]:[];
+    const currentInput=document.getElementById('a'+index)?.value||'';
+    const draft=String(currentInput).trim()?currentInput:fallback;
+    answers[index]=draft;
+    updated[index]=now;
+    prompts[index]=tasks[index][0];
+    const live={...prior,taskTitle:'Zuordnungen und Diagramme',status:'Antwort eingegeben',done:answers.filter(item=>String(item||'').trim()).length,total:taskCount,draftAnswers:answers,draftUpdatedAt:updated,draftPrompts:prompts,updatedAt:now};
+    value.lastAt=now;value.live=live;
+    const sessions=Array.isArray(value.sessions)?[...value.sessions]:[];
+    const active=sessions.findIndex(item=>item?.runId===activeRunId);
+    if(active>=0)sessions[active]={...sessions[active],lastAt:now,live};
+    value.sessions=sessions.slice(-100);
+    return value;
+   });
+  }
+  document.getElementById('tasks').addEventListener('input',event=>{
+   const match=String(event.target?.id||'').match(/^a([0-9]+)$/);if(!match)return;
+   const index=Number(match[1]);clearTimeout(draftSaveTimer);
+   draftSaveTimer=setTimeout(()=>void saveTaskDraft(index,event.target.value).catch(error=>{status.textContent='Antwort konnte nicht gezählt werden: '+error.message;}),350);
+  });
+  document.addEventListener('pointerup',event=>{
+   const match=String(event.target?.id||'').match(/^canvas([0-9]+)$/);
+   if(!match||!event.target.classList.contains('editing'))return;
+   const index=Number(match[1]);drawingTasks.add(index);clearTimeout(draftSaveTimer);
+   draftSaveTimer=setTimeout(()=>void saveTaskDraft(index,'').catch(error=>{status.textContent='Zeichnung konnte nicht gezählt werden: '+error.message;}),200);
+  });
   async function startTracking(user){
    if(started||!user||!openAt(Date.now()))return;
    started=true;uid=user.uid;
    const now=Date.now(),{dayKey,weekKey}=periodKeys(now),path='learningActivity/'+uid+'/'+childName+'/'+exercise;
-   const runId='run_'+now+'_'+uid.replace(/[^A-Za-z0-9_-]/g,'_')+'_'+Math.random().toString(36).slice(2,10);
+   const runId=activeRunId='run_'+now+'_'+uid.replace(/[^A-Za-z0-9_-]/g,'_')+'_'+Math.random().toString(36).slice(2,10);
    await runTransaction(ref(db,path),current=>{
     const value=current&&typeof current==='object'?{...current}:{};
     if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}
@@ -65,7 +103,7 @@ if(!allowedNames.includes(childName)){
     value.dayCount=(Number(value.dayCount)||0)+1;
     value.weekCount=(Number(value.weekCount)||0)+1;
     value.lastAt=now;
-    const live={taskTitle:'Zuordnungen und Diagramme',status:'Übung geöffnet',done:0,total:9,draftAnswers:[],draftUpdatedAt:[],draftPrompts:[],updatedAt:now};
+    const live={taskTitle:'Zuordnungen und Diagramme',status:'Übung geöffnet',done:0,total:taskCount,draftAnswers:[],draftUpdatedAt:[],draftPrompts:[],updatedAt:now};
     value.live=live;
     const sessions=Array.isArray(value.sessions)?[...value.sessions]:[];
     sessions.push({runId,startedAt:now,lastAt:now,live});
