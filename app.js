@@ -1203,7 +1203,23 @@ ffd166;font-weight:750}.activity-state.is-done{color:#8cebd8;font-weight:750}.ac
  const mathContent=mathTopicsOverview+classworkOverview+resetControls('math');
  const selectedName=SOLO_NAMES.includes(liveChildFilter)?liveChildFilter:'';
  const nameButtons=SOLO_NAMES.map(name=>`<button type="button" data-dashboard-child="${esc(name)}" aria-pressed="${selectedName===name}">${esc(name)}</button>`).join('');
- const activityContent=selectedName?'<div class="dashboard-live-toolbar"><span class="dashboard-live-current">Live-Anzeige: '+esc(selectedName)+'</span><button type="button" class="live-clear-bright dashboard-live-reset" data-clear-child-live="'+esc(selectedName)+'">↻ Live zurücksetzen</button></div><p class="muted small dashboard-live-note">Nur diese Live-Anzeige auf diesem Schiedsrichtergerät wird geleert. Tages-, Wochen- und Battle-Wertungen bleiben unverändert.</p><section class="dashboard-simple-activity"><h3>Lernaktivitäten</h3>'+learningActivityOverview(activityData,[selectedName],seriesData,englishEntries)+'</section>':'<p class="muted">Wähle ein Kind aus, um dessen Lernaktivitäten zu sehen.</p>'
+ function appUsageOverview(activityData,name){
+ const totals={};
+ for(const device of Object.values(activityData||{})){
+  const days=device?.[name]?.english_vocab_battle1?.appUsageByDay;
+  if(!days||typeof days!=='object')continue;
+  for(const [day,value] of Object.entries(days))totals[day]=(totals[day]||0)+(Number(value)||0);
+ }
+ const currentParts=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+ const dateParts=Object.fromEntries(currentParts.map(part=>[part.type,part.value]));
+ const date=new Date(Date.UTC(Number(dateParts.year),Number(dateParts.month)-1,Number(dateParts.day)));
+ const days=Array.from({length:7},(_,index)=>{const d=new Date(date);d.setUTCDate(d.getUTCDate()-(6-index));return d.toISOString().slice(0,10);});
+ const duration=ms=>{const minutes=Math.floor(Math.max(0,Number(ms)||0)/60000),hours=Math.floor(minutes/60),rest=minutes%60;return hours?hours+' Std. '+String(rest).padStart(2,'0')+' Min.':rest+' Min.';};
+ const rows=days.map(day=>{const label=new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',weekday:'short',day:'2-digit',month:'2-digit'}).format(new Date(day+'T12:00:00Z'));return '<div class="player"><div class="row"><strong>'+esc(label)+'</strong><span>'+esc(duration(totals[day]||0))+'</span></div></div>';}).join('');
+ const total=days.reduce((sum,day)=>sum+(totals[day]||0),0);
+ return '<section class="dashboard-simple-activity"><h3>⏱️ App-Zeit · letzte 7 Tage</h3><p class="muted small">Gezählt wird die sichtbare Kinderseite, solange ein Kind ausgewählt ist.</p>'+rows+'<p><strong>Gesamt:</strong> '+esc(duration(total))+'</p></section>';
+}
+const activityContent=selectedName?'<div class="dashboard-live-toolbar"><span class="dashboard-live-current">Live-Anzeige: '+esc(selectedName)+'</span><button type="button" class="live-clear-bright dashboard-live-reset" data-clear-child-live="'+esc(selectedName)+'">↻ Live zurücksetzen</button></div><p class="muted small dashboard-live-note">Nur diese Live-Anzeige auf diesem Schiedsrichtergerät wird geleert. Tages-, Wochen- und Battle-Wertungen bleiben unverändert.</p>'+appUsageOverview(activityData,selectedName)+'<section class="dashboard-simple-activity"><h3>Lernaktivitäten</h3>'+learningActivityOverview(activityData,[selectedName],seriesData,englishEntries)+'</section>':'<p class="muted">Wähle ein Kind aus, um dessen Lernaktivitäten zu sehen.</p>'
  const pickerStyles=`<style>
 .dashboard-simple-activity{margin-top:18px!important;padding:18px!important;border:1px solid rgba(207,255,224,.24)!important;border-radius:18px!important;background:linear-gradient(145deg,rgba(7,54,36,.56),rgba(8,44,31,.3))!important}
 .dashboard-simple-activity h3{display:flex;align-items:center;gap:10px;margin:0 0 16px!important;font-size:20px!important}
