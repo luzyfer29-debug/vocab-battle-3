@@ -75,7 +75,11 @@ if(!allowedNames.includes(childName)){
     value.lastAt=now;value.live=live;
     const sessions=Array.isArray(value.sessions)?[...value.sessions]:[];
     const active=sessions.findIndex(item=>item?.runId===activeRunId);
-    if(active>=0)sessions[active]={...sessions[active],lastAt:now,live};
+    if(active<0){
+     value.dayCount=(Number(value.dayCount)||0)+1;
+     value.weekCount=(Number(value.weekCount)||0)+1;
+     sessions.push({runId:activeRunId,startedAt:now,lastAt:now,live});
+    }else sessions[active]={...sessions[active],lastAt:now,live};
     value.sessions=sessions.slice(-100);
     return value;
    });
@@ -94,24 +98,10 @@ if(!allowedNames.includes(childName)){
   async function startTracking(user){
    if(started||!user||!openAt(Date.now()))return;
    started=true;uid=user.uid;
-   const now=Date.now(),{dayKey,weekKey}=periodKeys(now),path='learningActivity/'+uid+'/'+childName+'/'+exercise;
-   const runId=activeRunId='run_'+now+'_'+uid.replace(/[^A-Za-z0-9_-]/g,'_')+'_'+Math.random().toString(36).slice(2,10);
-   await runTransaction(ref(db,path),current=>{
-    const value=current&&typeof current==='object'?{...current}:{};
-    if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}
-    if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}
-    value.dayCount=(Number(value.dayCount)||0)+1;
-    value.weekCount=(Number(value.weekCount)||0)+1;
-    value.lastAt=now;
-    const live={taskTitle:'Zuordnungen und Diagramme',status:'Übung geöffnet',done:0,total:taskCount,draftAnswers:[],draftUpdatedAt:[],draftPrompts:[],updatedAt:now};
-    value.live=live;
-    const sessions=Array.isArray(value.sessions)?[...value.sessions]:[];
-    sessions.push({runId,startedAt:now,lastAt:now,live});
-    value.sessions=sessions.slice(-100);
-    return value;
-   });
-   lastAt=Date.now();wasVisible=document.visibilityState==='visible';
-   status.textContent='📊 '+childName+' · Zuordnungen und Diagramme · Lernaktivität und App-Zeit werden erfasst.';
+   const now=Date.now();
+   activeRunId='run_'+now+'_'+uid.replace(/[^A-Za-z0-9_-]/g,'_')+'_'+Math.random().toString(36).slice(2,10);
+   lastAt=now;wasVisible=document.visibilityState==='visible';
+   status.textContent='📊 '+childName+' · App-Zeit läuft. Die Übung erscheint in der Liveübersicht, sobald du eine Antwort eingibst oder in der Grafik arbeitest.';
   }
   async function flushUsage(){
    if(writing||!pendingMs||!uid||!openAt(Date.now()))return;
