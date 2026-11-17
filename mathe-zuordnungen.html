@@ -20,4 +20,91 @@ function checkOne(i){const el=document.getElementById('a'+i),ok=norm(el.value)==
 function checkAll(){let count=0;tasks.forEach((_,i)=>{if(checkOne(i))count++});document.getElementById('total').textContent=count+' von '+tasks.length+' Aufgaben richtig.'}
 function toggleHelp(i){const el=document.getElementById('h'+i);el.style.display=el.style.display==='block'?'none':'block'}
 function setMode(m){current=m;Object.keys(drawState).forEach(k=>delete drawState[k]);drawMode={};document.getElementById('learnTab').classList.toggle('active',m==='lernen');document.getElementById('battleTab').classList.toggle('active',m==='battle');document.getElementById('status').textContent=m==='lernen'?'Lernen: Hilfe und ausführliche Rechenwege sind bei jeder Aufgabe verfügbar.':'Battle-Übung: Löse die Aufgaben selbst. Bei Bedarf kannst du anschließend den Rechenweg öffnen.';document.getElementById('total').textContent='';render()}render();
+</script>
+<script type="module">
+import {firebaseConfig} from './firebase-config.js?v=20261117-diagram-activity-time';
+const childName=new URLSearchParams(location.search).get('name')||'';
+const allowedNames=['Luca','Semir','Talea','Nele'];
+const status=document.getElementById('status');
+const openAt=timestamp=>{
+ const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Berlin',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date(timestamp)).map(x=>[x.type,x.value]));
+ const seconds=(Number(parts.hour)||0)*3600+(Number(parts.minute)||0)*60+(Number(parts.second)||0);
+ return seconds>=23400&&seconds<=75600;
+};
+function periodKeys(timestamp){
+ const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(timestamp)).map(x=>[x.type,x.value]));
+ const date=new Date(Date.UTC(Number(parts.year),Number(parts.month)-1,Number(parts.day))),day=date.getUTCDay()||7;
+ date.setUTCDate(date.getUTCDate()+4-day);
+ const isoYear=date.getUTCFullYear(),yearStart=new Date(Date.UTC(isoYear,0,1)),week=Math.ceil((((date-yearStart)/86400000)+1)/7);
+ return {dayKey:parts.year+'-'+parts.month+'-'+parts.day,weekKey:isoYear+'-W'+String(week).padStart(2,'0')};
+}
+if(!allowedNames.includes(childName)){
+ status.textContent='Öffne diese Übung über die Kinderseite, nachdem du deinen Namen ausgewählt hast. Dann werden Matheaktivität und App-Zeit zugeordnet.';
+}else if(!openAt(Date.now())){
+ status.textContent='Diese Übung ist geöffnet. Die Tageszählung und App-Zeit laufen täglich von 6:30 bis 21:00 Uhr.';
+}else{
+ try{
+  const [appModule,authModule,databaseModule]=await Promise.all([
+   import('https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js'),
+   import('https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js'),
+   import('https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js')
+  ]);
+  const app=appModule.initializeApp(firebaseConfig),auth=authModule.getAuth(app),db=databaseModule.getDatabase(app);
+  const {onAuthStateChanged,signInAnonymously}=authModule,{ref,runTransaction}=databaseModule;
+  let started=false,uid='',pendingMs=0,lastAt=Date.now(),wasVisible=document.visibilityState==='visible',writing=false;
+  const exercise='math_proportional_diagrams';
+  async function startTracking(user){
+   if(started||!user||!openAt(Date.now()))return;
+   started=true;uid=user.uid;
+   const now=Date.now(),{dayKey,weekKey}=periodKeys(now),path='learningActivity/'+uid+'/'+childName+'/'+exercise;
+   const runId='run_'+now+'_'+uid.replace(/[^A-Za-z0-9_-]/g,'_')+'_'+Math.random().toString(36).slice(2,10);
+   await runTransaction(ref(db,path),current=>{
+    const value=current&&typeof current==='object'?{...current}:{};
+    if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}
+    if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}
+    value.dayCount=(Number(value.dayCount)||0)+1;
+    value.weekCount=(Number(value.weekCount)||0)+1;
+    value.lastAt=now;
+    const live={taskTitle:'Zuordnungen und Diagramme',status:'Übung geöffnet',done:0,total:9,draftAnswers:[],draftUpdatedAt:[],draftPrompts:[],updatedAt:now};
+    value.live=live;
+    const sessions=Array.isArray(value.sessions)?[...value.sessions]:[];
+    sessions.push({runId,startedAt:now,lastAt:now,live});
+    value.sessions=sessions.slice(-100);
+    return value;
+   });
+   lastAt=Date.now();wasVisible=document.visibilityState==='visible';
+   status.textContent='📊 '+childName+' · Zuordnungen und Diagramme · Lernaktivität und App-Zeit werden erfasst.';
+  }
+  async function flushUsage(){
+   if(writing||!pendingMs||!uid||!openAt(Date.now()))return;
+   const delta=Math.floor(pendingMs),now=Date.now(),{dayKey,weekKey}=periodKeys(now);
+   pendingMs=Math.max(0,pendingMs-delta);writing=true;
+   try{
+    await runTransaction(ref(db,'learningActivity/'+uid+'/'+childName+'/english_vocab_battle1'),current=>{
+     const value=current&&typeof current==='object'?{...current}:{dayKey,dayCount:0,weekKey,weekCount:0,lastAt:now};
+     if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=Number(value.dayCount)||0;}
+     if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=Number(value.weekCount)||0;}
+     value.lastAt=Math.max(Number(value.lastAt)||0,now);
+     const byDay=value.appUsageByDay&&typeof value.appUsageByDay==='object'?{...value.appUsageByDay}:{};
+     byDay[dayKey]=(Number(byDay[dayKey])||0)+delta;
+     value.appUsageByDay=byDay;return value;
+    });
+   }catch(error){pendingMs+=delta;console.warn('App-Zeit konnte nicht gespeichert werden:',error);}
+   finally{writing=false;if(pendingMs>=15000)void flushUsage();}
+  }
+  function tick(forceFlush=false){
+   const now=Date.now(),delta=now-lastAt;
+   if(wasVisible&&openAt(lastAt)&&delta>0)pendingMs+=Math.min(delta,30000);
+   lastAt=now;wasVisible=document.visibilityState==='visible';
+   if((forceFlush||pendingMs>=15000)&&pendingMs>0)void flushUsage();
+  }
+  onAuthStateChanged(auth,user=>{
+   if(user)void startTracking(user);
+   else void signInAnonymously(auth).catch(error=>{status.textContent='Zählung konnte nicht starten: '+error.message;});
+  });
+  setInterval(()=>tick(),10000);
+  document.addEventListener('visibilitychange',()=>tick(true));
+  window.addEventListener('pagehide',()=>tick(true));
+ }catch(error){status.textContent='Zählung konnte nicht starten: '+error.message;}
+}
 </script></html>
