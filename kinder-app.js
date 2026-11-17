@@ -468,7 +468,7 @@ function learningActivityIds(subject){
   ...[1,2,3,4].map(n=>`math_rational_battle${n}`),'math_rational_cards','math_exam','math_rational_exam',
   'math_proportional_practice',...[1,2,3].map(n=>`math_proportional_exam${n}`),
   ...MATH_PROPORTIONAL_PRACTICE_BLOCKS.map(block=>`math_proportional_practice_${block.id}`),
-  'math_proportional_worksheet','math_proportional_flashcards',...FRACTION_MODULES.map(module=>`math_fraction_${module.id}`)
+  'math_proportional_worksheet','math_proportional_flashcards','math_proportional_diagrams',...FRACTION_MODULES.map(module=>`math_fraction_${module.id}`)
  ];
 }
 async function backfillTodayLearningProgress(subject,dayKey){
@@ -786,7 +786,7 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
  const dailySaved=duplicateInput?true:await updateDailyLeaderboard(name,subject,eventAt,!correct,exercise,index,q?.prompt||q?.q||q?.word||topic,attemptId);
  return activitySaved;
 }
-function childLearningExercises(subject){if(subject==='math')return ['math_rational_battle1','math_rational_battle2','math_rational_battle3','math_rational_cards','math_exam','math_rational_exam','math_proportional_practice','math_proportional_exam1','math_proportional_exam2','math_proportional_exam3',...MATH_PROPORTIONAL_PRACTICE_BLOCKS.map(b=>`math_proportional_practice_${b.id}`),'math_proportional_worksheet','math_proportional_flashcards',...FRACTION_MODULES.map(m=>`math_fraction_${m.id}`)];return ['english_vocab_work_page1','english_vocab_work_page2','english_vocab_work_station2_page1','english_vocab_work_station2_page2','english_listening','english_reading',...GRAMMAR.flatMap((station,s)=>station.tasks.map((_,i)=>`english_grammar_${s+1}_task${i+1}`)),...WRITING_TASKS.map((_,i)=>`english_writing_task${i+1}`)];}
+function childLearningExercises(subject){if(subject==='math')return ['math_rational_battle1','math_rational_battle2','math_rational_battle3','math_rational_cards','math_exam','math_rational_exam','math_proportional_practice','math_proportional_exam1','math_proportional_exam2','math_proportional_exam3',...MATH_PROPORTIONAL_PRACTICE_BLOCKS.map(b=>`math_proportional_practice_${b.id}`),'math_proportional_worksheet','math_proportional_flashcards','math_proportional_diagrams',...FRACTION_MODULES.map(m=>`math_fraction_${m.id}`)];return ['english_vocab_work_page1','english_vocab_work_page2','english_vocab_work_station2_page1','english_vocab_work_station2_page2','english_listening','english_reading',...GRAMMAR.flatMap((station,s)=>station.tasks.map((_,i)=>`english_grammar_${s+1}_task${i+1}`)),...WRITING_TASKS.map((_,i)=>`english_writing_task${i+1}`)];}
 async function mergeSharedLearningReview(name,subject,exercise,index,item){
  if(!item||(item.subject&&item.subject!==subject)||item.source==='live_battle'||item.source==='battle')return;
  const at=Number(item.lastWrongAt)||Date.now(),period=activityPeriodKeys(at),resolved=item.resolved===true;
