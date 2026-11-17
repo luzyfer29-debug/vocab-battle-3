@@ -274,8 +274,8 @@ function dailySubmittedCount(progress,checkedProgress={}){
 async function prepareDailyCounterV3(name,subject,eventAt,path){
  const dayKey=activityPeriodKeys(eventAt).dayKey,currentSnap=await get(ref(db,path)),current=currentSnap.val()||{};
  if(Number(current.answerCounterVersion)===3)return;
- const activitySnap=await get(ref(db,"learningActivity/"+uid+"/"+name));
- const progress=dailyProgressFromActivity(activitySnap.val()||{},dayKey),summary=dailyProgressCounts(progress);
+ const activity=await loadChildLearningActivity(name,subject);
+ const progress=dailyProgressFromActivity(activity,dayKey),summary=dailyProgressCounts(progress);
  await runTransaction(ref(db,path),row=>{
   const value=row&&typeof row==="object"?{...row}:{name,attempts:0,mistakes:0,checkedAttempts:0,submittedAttempts:0};
   if(Number(value.answerCounterVersion)===3)return value;
