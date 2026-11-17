@@ -840,6 +840,14 @@ function learningActivityTitle(id){
  if(id.startsWith('math_fraction_')){const found=FRACTION_MODULES.find(x=>x.id===id.slice('math_fraction_'.length));return 'Bruchrechnung · '+(found?.title||id.slice('math_fraction_'.length));}
  return id.replaceAll('_',' ');
 }
+function refereeDraftAutoStatus(exercise,index,answer){
+ const id=String(exercise||''),supported=/^english_vocab_work(?:_station2)?_page[12]$/.test(id)||/^english_grammar_[12]_task\\d+$/.test(id);
+ if(!supported)return '';
+ const expected=refereeExpectedAnswers(id,index);
+ if(!Array.isArray(expected)||!expected.length)return '';
+ const normalize=value=>String(value??'').trim().toLowerCase().replace(/[’‘]/g,"'").replace(/\\s+/g,' ');
+ return expected.some(value=>normalize(value)===normalize(answer))?'✅ Richtig':'❌ Falsch – noch nicht korrigiert';
+}
 function refereeExpectedAnswers(exercise,index){
  const i=Number(index);if(!Number.isInteger(i)||i<0)return null;
  let question=null;
@@ -1020,7 +1028,7 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
     const answer=String(answers[index]||'').trim(),at=Number(draftTimes[index])||Number(live.updatedAt)||0;
     if(!answer||at<=(latestCheckAtByIndex[String(index)]||0))continue;
     const latestEntry=events.filter(([,event])=>String(event.index)===String(index)).sort((a,b)=>(Number(b[1].checkedAt)||Number(b[1].eventAt)||0)-(Number(a[1].checkedAt)||Number(a[1].eventAt)||0))[0],latest=latestEntry?.[1],check=checks[String(index)]||{};
-    answerRows.push({at,html:answerCard(at,index,prompts[index]||latest?.prompt||check.prompt||'',answer,latest?.accepted||check.accepted||refereeExpectedAnswers(id,index),'✍️ Noch nicht geprüft')});
+    const expected=latest?.accepted||check.accepted||refereeExpectedAnswers(id,index),status=refereeDraftAutoStatus(id,index,answer)||'✍️ Noch nicht geprüft';answerRows.push({at,html:answerCard(at,index,prompts[index]||latest?.prompt||check.prompt||'',answer,expected,status)});
    }
    answerRows.sort((a,b)=>b.at-a.at);
    const isFrenchExercise=id.startsWith('french_');
