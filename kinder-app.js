@@ -1385,6 +1385,7 @@ function vocabWorkCollect(sync=true){
  values.forEach((answer,index)=>{if(String(answer||'')!==String(previous[index]||''))times[index]=now;});
  try{localStorage.setItem(vocabWorkKey(page),JSON.stringify(values));localStorage.setItem(vocabWorkDraftTimesKey(1,page),JSON.stringify(times));}catch{}
  if(sync)scheduleVocabWorkDraftSync(1,page);
+ return values;
 }
 const VOCAB_WORK_ANSWERS={
 
@@ -1531,6 +1532,7 @@ function vocabWorkStation2Collect(sync=true){
  values.forEach((answer,index)=>{if(String(answer||'')!==String(previous[index]||''))times[index]=now;});
  try{localStorage.setItem(vocabWorkStation2Key(page),JSON.stringify(values));localStorage.setItem(vocabWorkDraftTimesKey(2,page),JSON.stringify(times));}catch{}
  if(sync)scheduleVocabWorkDraftSync(2,page);
+ return values;
 }
 const VOCAB_WORK_STATION2_ANSWERS={
  1:[['plaster'],['bandage'],['ambulance'],['tooth'],['tablet','medicine','tablet/medicine','tablet / medicine'],['cast'],['accident'],['bleed'],['knee'],['sprain','twist','hurt'],['burn'],['emergency']],
