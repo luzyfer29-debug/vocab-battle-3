@@ -988,13 +988,13 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
    const errorText=errors.length?errors.length+' Aufgaben mit Fehlern · '+unresolved+' noch offen':'Keine Fehler';
    const improvedText=errors.length?improved+' von '+errors.length+' danach richtig wiederholt':'Nicht nötig – fehlerfrei';
    const what=id.startsWith('english_grammar_')?learningActivityTitle(id):String(live.taskTitle||learningActivityTitle(id));
-   const checks=entry.answerChecks||{},events=Object.values(uniqueLearningAnswerEvents(entry.answerEvents||{})).filter(item=>item?.attempted===true),answers=Array.isArray(live.draftAnswers)?live.draftAnswers:[],prompts=Array.isArray(live.draftPrompts)?live.draftPrompts:[],draftTimes=Array.isArray(live.draftUpdatedAt)?live.draftUpdatedAt:[],answerRows=[],seenAttempts=new Set(),latestCheckAtByIndex={};
-   for(const event of events){const index=String(event.index??''),at=Number(event.checkedAt)||Number(event.eventAt)||0;latestCheckAtByIndex[index]=Math.max(latestCheckAtByIndex[index]||0,at);}
+   const checks=entry.answerChecks||{},events=Object.entries(uniqueLearningAnswerEvents(entry.answerEvents||{})).filter(([,item])=>item?.attempted===true),answers=Array.isArray(live.draftAnswers)?live.draftAnswers:[],prompts=Array.isArray(live.draftPrompts)?live.draftPrompts:[],draftTimes=Array.isArray(live.draftUpdatedAt)?live.draftUpdatedAt:[],answerRows=[],seenAttempts=new Set(),latestCheckAtByIndex={};
+   for(const [,event] of events){const index=String(event.index??''),at=Number(event.checkedAt)||Number(event.eventAt)||0;latestCheckAtByIndex[index]=Math.max(latestCheckAtByIndex[index]||0,at);}
    for(const [index,check] of Object.entries(checks)){const at=Number(check?.checkedAt)||0;latestCheckAtByIndex[index]=Math.max(latestCheckAtByIndex[index]||0,at);}
    const expectedText=value=>Array.isArray(value)&&value.length?value.map(String).join(' / '):String(value||'—');
    const answerCard=(at,index,prompt,answer,expected,status)=>'<article class="live-answer-card"><div class="live-answer-card-head"><strong>Aufgabe '+(Number(index)+1)+'. '+esc(prompt||'Lernaufgabe')+'</strong><time>'+esc(at?evaluationDate(at):'Zeit unbekannt')+'</time></div><p><b>Eingegeben:</b> '+esc(answer)+'</p><p><b>Richtig wäre:</b> '+esc(expectedText(expected))+'</p><p><b>Status:</b> '+esc(status)+'</p></article>';
    const seenEvents=new Set();
-   events.sort((a,b)=>(Number(b.checkedAt)||Number(b.eventAt)||0)-(Number(a.checkedAt)||Number(a.eventAt)||0)).forEach(event=>{
+   events.sort((a,b)=>(Number(b[1].checkedAt)||Number(b[1].eventAt)||0)-(Number(a[1].checkedAt)||Number(a[1].eventAt)||0)).forEach(([eventId,event])=>{
     const index=String(event.index??''),check=checks[index]||{},at=Number(event.checkedAt)||Number(event.eventAt)||0;
     const priorError=entry.errorItems?.[index],fallbackAnswer=Number(check.checkedAt)===at?check.submittedAnswer:(Number(priorError?.lastWrongAt)===at?priorError?.submittedAnswer:''),answer=String(event.submittedAnswer??fallbackAnswer??'').trim();
     if(!answer)return;
@@ -1002,7 +1002,7 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
     const status=event.correct===true?'✅ Richtig':resolved?'🔁 Falsch – später korrigiert':'❌ Falsch – noch nicht korrigiert';
     const expected=event.accepted||(Number(check.checkedAt)===at?check.accepted:null)||refereeExpectedAnswers(id,index);
     answerRows.push({at,html:answerCard(at,index,event.prompt||check.prompt||prompts[Number(index)]||'',answer,expected,status)});seenAttempts.add(index+'_'+at);
-    if(event.eventId)seenEvents.add(String(event.eventId));
+    seenEvents.add(String(eventId));
    });
    for(const [index,item] of Object.entries(entry.errorItems||{})){
     const at=Number(item?.lastWrongAt)||0,answer=String(item?.submittedAnswer||'').trim();
@@ -1018,7 +1018,7 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
    for(let index=0;index<answers.length;index++){
     const answer=String(answers[index]||'').trim(),at=Number(draftTimes[index])||Number(live.updatedAt)||0;
     if(!answer||at<=(latestCheckAtByIndex[String(index)]||0))continue;
-    const latest=events.filter(event=>String(event.index)===String(index)).sort((a,b)=>(Number(b.checkedAt)||Number(b.eventAt)||0)-(Number(a.checkedAt)||Number(a.eventAt)||0))[0],check=checks[String(index)]||{};
+    const latestEntry=events.filter(([,event])=>String(event.index)===String(index)).sort((a,b)=>(Number(b[1].checkedAt)||Number(b[1].eventAt)||0)-(Number(a[1].checkedAt)||Number(a[1].eventAt)||0))[0],latest=latestEntry?.[1],check=checks[String(index)]||{};
     answerRows.push({at,html:answerCard(at,index,prompts[index]||latest?.prompt||check.prompt||'',answer,latest?.accepted||check.accepted||refereeExpectedAnswers(id,index),'✍️ Noch nicht geprüft')});
    }
    answerRows.sort((a,b)=>b.at-a.at);
