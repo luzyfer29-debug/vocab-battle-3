@@ -965,7 +965,7 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
  }).join('');
  return livePanel('📚 '+title+' · Bearbeitungen und Fehler',content,'live-learning-activity-'+subject,subject==='math'?'#ffd166':'#62e2c2',true);
 }function learningActivityOverview(activityData,names,seriesData={},soloProgress={}){
- const rows=[];
+ const rows=[],currentDayKey=activityDateKeys().dayKey,isTodayAt=timestamp=>Number(timestamp)>0&&activityDateKeys(Number(timestamp)).dayKey===currentDayKey;
  for(const name of names){
   const byExercise={};
   for(const device of Object.values(activityData||{}))for(const [id,entry] of Object.entries(device?.[name]||{}))if((id.startsWith('english_')||id.startsWith('math_')||id.startsWith('french_'))&&!isRemovedVocabBattleActivity(id))byExercise[id]=mergeLearningActivityEntries(byExercise[id],entry);
@@ -1033,6 +1033,14 @@ function learningActivityPanel(activityData,names,subject,seriesData={}){
    const errorReview=isFrenchExercise&&frenchErrorRows?'<details class="live-answer-details french-error-review"><summary>Fehler ansehen · '+errors.length+'</summary>'+frenchErrorRows+'</details>':'';
    const answerList=answerRows.length?'<details class="live-answer-details" data-live-key="answers-'+esc(name)+'-'+esc(id)+'"><summary>Eingaben ansehen · '+answerRows.length+'</summary><div class="live-answer-card-list">'+answerRows.map(row=>row.html).join('')+'</div></details>':'';
    const answerDetails=(isFrenchExercise?errorReview:'')+answerList;
+   if((id.startsWith('english_')||id.startsWith('math_'))&&activityDateKeys(when).dayKey===currentDayKey){
+    const draftWorkedToday=answers.some((answer,index)=>String(answer||'').trim()&&isTodayAt(draftTimes[index]));
+    const checkedToday=Object.values(checks).some(check=>check?.attempted===true&&String(check?.submittedAnswer||'').trim()&&isTodayAt(check.checkedAt));
+    const eventWorkedToday=events.some(([,event])=>String(event?.submittedAnswer||'').trim()&&isTodayAt(Number(event.checkedAt)||Number(event.eventAt)||0));
+    const wrongToday=Object.values(entry.errorItems||{}).some(item=>String(item?.submittedAnswer||'').trim()&&isTodayAt(item.lastWrongAt));
+    const liveWorkedToday=done>0&&isTodayAt(live.updatedAt||when);
+    if(!draftWorkedToday&&!checkedToday&&!eventWorkedToday&&!wrongToday&&!liveWorkedToday)continue;
+   }
    rows.push({name,id,what,when,errorText,improvedText,answerDetails,errorReview:!!errorReview});
   }
  }
