@@ -201,10 +201,11 @@ function uniqueLearningAnswerEvents(events){
  const unique=new Map();
  for(const [eventId,item] of Object.entries(events||{})){
   if(item?.attempted!==true||!normalizeLearningAnswerForCount(item?.submittedAnswer))continue;
-  const answer=normalizeLearningAnswerForCount(item.submittedAnswer),runId=String(item.runId||'legacy:'+eventId),dayKey=String(item.dayKey||''),index=String(item.index??''),result=item.correct===true?'right':item.correct===false?'wrong':'unknown',signature=[dayKey,runId,index,answer,result].join('|'),at=Math.max(Number(item.checkedAt)||0,Number(item.eventAt)||0,Number(item.resolvedAt)||0),old=unique.get(signature);
-  if(!old||at>=old.at)unique.set(signature,{eventId,item,at});
+  const at=Math.max(Number(item.checkedAt)||0,Number(item.eventAt)||0,Number(item.resolvedAt)||0),dayKey=String(item.dayKey|| (at?activityPeriodKeys(at).dayKey:'')),index=String(item.index??''),signature=[dayKey,index].join('|'),old=unique.get(signature),hadWrong=Boolean(item.correct===false||Number(item.lastWrongAt)>0);
+  if(!old||at>=old.at)unique.set(signature,{eventId,item,at,hadWrong:Boolean(old?.hadWrong||hadWrong)});
+  else if(hadWrong)old.hadWrong=true;
  }
- return Object.fromEntries([...unique.values()].map(({eventId,item})=>[eventId,item]));
+ return Object.fromEntries([...unique.values()].map(({eventId,item,hadWrong})=>[eventId,{...item,_countHadWrong:hadWrong}]));
 }
 function dailyProgressFromActivity(activity,dayKey){
  const progress={};
@@ -217,7 +218,7 @@ function dailyProgressFromActivity(activity,dayKey){
    const touchedToday=item.dayKey===dayKey||(checkedAt>0&&activityPeriodKeys(checkedAt).dayKey===dayKey);
    if(!touchedToday)continue;
    const key="attempt_"+String(eventId).replace(/[^A-Za-z0-9_-]/g,"_");
-   items[key]={count:1,mistakes:item.correct===false?1:0,answerIndex:String(item.index??""),updatedAt:checkedAt};
+   items[key]={count:1,mistakes:item.correct===false||item._countHadWrong===true?1:0,answerIndex:String(item.index??""),updatedAt:checkedAt};
    if(item.index!==undefined)eventsByIndex.add(String(item.index));
   }
   for(const [index,item] of Object.entries(checks)){
@@ -309,7 +310,7 @@ async function prepareDailyCounterV3(name,subject,eventAt,path){
 async function updateDailyLeaderboard(name,subject,eventAt,wrong,exercise,index,prompt,attemptId){
  if(!learningTimeIsOpen())return false;
  if(!db||!uid||!RANKED_NAMES.includes(name)||!["english","math"].includes(subject)||!exercise)return false;
- const {dayKey}=activityPeriodKeys(eventAt);if(!isWithinDailyCountWindow(eventAt,dayKey))return false;const path="learningDailyLeaderboard/"+dayKey+"/"+subject+"/"+name+"/"+uid,key=String(attemptId||('attempt_'+eventAt+'_'+index)).replace(/[^A-Za-z0-9_-]/g,'_');
+ const {dayKey}=activityPeriodKeys(eventAt);if(!isWithinDailyCountWindow(eventAt,dayKey))return false;const path="learningDailyLeaderboard/"+dayKey+"/"+subject+"/"+name+"/"+uid,key=('task_'+String(index)).replace(/[^A-Za-z0-9_-]/g,'_');
  try{
   await prepareDailyCounterV3(name,subject,eventAt,path);
   await runTransaction(ref(db,path),current=>{
