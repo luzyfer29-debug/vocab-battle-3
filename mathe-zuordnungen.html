@@ -18,14 +18,14 @@ function undo(i){state(i).items.pop();paint(i)}
 function clearDraw(i){state(i).items=[];paint(i)}
 window.addEventListener('resize',()=>requestAnimationFrame(setupCanvases));
 
-function norm(s){return String(s).toLocaleLowerCase('de').trim().replace(/€/g,'').replace(/\s+/g,'').replace(/\./g,',').replace(/\|/g,';').split(/[;\n/]+/).map(x=>x.trim()).join(';')}
+function norm(s){return String(s).toLocaleLowerCase('de').trim().replace(/€/g,'').replace(/\s+/g,'').replace(/\./g,',').replace(/\|/g,';').split(new RegExp('[;\\n/]+')).map(x=>x.trim()).join(';')}
 function numericValue(s){const v=String(s).replace(/€/g,'').replace(/\s/g,'').replace(/,/g,'.');return /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(v)?Number(v):NaN}
 function answerMatches(input,expected){
- const wanted=String(expected).split(/[;|\n/]+/).map(numericValue);
+ const wanted=String(expected).split(new RegExp('[;|\\n/]+')).map(numericValue);
  if(wanted.length&&wanted.every(Number.isFinite)){
   const raw=String(input).replace(/€/g,'').trim();
-  const explicit=/[;|/\n]/.test(raw);
-  const pieces=explicit?raw.split(/[;|/\n]+/).map(x=>x.trim()).filter(Boolean):raw.split(',').map(x=>x.trim()).filter(Boolean);
+  const explicit=new RegExp('[;|/\\n]').test(raw);
+  const pieces=explicit?raw.split(new RegExp('[;|/\\n]+')).map(x=>x.trim()).filter(Boolean):raw.split(',').map(x=>x.trim()).filter(Boolean);
   const matches=values=>values.length===wanted.length&&values.every((v,i)=>Number.isFinite(v)&&Math.abs(v-wanted[i])<0.005);
   if(explicit){if(matches(pieces.map(numericValue)))return true}
   else{
