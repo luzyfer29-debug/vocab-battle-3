@@ -833,6 +833,7 @@ function learningActivityTitle(id){
  if(id==='math_proportional_practice')return 'Proportional / Antiproportional · Übung';
  if(/^math_proportional_exam[1-3]$/.test(id))return 'Proportional / Antiproportional · Klassenarbeit '+id.slice(-1);
  if(id==='math_proportional_worksheet')return 'Proportional · Arbeitsblatt';
+ if(id==='math_proportional_dreisatz')return 'Proportional · Dreisatz-Aufgaben';
  if(id==='math_proportional_flashcards')return 'Proportional · Lernkarten';
  if(id==='math_proportional_diagrams')return 'Zuordnungen und Diagramme';
  const block=id.match(/^math_proportional_practice_(.+)$/);
