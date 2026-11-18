@@ -43,7 +43,7 @@ function answerMatches(input,expected){
  }
  return norm(input)===norm(expected)
 }
-function checkOne(i){const el=document.getElementById('a'+i),ok=answerMatches(el.value,tasks[i][2]);el.style.borderColor=ok?'#4ad6a5':'#ff9c9c';document.getElementById('r'+i).textContent=ok?'✅ Richtig!':'❌ Noch nicht richtig. Nutze die Hilfe und versuche es erneut.';return ok}
+function checkOne(i){const el=document.getElementById('a'+i),ok=answerMatches(el.value,tasks[i][2]);el.style.borderColor=ok?'#4ad6a5':'#ff9c9c';document.getElementById('r'+i).textContent=ok?'✅ Richtig!':'❌ Noch nicht richtig. Nutze die Hilfe und versuche es erneut.';if(typeof window.recordMathDiagramCheck==='function')void window.recordMathDiagramCheck(i,el.value,ok,tasks[i][0],tasks[i][2]);return ok}
 function checkAll(){let count=0;tasks.forEach((_,i)=>{if(checkOne(i))count++});document.getElementById('total').textContent=count+' von '+tasks.length+' Aufgaben richtig.'}
 function toggleHelp(i){const el=document.getElementById('h'+i);el.style.display=el.style.display==='block'?'none':'block'}
 function setMode(m){current=m;Object.keys(drawState).forEach(k=>delete drawState[k]);drawMode={};document.getElementById('learnTab').classList.toggle('active',m==='lernen');document.getElementById('battleTab').classList.toggle('active',m==='battle');document.getElementById('status').textContent=m==='lernen'?'Lernen: Hilfe und ausführliche Rechenwege sind bei jeder Aufgabe verfügbar.':'Battle-Übung: Löse die Aufgaben selbst. Bei Bedarf kannst du anschließend den Rechenweg öffnen.';document.getElementById('total').textContent='';render()}render();
@@ -82,6 +82,37 @@ if(!allowedNames.includes(childName)){
   const exercise='math_proportional_diagrams';
   const taskCount=17;
   const activityPath=()=> 'learningActivity/'+uid+'/'+childName+'/'+exercise;
+  window.recordMathDiagramCheck=async(index,submittedAnswer,correct,prompt,expected)=>{
+   const answer=String(submittedAnswer||'').trim();if(!answer||!allowedNames.includes(childName)||!openAt(Date.now()))return false;
+   try{
+    await ensureFirebaseAuth();
+    const at=Date.now(),{dayKey,weekKey}=periodKeys(at),path=activityPath(),key=String(index),runId=activeRunId||('run_'+at+'_'+uid.replace(/[^A-Za-z0-9_-]/g,'_')),attemptId='attempt_'+uid.replace(/[^A-Za-z0-9_-]/g,'_')+'_'+runId.replace(/[^A-Za-z0-9_-]/g,'_')+'_'+dayKey+'_'+key+'_'+at+'_'+Math.random().toString(36).slice(2,8),accepted=[String(expected||'')];
+    let duplicate=false;
+    await runTransaction(ref(db,path),current=>{
+     const value=current&&typeof current==='object'?{...current}:{dayKey,dayCount:0,weekKey,weekCount:0};
+     if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}
+     if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}
+     const checks={...(value.answerChecks||{})},previous=checks[key],sameAnswer=String(previous?.submittedAnswer||'').trim().toLowerCase().replace(/\\s+/g,' ')===answer.toLowerCase().replace(/\\s+/g,' ');
+     if(previous?.attempted&&previous.runId===runId&&sameAnswer&&previous.correct===Boolean(correct)){duplicate=true;return current;}
+     const errors={...(value.errorItems||{})},old=errors[key],events={...(value.answerEvents||{})};
+     checks[key]={attempted:true,source:'answer_check',subject:'math',topic:'Zuordnungen und Diagramme',prompt:String(prompt||('Aufgabe '+(Number(index)+1))),submittedAnswer:answer,accepted,dayKey,weekKey,checkedAt:at,lastWrongAt:correct?0:at,correct:Boolean(correct),eventId:attemptId,runId};
+     events[attemptId]={attempted:true,source:'answer_check',subject:'math',topic:'Zuordnungen und Diagramme',index:Number(index),prompt:String(prompt||('Aufgabe '+(Number(index)+1))),submittedAnswer:answer,accepted,dayKey,weekKey,checkedAt:at,eventAt:at,lastWrongAt:correct?0:at,correct:Boolean(correct),resolved:false,runId};
+     if(correct){if(old)errors[key]={...old,resolved:true,resolvedAt:Math.max(at,Number(old.lastWrongAt)||0)+1};}
+     else errors[key]={attempted:true,source:'answer_check',subject:'math',topic:'Zuordnungen und Diagramme',prompt:String(prompt||('Aufgabe '+(Number(index)+1))),submittedAnswer:answer,accepted,answer:String(expected||''),count:(Number(old?.count)||0)+1,lastWrongAt:at,dayKey,weekKey,resolved:false,resolvedAt:null};
+     value.answerChecks=checks;value.answerEvents=events;value.errorItems=errors;value.lastAt=at;return value;
+    });
+    if(duplicate)return true;
+    const rowPath='learningDailyLeaderboard/'+dayKey+'/math/'+childName+'/'+uid,itemKey=attemptId.replace(/[^A-Za-z0-9_-]/g,'_');
+    await runTransaction(ref(db,rowPath),current=>{
+     const value=current&&typeof current==='object'?{...current}:{name:childName,attempts:0,mistakes:0,checkedAttempts:0,submittedAttempts:0,answerCounterVersion:3,progressByExercise:{},submittedByExercise:{},legacySubmittedAttempts:0};
+     const progress={...(value.progressByExercise||{})},exerciseValue={...(progress[exercise]||{})},items={...(exerciseValue.items||{})};
+     if(!items[itemKey])items[itemKey]={count:1,mistakes:correct?0:1,answerIndex:key,updatedAt:at};
+     exerciseValue.items=items;exerciseValue.count=Object.values(items).reduce((n,item)=>n+(Number(item.count)||0),0);exerciseValue.mistakes=Object.values(items).reduce((n,item)=>n+(Number(item.mistakes)||0),0);exerciseValue.updatedAt=at;progress[exercise]=exerciseValue;
+     value.progressByExercise=progress;value.checkedAttempts=Object.values(progress).reduce((n,item)=>n+(Number(item.count)||0),0);value.mistakes=Object.values(progress).reduce((n,item)=>n+(Number(item.mistakes)||0),0);value.submittedByExercise=value.submittedByExercise||{};value.submittedAttempts=Number(value.legacySubmittedAttempts)||0;value.attempts=value.checkedAttempts+value.submittedAttempts;value.answerCounterVersion=3;value.name=childName;value.updatedAt=at;return value;
+    });
+    return true;
+   }catch(error){status.textContent='Antwort konnte nicht gezählt werden: '+error.message;return false;}
+  };
   async function saveTaskDraft(index,answer){
    if(!uid||!openAt(Date.now())||index<0||index>=taskCount)return;
    const now=Date.now(),{dayKey,weekKey}=periodKeys(now),fallback=String(answer||'').trim()?'':(drawingTasks.has(index)?'[Grafik bearbeitet]':'');
