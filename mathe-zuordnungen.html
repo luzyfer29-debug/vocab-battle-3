@@ -79,14 +79,14 @@ if(!allowedNames.includes(childName)){
   ]);
   const app=appModule.initializeApp(firebaseConfig),auth=authModule.getAuth(app),db=databaseModule.getDatabase(app);
   const {onAuthStateChanged,signInAnonymously}=authModule,{ref,runTransaction}=databaseModule;
-  let started=false,uid='',pendingMs=0,lastAt=Date.now(),wasVisible=document.visibilityState==='visible',writing=false,activeRunId='',draftSaveTimer=0,drawingTasks=new Set();
+  let started=false,uid='',pendingMs=0,lastAt=Date.now(),wasVisible=document.visibilityState==='visible',writing=false,activeRunId='',draftSaveTimer=0,drawingTasks=new Set(),authReadyResolve;const authReady=new Promise(resolve=>{authReadyResolve=resolve});
   const exercise='math_proportional_diagrams';
   const taskCount=17;
   const activityPath=()=> 'learningActivity/'+uid+'/'+childName+'/'+exercise;
   window.recordMathDiagramCheck=async(index,submittedAnswer,correct,prompt,expected)=>{
    const answer=String(submittedAnswer||'').trim();if(!answer||!allowedNames.includes(childName)||!openAt(Date.now()))return false;
    try{
-    if(!uid)throw new Error('Firebase-Anmeldung noch nicht bereit');
+    await authReady;if(!uid)throw new Error('Firebase-Anmeldung noch nicht bereit');
     const at=Date.now(),{dayKey,weekKey}=periodKeys(at),path=activityPath(),key=String(index),runId=activeRunId||('run_'+at+'_'+uid.replace(/[^A-Za-z0-9_-]/g,'_')),attemptId='attempt_'+uid.replace(/[^A-Za-z0-9_-]/g,'_')+'_'+runId.replace(/[^A-Za-z0-9_-]/g,'_')+'_'+dayKey+'_'+key+'_'+at+'_'+Math.random().toString(36).slice(2,8),accepted=[String(expected||'')];
     let duplicate=false;
     await runTransaction(ref(db,path),current=>{
@@ -186,7 +186,7 @@ if(!allowedNames.includes(childName)){
    if((forceFlush||pendingMs>=15000)&&pendingMs>0)void flushUsage();
   }
   onAuthStateChanged(auth,user=>{
-   if(user)void startTracking(user);
+   if(user){void startTracking(user);authReadyResolve();}
    else void signInAnonymously(auth).catch(error=>{status.textContent='Zählung konnte nicht starten: '+error.message;});
   });
   setInterval(()=>tick(),10000);
