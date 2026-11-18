@@ -11,7 +11,7 @@ let getDatabase,ref,onValue,get,set,update,runTransaction,remove;
 const RATIONAL_MATH_TITLES=['Rationale Zahlen · Aufgabe 1','Rationale Zahlen · Aufgabe 2','Rationale Zahlen · Aufgabe 3','Rationale Zahlen · Aufgabe 4'];
 
 const app=document.querySelector('#app'),status=document.querySelector('#status');function disableChildTextAssist(){app.querySelectorAll('input,textarea').forEach(field=>{field.setAttribute('autocomplete','off');field.setAttribute('autocorrect','off');field.setAttribute('autocapitalize','off');field.setAttribute('spellcheck','false');});}new MutationObserver(disableChildTextAssist).observe(app,{childList:true,subtree:true});disableChildTextAssist();
-const names=['Luca','Talea','Nele'];
+const names=['Luca','Semir','Talea','Nele'];
 const VOCAB_QUESTION_MS=8000,OTHER_QUESTION_MS=15000,REVEAL_MS=3000;
 const ADMIN_UID='M41x9WNoHAfqpSmyrztAgf2IZYC3';
 let resetUnsubscribe=null,resetState={},resetReady=false;
@@ -78,14 +78,14 @@ function grammarDraftTimesRead(st,task){try{const values=JSON.parse(localStorage
 function grammarCollect(){
  if(grammarStation===null||grammarTask===null)return;
  const fields=Array.from(document.querySelectorAll('[data-grammar]'));if(!fields.length)return;
- const previous=grammarRead(grammarStation,grammarTask),answers=fields.map(el=>el.value),storedTimes=grammarDraftTimesRead(grammarStation,grammarTask),times=Array.from({length:answers.length},(_,index)=>Number(storedTimes[index])||0),now=Date.now();
+ const previous=grammarRead(grammarStation,grammarTask),answers=fields.map(el=>el.value),times=grammarDraftTimesRead(grammarStation,grammarTask),now=Date.now();
  answers.forEach((answer,index)=>{if(String(answer||'')!==String(previous[index]||'')||(String(answer||'').trim()&&!Number(times[index])))times[index]=now;});
  grammarWrite(grammarStation,grammarTask,answers);try{localStorage.setItem(grammarDraftTimesKey(grammarStation,grammarTask),JSON.stringify(times));}catch{}
  void syncGrammarDraft(grammarStation,grammarTask,answers,times);
 }
 const grammarDraftQueues=[Promise.resolve(),Promise.resolve()];
 function syncGrammarDraft(st,task,answers=grammarRead(st,task),draftUpdatedAt=grammarDraftTimesRead(st,task)){
- const snapshot=answers.map(value=>String(value||'')),times=Array.from({length:answers.length},(_,index)=>Number(draftUpdatedAt?.[index])||0),previous=grammarDraftQueues[st]||Promise.resolve();
+ const snapshot=answers.map(value=>String(value||'')),times=[...draftUpdatedAt],previous=grammarDraftQueues[st]||Promise.resolve();
  const next=previous.catch(()=>{}).then(()=>saveGrammarDraft(st,task,snapshot,times));grammarDraftQueues[st]=next.catch(()=>{});return next;
 }
 async function saveGrammarDraft(st,task,answers,draftUpdatedAt){
@@ -158,8 +158,8 @@ function grammarReveal(){return;}
 function grammarClear(){if(grammarStation===null||grammarTask===null)return;grammarWrite(grammarStation,grammarTask,[]);grammarRender(grammarStation,grammarTask);}
 
 const key='vb2solo';
-const SOLO_NAMES=['Luca','Talea','Nele','Frauke'];
-const RANKED_NAMES=['Luca','Talea','Nele','Frauke'];
+const SOLO_NAMES=['Luca','Semir','Talea','Nele'];
+const RANKED_NAMES=['Luca','Semir','Talea','Nele'];
 const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:{count:50,baselineAnswers:36},Talea:{count:6,baselineAnswers:4}}},'2026-11-05':{english:{Luca:{count:111,baselineAnswers:66}}},'2026-11-06':{english:{Luca:{count:26,baselineAnswers:26}}},'2026-11-15':{english:{Nele:{count:145,baselineAnswers:145}}}};
 const DAILY_WIN_EXCLUDED_DAYS={'2026-11-02':'Lern- und Battle-Antworten sind an diesem Tag nicht verlässlich getrennt; der Tagessieg wurde manuell Luca gutgeschrieben.'};
 const DAILY_WINNER_OVERRIDES={'2026-11-02':{Luca:1},'2026-11-13':{Luca:1}}; const DAILY_WINNER_DAY_OVERRIDES={'2026-11-02':['Luca'],'2026-11-03':['Luca'],'2026-11-04':['Luca'],'2026-11-05':['Luca'],'2026-11-06':['Luca'],'2026-11-07':['Talea'],'2026-11-09':['Talea'],'2026-11-10':['Luca']};
@@ -185,7 +185,6 @@ function dailyAnswerItemKey(index,prompt){
 function isRemovedVocabBattleActivity(activity,key=''){const id=String(typeof activity==='string'?activity:activity?.originalActivity||activity?.id||activity?.activity||'');return /^english_vocab_battle[123]$/.test(id)||/^vocab_[123]$/.test(id)||/(?:^|_)vocab_[123](?:_|$)/.test(id)||/(?:^|_)english_vocab_battle[123](?:_|$)/.test(String(key||''));}
 const DAILY_COUNT_WINDOW_START_DAY='2026-11-16';
 function isWithinDailyCountWindow(timestamp,dayKey){
- if(new URLSearchParams(location.search).get('test')==='1'&&(soloName==='Frauke'||mathName==='Frauke'))return true;
  if(!dayKey||dayKey<DAILY_COUNT_WINDOW_START_DAY)return true;
  if(!Number(timestamp))return false;
  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Berlin',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date(Number(timestamp))).map(x=>[x.type,x.value]));
@@ -193,7 +192,6 @@ function isWithinDailyCountWindow(timestamp,dayKey){
  return seconds>=23400&&seconds<=75600;
 }
 function learningTimeIsOpen(timestamp=Date.now()){
- if(new URLSearchParams(location.search).get('test')==='1'&&(soloName==='Frauke'||mathName==='Frauke'||(!localStorage.getItem('vb2solo_name')&&!localStorage.getItem('vb2math_name'))))return true;
  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Berlin',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date(Number(timestamp))).map(x=>[x.type,x.value]));
  const seconds=(Number(parts.hour)||0)*3600+(Number(parts.minute)||0)*60+(Number(parts.second)||0);
  return seconds>=23400&&seconds<=75600;
@@ -1756,7 +1754,7 @@ async function mathSync(){
  }catch(e){msg('Mathe online noch nicht verfügbar – der Fortschritt bleibt auf diesem Gerät gespeichert.',true);}
 }
 function mathChoose(){mathRun=null;mathView='';if(!mathName){mathNeedName('mathChoose');return;}app.innerHTML=card('<h2>🔢 Mathe · Klasse 7 NRW · '+esc(mathName)+'</h2><p>'+btn('👤 Kind wechseln','mathChangeName','alt')+'</p><p>Wähle ein Kapitel zum Lernen oder eine Klassenarbeit.</p>'+`<section class="solo-section math-review-panel"><div class="math-review-copy"><span class="math-review-kicker">🔁 Wiederholen</span><h3>Das muss ich noch lernen</h3><p>Offene Mathefehler üben, bis sie richtig beantwortet sind.</p></div><div class="solo-actions">${btn('Mathe-Fehler wiederholen','reviewMathChild','math-review-button')}</div></section>`+'<div class="name-actions">'+btn('➗ Bruchrechnung','mathViewFractions','math-choice-fractions')+btn('📈 Proportional / Antiproportional','mathViewProportional','math-choice-proportional')+btn('🧮 Dreisatz üben · 8 Aufgaben','mathDreisatzStart','math-choice-dreisatz')+btn('📊 Zuordnungen und Diagramme','mathDiagramsStart','math-choice-diagrams')+btn('📝 Klassenarbeit Proportional / Antiproportional','mathViewProportionalExam','math-choice-proportional-exam')+ '</div>')+card(btn('Zur Fächerauswahl','home','alt'));}
-function mathDiagramsStart(){if(mathNeedName('mathDiagramsStart'))return;window.location.href='./mathe-zuordnungen.html?name='+encodeURIComponent(mathName)+'&v=20261118-answer-count-v1'+(mathName==='Frauke'?'&test=1':'')+'#worksheet-tasks';}
+function mathDiagramsStart(){if(mathNeedName('mathDiagramsStart'))return;window.location.href='./mathe-zuordnungen.html?name='+encodeURIComponent(mathName)+'&v=20261118-counting-fix-v5#worksheet-tasks';}
 function mathSelectView(view){mathView=view;mathHome();if(view==='proportional')window.scrollTo(0,0);}
 function mathChangeName(){mathName='';mathRun=null;fractionRun=null;localStorage.removeItem('vb2math_name');mathNeedName('mathChoose');}
 function mathNeedName(action){if(mathName)return false;mathPendingAction=action;app.innerHTML=card('<h2>📚 Wer lernt gerade?</h2><p>Wähle deinen Namen, damit dein Lernstand gespeichert wird.</p><div class="name-actions">'+SOLO_NAMES.map((n,i)=>btn(esc(n),`mathName${i}`)).join('')+'</div>')+card(btn('Zur Aufgabenübersicht','mathHome','alt'));return true;}
