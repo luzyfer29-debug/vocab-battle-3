@@ -49,12 +49,11 @@ function toggleHelp(i){const el=document.getElementById('h'+i);el.style.display=
 function setMode(m){current=m;Object.keys(drawState).forEach(k=>delete drawState[k]);drawMode={};document.getElementById('learnTab').classList.toggle('active',m==='lernen');document.getElementById('battleTab').classList.toggle('active',m==='battle');document.getElementById('status').textContent=m==='lernen'?'Lernen: Hilfe und ausführliche Rechenwege sind bei jeder Aufgabe verfügbar.':'Battle-Übung: Löse die Aufgaben selbst. Bei Bedarf kannst du anschließend den Rechenweg öffnen.';document.getElementById('total').textContent='';render()}render();
 </script>
 <script type="module">
-import {firebaseConfig} from './firebase-config.js?v=20261118-temp-frauke-test';
+import {firebaseConfig} from './firebase-config.js?v=20261117-diagram-activity-time';
 const childName=new URLSearchParams(location.search).get('name')||'';
-const allowedNames=['Luca','Semir','Talea','Nele','Frauke'];
+const allowedNames=['Luca','Semir','Talea','Nele'];
 const status=document.getElementById('status');
 const openAt=timestamp=>{
- if(childName==='Frauke'&&new URLSearchParams(location.search).get('test')==='1')return true;
  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Berlin',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date(timestamp)).map(x=>[x.type,x.value]));
  const seconds=(Number(parts.hour)||0)*3600+(Number(parts.minute)||0)*60+(Number(parts.second)||0);
  return seconds>=23400&&seconds<=75600;
