@@ -1848,50 +1848,65 @@ function mathProportionalReveal(){proportionalStudyRevealed=true;mathProportiona
 function mathProportionalNext(){const cards=proportionalStudyDeck==='worksheet'?PROPORTIONAL_WORKSHEET_CARDS:PROPORTIONAL_FLASH_CARDS;if(proportionalStudyIndex+1>=cards.length){touchLearningActivity(mathName,`math_proportional_${proportionalStudyDeck}`,{done:cards.length,total:cards.length,finished:true,status:'abgeschlossen'});mathSelectView('proportional');return;}proportionalStudyIndex++;proportionalStudyRevealed=false;mathProportionalStudyShow();}
 function mathProportionalPrevious(){if(proportionalStudyIndex>0)proportionalStudyIndex--;proportionalStudyRevealed=false;mathProportionalStudyShow();}
 
+
 const DREISATZ_EXERCISE='math_proportional_dreisatz';
 const DREISATZ_TASKS=[
- {prompt:'Eine Treppe mit 14 Stufen ist 252 cm hoch. Wie hoch ist eine Treppe mit 5 Stufen?',answer:90,unit:'cm',explanation:'252 : 14 = 18 cm pro Stufe. 18 · 5 = 90 cm.'},
- {prompt:'In 3 Stunden werden 240 Teile gefertigt. Wie viele Stunden werden für 600 Teile benötigt?',answer:7.5,unit:'Stunden',explanation:'240 : 3 = 80 Teile pro Stunde. 600 : 80 = 7,5 Stunden.'},
- {prompt:'Ein Auto verbraucht 6 l Benzin auf 100 km. Wie viel Benzin verbraucht es auf 245 km?',answer:14.7,unit:'l',explanation:'6 : 100 = 0,06 l pro km. 0,06 · 245 = 14,7 l.'},
- {prompt:'100 ml Cola enthalten 10,6 g Zucker. In wie viel ml Cola sind 90,1 g Zucker?',answer:850,unit:'ml',explanation:'10,6 : 100 = 0,106 g Zucker pro ml. 90,1 : 0,106 = 850 ml.'},
- {prompt:'4 DVDs kosten 31,60 €. Wie viel kosten 3 DVDs?',answer:23.7,unit:'€',explanation:'31,60 : 4 = 7,90 € pro DVD. 7,90 · 3 = 23,70 €.'},
- {prompt:'Für 5 Regale sind 180 Schrauben nötig. Wie viele Schrauben sind für 12 Regale nötig?',answer:432,unit:'Schrauben',explanation:'180 : 5 = 36 Schrauben pro Regal. 36 · 12 = 432 Schrauben.'},
- {prompt:'80,5 m³ Wasser füllen 7 Becken. Wie viel Wasser benötigt man für 4 Becken?',answer:46,unit:'m³',explanation:'80,5 : 7 = 11,5 m³ pro Becken. 11,5 · 4 = 46 m³.'},
- {prompt:'In 2 kg einer Farbmischung sind 0,3 kg Rot. Wie viel Rot ist in 7 kg der Farbmischung?',answer:1.05,unit:'kg',explanation:'0,3 : 2 = 0,15 kg Rot pro kg Mischung. 0,15 · 7 = 1,05 kg.'}
+ {prompt:'Eine Treppe mit 14 Stufen ist 252 cm hoch. Wie hoch ist eine Treppe mit 5 Stufen?',inputLabel:'Anzahl der Stufen',outputLabel:'Höhe (cm)',inputSingular:'Stufe',inputValue:14,outputValue:252,divideBy:14,unitValue:18,targetValue:5,answer:90,intermediateTolerance:0.000001,unit:'cm',explanation:'252 : 14 = 18 cm pro Stufe. Danach 18 · 5 = 90 cm.'},
+ {prompt:'In 3 Stunden werden 240 Teile gefertigt. Wie viele Stunden werden für 600 Teile benötigt?',inputLabel:'Anzahl der Teile',outputLabel:'Zeit (h)',inputSingular:'Teil',inputValue:240,outputValue:3,divideBy:240,unitValue:0.0125,targetValue:600,answer:7.5,intermediateTolerance:0.000001,unit:'h',explanation:'3 : 240 = 0,0125 h pro Teil. Danach 0,0125 · 600 = 7,5 h.'},
+ {prompt:'Ein Auto verbraucht 6 l Benzin auf 100 km. Wie viel Benzin verbraucht es auf 245 km?',inputLabel:'Strecke (km)',outputLabel:'Verbrauch (l)',inputSingular:'km',inputValue:100,outputValue:6,divideBy:100,unitValue:0.06,targetValue:245,answer:14.7,intermediateTolerance:0.000001,unit:'l',explanation:'6 : 100 = 0,06 l pro km. Danach 0,06 · 245 = 14,7 l.'},
+ {prompt:'100 ml Cola enthalten 10,6 g Zucker. In wie viel ml Cola sind 90,1 g Zucker?',inputLabel:'Zuckermenge (g)',outputLabel:'Cola (ml)',inputSingular:'g Zucker',inputValue:10.6,outputValue:100,divideBy:10.6,unitValue:100/10.6,targetValue:90.1,answer:850,intermediateTolerance:0.01,unit:'ml',explanation:'100 : 10,6 = 9,43396… ml pro g. Danach 9,43396… · 90,1 = 850 ml.'},
+ {prompt:'4 DVDs kosten 31,60 €. Wie viel kosten 3 DVDs?',inputLabel:'Anzahl der DVDs',outputLabel:'Preis (€)',inputSingular:'DVD',inputValue:4,outputValue:31.6,divideBy:4,unitValue:7.9,targetValue:3,answer:23.7,intermediateTolerance:0.000001,unit:'€',explanation:'31,60 : 4 = 7,90 € pro DVD. Danach 7,90 · 3 = 23,70 €.'},
+ {prompt:'Für 5 Regale sind 180 Schrauben nötig. Wie viele Schrauben sind für 12 Regale nötig?',inputLabel:'Anzahl der Regale',outputLabel:'Schrauben',inputSingular:'Regal',inputValue:5,outputValue:180,divideBy:5,unitValue:36,targetValue:12,answer:432,intermediateTolerance:0.000001,unit:'Schrauben',explanation:'180 : 5 = 36 Schrauben pro Regal. Danach 36 · 12 = 432 Schrauben.'},
+ {prompt:'80,5 m³ Wasser füllen 7 Becken. Wie viel Wasser benötigt man für 4 Becken?',inputLabel:'Anzahl der Becken',outputLabel:'Wasser (m³)',inputSingular:'Becken',inputValue:7,outputValue:80.5,divideBy:7,unitValue:11.5,targetValue:4,answer:46,intermediateTolerance:0.000001,unit:'m³',explanation:'80,5 : 7 = 11,5 m³ pro Becken. Danach 11,5 · 4 = 46 m³.'},
+ {prompt:'In 2 kg einer Farbmischung sind 0,3 kg Rot. Wie viel Rot ist in 7 kg der Farbmischung?',inputLabel:'Farbmischung (kg)',outputLabel:'Rotanteil (kg)',inputSingular:'kg Mischung',inputValue:2,outputValue:0.3,divideBy:2,unitValue:0.15,targetValue:7,answer:1.05,intermediateTolerance:0.000001,unit:'kg',explanation:'0,3 : 2 = 0,15 kg Rot pro kg Mischung. Danach 0,15 · 7 = 1,05 kg.'}
 ];
 function mathDreisatzStart(){if(mathNeedName('mathDreisatzStart'))return;mathView='proportionalDreisatz';mathHome();window.scrollTo(0,0);}
 function mathDreisatzRender(){
- const tasks=DREISATZ_TASKS.map((task,index)=>{
-  const number=index+1;
-  return '<article class="player proportional-test-card"><h3>Aufgabe '+number+'</h3><p>'+esc(task.prompt)+'</p><label for="dreisatz-answer-'+index+'">Dein Ergebnis ('+esc(task.unit)+')</label><input id="dreisatz-answer-'+index+'" type="text" inputmode="decimal" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-dreisatz-answer="'+index+'" aria-label="Ergebnis für Aufgabe '+number+'" placeholder="Zahl eingeben" style="display:block;width:100%;margin:8px 0 4px;padding:13px;border-radius:10px;border:2px solid #8092ad;background:#fff;color:#172337;font-size:18px"><p id="dreisatz-result-'+index+'" aria-live="polite" class="muted">Trage dein Ergebnis ein. Es wird beim Verlassen des Feldes geprüft.</p></article>';
+ const cards=DREISATZ_TASKS.map((task,index)=>{
+  const first=index*2,second=first+1;
+  const inputStyle='display:block;width:100%;margin:7px 0 3px;padding:11px;border-radius:9px;border:2px solid #8092ad;background:#fff;color:#172337;font-size:17px';
+  const entry=(flatIndex,disabled)=>'<input id="dreisatz-answer-'+flatIndex+'" type="text" inputmode="decimal" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-dreisatz-answer="'+flatIndex+'" aria-label="'+(flatIndex%2?'Endergebnis':'Einheitswert')+' für Aufgabe '+(index+1)+'" placeholder="Ergebnis eintragen" '+(disabled?'disabled ':'')+'style="'+inputStyle+'"><small id="dreisatz-result-'+flatIndex+'" aria-live="polite" class="muted">'+(disabled?'Erst Schritt 1 richtig lösen.':'')+'</small>';
+  return '<article class="player proportional-test-card"><h3>Aufgabe '+(index+1)+'</h3><p>'+esc(task.prompt)+'</p><p class="muted">Fülle die Tabelle nacheinander aus: erst teilen bis auf 1, danach mit dem Zielwert multiplizieren.</p><div class="proportional-table-wrap"><table class="proportional-table"><thead><tr><th scope="col">'+esc(task.inputLabel)+'</th><th scope="col">'+esc(task.outputLabel)+'</th></tr></thead><tbody><tr><th scope="row">Gegeben</th><td>'+String(task.inputValue).replace('.',',')+'</td><td>'+String(task.outputValue).replace('.',',')+'</td></tr><tr class="table-rule"><th scope="row">1. Schritt: teilen</th><td>:'+String(task.divideBy).replace('.',',')+'</td><td>:'+String(task.divideBy).replace('.',',')+'</td></tr><tr><th scope="row">Für 1 '+esc(task.inputSingular)+'</th><td>1</td><td>'+entry(first,false)+'</td></tr><tr class="table-rule"><th scope="row">2. Schritt: multiplizieren</th><td>·'+String(task.targetValue).replace('.',',')+'</td><td>·'+String(task.targetValue).replace('.',',')+'</td></tr><tr><th scope="row">Gesucht</th><td>'+String(task.targetValue).replace('.',',')+'</td><td>'+entry(second,true)+'</td></tr></tbody></table></div></article>';
  }).join('');
- app.innerHTML=card('<h2>🧮 Dreisatz · Aufgaben</h2><p>Gib bei jeder Aufgabe nur die Zahl ein. Ein Komma oder Punkt ist bei Dezimalzahlen möglich. Deine Eingabe wird geprüft, sobald du das Feld verlässt.</p><p class="muted">8 Aufgaben · proportionaler Dreisatz</p>'+tasks+'<a class="proportional-video-link" href="./dreisatz-proportional-aufgaben.pdf?v=20261118" target="_blank" rel="noopener">📄 Originalblatt öffnen oder drucken</a>')+card(btn('Zurück zu Proportional / Antiproportional','mathViewProportional','alt'));
+ app.innerHTML=card('<h2>🧮 Dreisatz · Schritt für Schritt</h2><p>Wie auf dem Arbeitsblatt: erst beide Werte durch die Ausgangszahl teilen. Trage den Wert für 1 ein. Wenn er stimmt, wird Schritt 2 freigeschaltet: mit der gesuchten Zahl multiplizieren.</p><p class="muted">8 Aufgaben · 16 Rechenschritte · Dezimalzahlen mit Komma oder Punkt</p>'+cards+'<a class="proportional-video-link" href="./dreisatz-proportional-aufgaben.pdf?v=20261118" target="_blank" rel="noopener">📄 Originalblatt öffnen oder drucken</a>')+card(btn('Zurück zu Proportional / Antiproportional','mathViewProportional','alt'));
 }
 async function mathDreisatzCheck(field){
- const index=Number(field.dataset.dreisatzAnswer),task=DREISATZ_TASKS[index],raw=String(field.value||'').trim();
- if(!task||!raw||field.dataset.dreisatzChecking==='1')return;
+ const flatIndex=Number(field.dataset.dreisatzAnswer),task=DREISATZ_TASKS[Math.floor(flatIndex/2)],step=flatIndex%2,raw=String(field.value||'').trim();
+ if(!task||!Number.isInteger(flatIndex)||flatIndex<0||flatIndex>=DREISATZ_TASKS.length*2||field.dataset.dreisatzChecking==='1')return;
+ if(!raw){field.dataset.dreisatzCorrect='';field.style.borderColor='#8092ad';const status=document.getElementById('dreisatz-result-'+flatIndex);if(status)status.textContent='';await mathDreisatzSaveLiveState(flatIndex);return;}
+ if(step===1){const firstField=document.getElementById('dreisatz-answer-'+(flatIndex-1));if(!firstField||firstField.dataset.dreisatzCorrect!=='true')return;}
  field.dataset.dreisatzChecking='1';
  try{
   await ensureFirebaseAuth();
-  const value=Number(raw.replace(/\s/g,'').replace(',','.')),correct=Number.isFinite(value)&&Math.abs(value-task.answer)<0.000001,at=Date.now();
+  const value=Number(raw.replace(/\s/g,'').replace(',','.')),expected=step===0?task.unitValue:task.answer,tolerance=step===0?task.intermediateTolerance:0.000001,correct=Number.isFinite(value)&&Math.abs(value-expected)<tolerance,at=Date.now();
   field.dataset.dreisatzCorrect=correct?'true':'false';field.dataset.dreisatzUpdatedAt=String(at);
   field.style.borderColor=correct?'#63e6b3':'#ff8b92';
-  const result=document.getElementById('dreisatz-result-'+index);
-  if(result)result.innerHTML=correct?'<strong style="color:#63e6b3">✅ Richtig!</strong> '+esc(task.explanation):'<strong style="color:#ff9ca5">❌ Noch nicht richtig.</strong><br>Richtige Antwort: <strong>'+esc(String(task.answer).replace('.',','))+' '+esc(task.unit)+'</strong><br>'+esc(task.explanation);
-  const fields=Array.from(app.querySelectorAll('[data-dreisatz-answer]'));
-  const answers=fields.map(item=>String(item.value||''));
-  const updated=fields.map(item=>Number(item.dataset.dreisatzUpdatedAt)||0);
-  const entered=fields.filter(item=>String(item.value||'').trim()).length;
-  const correctCount=fields.filter(item=>item.dataset.dreisatzCorrect==='true').length;
-  const prompts=DREISATZ_TASKS.map(item=>item.prompt);
-  const liveState={taskTitle:'Dreisatz · Aufgabe '+(index+1),done:entered,total:DREISATZ_TASKS.length,draftAnswers:answers,draftUpdatedAt:updated,draftPrompts:prompts,status:entered+' von 8 eingetragen · '+correctCount+' richtig'};
-  await recordLearningActivity(mathName,DREISATZ_EXERCISE,false,liveState);
-  await recordLearningError(mathName,'math',DREISATZ_EXERCISE,index,'Proportional / Antiproportional · Dreisatz',{prompt:task.prompt,submittedAnswer:raw,answer:String(task.answer).replace('.',','),explanation:task.explanation},correct,at);
+  const status=document.getElementById('dreisatz-result-'+flatIndex);
+  if(status){
+   if(correct){status.innerHTML='<strong style="color:#63e6b3">✅ Richtig!</strong> '+(step===0?'Schritt 2 ist jetzt freigeschaltet.':esc(task.explanation));}
+   else status.innerHTML='<strong style="color:#ff9ca5">❌ Noch nicht richtig.</strong><br>Richtiger Wert: <strong>'+esc(String(expected).replace('.',','))+(step===0?'':(' '+esc(task.unit)))+'</strong><br>'+esc(task.explanation);
+  }
+  if(step===0){const next=document.getElementById('dreisatz-answer-'+(flatIndex+1));if(next)next.disabled=!correct;}
+  await mathDreisatzSaveLiveState(flatIndex,at);
+  const prompt=task.prompt+' · Schritt '+(step+1)+(step===0?' · Einheitswert durch Teilen':' · Endergebnis durch Multiplizieren');
+  const answer=step===0?String(task.unitValue).replace('.',','):String(task.answer).replace('.',',');
+  await recordLearningError(mathName,'math',DREISATZ_EXERCISE,flatIndex,'Proportional / Antiproportional · Dreisatz · Aufgabe '+(Math.floor(flatIndex/2)+1),{prompt,submittedAnswer:raw,answer,explanation:task.explanation},correct,at);
  }catch(error){
-  const result=document.getElementById('dreisatz-result-'+index);
-  if(result)result.textContent='Eingabe konnte gerade nicht gespeichert werden. Bitte Verbindung prüfen und die Antwort erneut eingeben.';
+  const status=document.getElementById('dreisatz-result-'+flatIndex);
+  if(status)status.textContent='Eingabe konnte gerade nicht gespeichert werden. Bitte Verbindung prüfen und die Antwort erneut eingeben.';
   console.warn('Dreisatz-Antwort konnte nicht gespeichert werden:',error);
  }finally{field.dataset.dreisatzChecking='0';}
+}
+async function mathDreisatzSaveLiveState(activeIndex,activeAt=Date.now()){
+ const fields=Array.from(app.querySelectorAll('[data-dreisatz-answer]'));
+ const answers=fields.map(field=>String(field.value||''));
+ const updated=fields.map(field=>Number(field.dataset.dreisatzUpdatedAt)||0);
+ if(Number.isInteger(activeIndex)){answers[activeIndex]=String(fields[activeIndex]?.value||'');updated[activeIndex]=String(fields[activeIndex]?.value||'').trim()?activeAt:0;}
+ const entered=fields.filter(field=>String(field.value||'').trim()).length;
+ const correctCount=fields.filter(field=>field.dataset.dreisatzCorrect==='true').length;
+ const prompts=DREISATZ_TASKS.flatMap((task,index)=>[task.prompt+' · Aufgabe '+(index+1)+' · Schritt 1: teilen bis auf 1',task.prompt+' · Aufgabe '+(index+1)+' · Schritt 2: multiplizieren']);
+ const liveState={taskTitle:'Dreisatz · Schritt '+(Number.isInteger(activeIndex)?(activeIndex+1):''),done:entered,total:DREISATZ_TASKS.length*2,draftAnswers:answers,draftUpdatedAt:updated,draftPrompts:prompts,status:entered+' von 16 Rechenschritten eingetragen · '+correctCount+' richtig'};
+ await recordLearningActivity(mathName,DREISATZ_EXERCISE,false,liveState);
 }
 
 function mathAction(v){if(v==='mathChangeName'){mathChangeName();return true;}if(v.startsWith('fractionOpen_')){fractionOpen(v.slice(13));return true;}if(v.startsWith('fractionStart_')){fractionStart(v.slice(14));return true;}if(v==='fractionNext'){fractionQuestion();return true;}if(v==='mathChoose')mathChoose();else if(v==='mathViewFractions')mathSelectView('fractions');else if(v==='mathViewRational')mathSelectView('rational');else if(v==='mathViewExam')mathSelectView('exam');else if(v==='mathViewRationalExam')mathSelectView('rationalExam');else if(v==='mathViewProportional')mathSelectView('proportional');else if(v==='mathViewProportionalExam')mathSelectView('proportionalExam');else if(v==='mathPracticePro'){mathPracticeGroup='proportional';mathView='proportionalPractice';mathHome();}else if(v==='mathPracticeAnti'){mathPracticeGroup='antiproportional';mathView='proportionalPractice';mathHome();}else if(v==='mathPracticeMixed'){mathPracticeGroup='mixed';mathView='proportionalPractice';mathHome();}else if(v==='mathDreisatzStart')mathDreisatzStart();else if(v==='mathProportionalWorksheet')mathProportionalStudyStart('worksheet');else if(v==='mathProportionalFlashcards')mathProportionalStudyStart('flashcards');else if(v==='mathProportionalReveal')mathProportionalReveal();else if(v==='mathProportionalNext')mathProportionalNext();else if(v==='mathProportionalPrevious')mathProportionalPrevious();else if(v==='mathHome')mathHome();else if(v==='mathShowSolution')mathShowSolution();else if(v==='fractionShowSolution')fractionShowSolution();else if(v==='mathNext')mathQuestion();else if(v==='mathFlashStart')mathFlashStart();else if(v==='mathFlashResume')mathFlashResume();else if(v==='mathFlashReveal')mathFlashReveal();else if(v==='mathFlashKnown')mathFlashKnown();else if(v==='mathFlashAgain')mathFlashAgain();else if(v==='mathFlashReviewKnown')mathFlashReviewKnown();else if(v==='mathFlashReviewAgain')mathFlashReviewAgain();else if(/^mathName[0-4]$/.test(v))mathSetName(Number(v.slice(-1)));else if(/^mathStart\d+$/.test(v))mathStart(Number(v.slice(9)));else if(/^mathResume\d+$/.test(v))mathStart(Number(v.slice(10)),true);else return false;return true;}
