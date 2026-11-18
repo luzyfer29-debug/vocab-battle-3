@@ -122,6 +122,7 @@ async function autoCheckGrammarInput(input){
  if(!input||!soloName||grammarStation===null||grammarTask===null||!learningTimeIsOpen())return;
  const st=grammarStation,taskIndex=grammarTask,index=Number(input.dataset.grammar),task=GRAMMAR[st]?.tasks?.[taskIndex],item=task?.items?.[index];
  const submittedAnswer=String(input.value||'').trim();if(!item||!submittedAnswer)return;
+ const normalizedSubmitted=grammarNormalize(submittedAnswer);if(item[2].some(answer=>grammarNormalize(answer).startsWith(normalizedSubmitted))&&!item[2].some(answer=>grammarNormalize(answer)===normalizedSubmitted))return;
  const exercise=`english_grammar_${st+1}_task${taskIndex+1}`,topic=GRAMMAR[st].title+' · '+task.title,prompt=`${item[0]} _____ ${item[1]}`;
  const correct=item[2].some(answer=>grammarNormalize(answer)===grammarNormalize(submittedAnswer));
  await recordLearningError(soloName,'english',exercise,index,topic,{prompt,accepted:item[2],submittedAnswer},correct);
