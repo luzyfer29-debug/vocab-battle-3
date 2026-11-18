@@ -1849,6 +1849,7 @@ function mathProportionalNext(){const cards=proportionalStudyDeck==='worksheet'?
 function mathProportionalPrevious(){if(proportionalStudyIndex>0)proportionalStudyIndex--;proportionalStudyRevealed=false;mathProportionalStudyShow();}
 
 
+
 const DREISATZ_EXERCISE='math_proportional_dreisatz';
 const DREISATZ_TASKS=[
  {prompt:'Eine Treppe mit 14 Stufen ist 252 cm hoch. Wie hoch ist eine Treppe mit 5 Stufen?',inputLabel:'Anzahl der Stufen',outputLabel:'Höhe (cm)',inputSingular:'Stufe',inputValue:14,outputValue:252,divideBy:14,unitValue:18,targetValue:5,answer:90,intermediateTolerance:0.000001,unit:'cm',explanation:'252 : 14 = 18 cm pro Stufe. Danach 18 · 5 = 90 cm.'},
@@ -1863,37 +1864,52 @@ const DREISATZ_TASKS=[
 function mathDreisatzStart(){if(mathNeedName('mathDreisatzStart'))return;mathView='proportionalDreisatz';mathHome();window.scrollTo(0,0);}
 function mathDreisatzRender(){
  const cards=DREISATZ_TASKS.map((task,index)=>{
-  const first=index*2,second=first+1;
-  const inputStyle='display:block;width:100%;margin:7px 0 3px;padding:11px;border-radius:9px;border:2px solid #8092ad;background:#fff;color:#172337;font-size:17px';
-  const entry=(flatIndex,disabled)=>'<input id="dreisatz-answer-'+flatIndex+'" type="text" inputmode="decimal" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-dreisatz-answer="'+flatIndex+'" aria-label="'+(flatIndex%2?'Endergebnis':'Einheitswert')+' für Aufgabe '+(index+1)+'" placeholder="Ergebnis eintragen" '+(disabled?'disabled ':'')+'style="'+inputStyle+'"><small id="dreisatz-result-'+flatIndex+'" aria-live="polite" class="muted">'+(disabled?'Erst Schritt 1 richtig lösen.':'')+'</small>';
-  return '<article class="player proportional-test-card"><h3>Aufgabe '+(index+1)+'</h3><p>'+esc(task.prompt)+'</p><p class="muted">Fülle die Tabelle nacheinander aus: erst teilen bis auf 1, danach mit dem Zielwert multiplizieren.</p><div class="proportional-table-wrap"><table class="proportional-table"><thead><tr><th scope="col">Schritt</th><th scope="col">'+esc(task.inputLabel)+'</th><th scope="col">'+esc(task.outputLabel)+'</th></tr></thead><tbody><tr><th scope="row">Gegeben</th><td>'+String(task.inputValue).replace('.',',')+'</td><td>'+String(task.outputValue).replace('.',',')+'</td></tr><tr class="table-rule"><th scope="row">1. Schritt: teilen</th><td>:'+String(task.divideBy).replace('.',',')+'</td><td>:'+String(task.divideBy).replace('.',',')+'</td></tr><tr><th scope="row">Für 1 '+esc(task.inputSingular)+'</th><td>1</td><td>'+entry(first,false)+'</td></tr><tr class="table-rule"><th scope="row">2. Schritt: multiplizieren</th><td>·'+String(task.targetValue).replace('.',',')+'</td><td>·'+String(task.targetValue).replace('.',',')+'</td></tr><tr><th scope="row">Gesucht</th><td>'+String(task.targetValue).replace('.',',')+'</td><td>'+entry(second,true)+'</td></tr></tbody></table></div></article>';
+  const first=index*6,taskSelector='[data-dreisatz-task="'+index+'"]';
+  const inputStyle='display:inline-block;width:94px;max-width:100%;margin:3px 0;padding:9px;border-radius:8px;border:2px solid #8092ad;background:#fff;color:#172337;font-size:16px';
+  const field=(part,disabled,label)=>{const flat=first+part;return '<input id="dreisatz-answer-'+flat+'" type="text" inputmode="decimal" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-dreisatz-answer="'+flat+'" data-dreisatz-task="'+index+'" data-dreisatz-part="'+part+'" aria-label="'+esc(label)+' für Aufgabe '+(index+1)+'" placeholder="?" '+(disabled?'disabled ':'')+'style="'+inputStyle+'"><small id="dreisatz-result-'+flat+'" aria-live="polite" class="muted"></small>';};
+  const lockedTarget='?';
+  return '<article class="player proportional-test-card"><h3>Aufgabe '+(index+1)+'</h3><p>'+esc(task.prompt)+'</p><div class="proportional-table-wrap"><table class="proportional-table"><thead><tr><th scope="col">Schritt</th><th scope="col">'+esc(task.inputLabel)+'</th><th scope="col">'+esc(task.outputLabel)+'</th></tr></thead><tbody><tr><th scope="row">Gegeben</th><td>'+String(task.inputValue).replace('.',',')+'</td><td>'+String(task.outputValue).replace('.',',')+'</td></tr><tr class="table-rule"><th scope="row">1. Schritt: teilen</th><td>: '+field(0,false,'Divisor der linken Spalte')+'</td><td>: '+field(1,false,'Divisor der rechten Spalte')+'</td></tr><tr><th scope="row">Für 1 '+esc(task.inputSingular)+'</th><td>1</td><td>'+field(2,true,'Ergebnis nach dem Teilen')+'</td></tr><tr class="table-rule"><th scope="row">2. Schritt: multiplizieren</th><td>· '+field(3,true,'Multiplikator der linken Spalte')+'</td><td>· '+field(4,true,'Multiplikator der rechten Spalte')+'</td></tr><tr><th scope="row">Gesucht</th><td>'+lockedTarget+'</td><td>'+field(5,true,'Endergebnis')+'</td></tr></tbody></table></div></article>';
  }).join('');
- app.innerHTML=card('<h2>🧮 Dreisatz · Schritt für Schritt</h2><p>Wie auf dem Arbeitsblatt: erst beide Werte durch die Ausgangszahl teilen. Trage den Wert für 1 ein. Wenn er stimmt, wird Schritt 2 freigeschaltet: mit der gesuchten Zahl multiplizieren.</p><p class="muted">8 Aufgaben · 16 Rechenschritte · Dezimalzahlen mit Komma oder Punkt</p>'+cards+'<a class="proportional-video-link" href="./dreisatz-proportional-aufgaben.pdf?v=20261118" target="_blank" rel="noopener">📄 Originalblatt öffnen oder drucken</a>')+card(btn('Zurück zu Proportional / Antiproportional','mathViewProportional','alt'));
+ app.innerHTML=card('<h2>🧮 Dreisatz · Schritt für Schritt</h2><p>Wie auf dem Arbeitsblatt: Trage bei „:“ selbst ein, durch welche Zahl geteilt wird. Berechne danach den Wert für 1. Im zweiten Schritt trägst du bei „·“ selbst ein, mit welcher Zahl multipliziert wird. Die Faktoren kommen in beide Spalten.</p><p class="muted">8 Aufgaben · 48 Eintragungen · Dezimalzahlen mit Komma oder Punkt</p>'+cards+'<a class="proportional-video-link" href="./dreisatz-proportional-aufgaben.pdf?v=20261118" target="_blank" rel="noopener">📄 Originalblatt öffnen oder drucken</a>')+card(btn('Zurück zu Proportional / Antiproportional','mathViewProportional','alt'));
+}
+function mathDreisatzUnlock(taskIndex){
+ const fields=Array.from(app.querySelectorAll('[data-dreisatz-task="'+taskIndex+'"]'));
+ const get=part=>fields.find(field=>Number(field.dataset.dreisatzPart)===part);
+ const divideReady=get(0)?.dataset.dreisatzCorrect==='true'&&get(1)?.dataset.dreisatzCorrect==='true';
+ if(get(2))get(2).disabled=!divideReady;
+ const unitReady=divideReady&&get(2)?.dataset.dreisatzCorrect==='true';
+ if(get(3))get(3).disabled=!unitReady;
+ if(get(4))get(4).disabled=!unitReady;
+ const multiplyReady=unitReady&&get(3)?.dataset.dreisatzCorrect==='true'&&get(4)?.dataset.dreisatzCorrect==='true';
+ if(get(5))get(5).disabled=!multiplyReady;
+ const targetCell=fields[0]?.closest('tbody')?.querySelector('tr:last-child td:first-of-type');
+ if(targetCell)targetCell.textContent=multiplyReady?String(DREISATZ_TASKS[taskIndex].targetValue).replace('.',','):'?';
 }
 async function mathDreisatzCheck(field){
- const flatIndex=Number(field.dataset.dreisatzAnswer),task=DREISATZ_TASKS[Math.floor(flatIndex/2)],step=flatIndex%2,raw=String(field.value||'').trim();
- if(!task||!Number.isInteger(flatIndex)||flatIndex<0||flatIndex>=DREISATZ_TASKS.length*2||field.dataset.dreisatzChecking==='1')return;
- if(!raw){field.dataset.dreisatzCorrect='';field.style.borderColor='#8092ad';const status=document.getElementById('dreisatz-result-'+flatIndex);if(status)status.textContent='';await mathDreisatzSaveLiveState(flatIndex);return;}
- if(step===1){const firstField=document.getElementById('dreisatz-answer-'+(flatIndex-1));if(!firstField||firstField.dataset.dreisatzCorrect!=='true')return;}
+ const flatIndex=Number(field.dataset.dreisatzAnswer),taskIndex=Number(field.dataset.dreisatzTask),part=Number(field.dataset.dreisatzPart),task=DREISATZ_TASKS[taskIndex],raw=String(field.value||'').trim();
+ if(!task||!Number.isInteger(flatIndex)||flatIndex<0||flatIndex>=DREISATZ_TASKS.length*6||field.dataset.dreisatzChecking==='1')return;
+ if(!raw){field.dataset.dreisatzCorrect='';field.style.borderColor='#8092ad';const status=document.getElementById('dreisatz-result-'+flatIndex);if(status)status.textContent='';mathDreisatzUnlock(taskIndex);await mathDreisatzSaveLiveState(flatIndex);return;}
+ if(field.disabled)return;
  field.dataset.dreisatzChecking='1';
  try{
   await ensureFirebaseAuth();
-  const value=Number(raw.replace(/\s/g,'').replace(',','.')),expected=step===0?task.unitValue:task.answer,tolerance=step===0?task.intermediateTolerance:0.000001,correct=Number.isFinite(value)&&Math.abs(value-expected)<tolerance,at=Date.now();
-  field.dataset.dreisatzCorrect=correct?'true':'false';field.dataset.dreisatzUpdatedAt=String(at);
-  field.style.borderColor=correct?'#63e6b3':'#ff8b92';
-  const status=document.getElementById('dreisatz-result-'+flatIndex);
-  if(status){
-   if(correct){status.innerHTML='<strong style="color:#63e6b3">✅ Richtig!</strong> '+(step===0?'Schritt 2 ist jetzt freigeschaltet.':esc(task.explanation));}
-   else status.innerHTML='<strong style="color:#ff9ca5">❌ Noch nicht richtig.</strong><br>Richtiger Wert: <strong>'+esc(String(expected).replace('.',','))+(step===0?'':(' '+esc(task.unit)))+'</strong><br>'+esc(task.explanation);
+  const expected=part===0||part===1?task.divideBy:part===2?task.unitValue:part===3||part===4?task.targetValue:task.answer;
+  const tolerance=part===2?task.intermediateTolerance:0.000001,value=Number(raw.replace(/\s/g,'').replace(',','.')),correct=Number.isFinite(value)&&Math.abs(value-expected)<tolerance,at=Date.now();
+  field.dataset.dreisatzCorrect=correct?'true':'false';field.dataset.dreisatzUpdatedAt=String(at);field.style.borderColor=correct?'#63e6b3':'#ff8b92';
+  const result=document.getElementById('dreisatz-result-'+flatIndex),unit=part===2||part===5?' '+task.unit:'';
+  const prompts=['Divisor in Spalte 1','Divisor in Spalte 2','Ergebnis nach dem Teilen','Multiplikator in Spalte 1','Multiplikator in Spalte 2','Endergebnis'];
+  if(result){
+   if(correct)result.innerHTML='<strong style="color:#63e6b3">✅ Richtig!</strong>';
+   else result.innerHTML='<strong style="color:#ff9ca5">❌ Noch nicht richtig.</strong><br>Richtige Zahl: <strong>'+esc(String(expected).replace('.',','))+esc(unit)+'</strong><br>'+esc(task.explanation);
   }
-  if(step===0){const next=document.getElementById('dreisatz-answer-'+(flatIndex+1));if(next)next.disabled=!correct;}
+  mathDreisatzUnlock(taskIndex);
   await mathDreisatzSaveLiveState(flatIndex,at);
-  const prompt=task.prompt+' · Schritt '+(step+1)+(step===0?' · Einheitswert durch Teilen':' · Endergebnis durch Multiplizieren');
-  const answer=step===0?String(task.unitValue).replace('.',','):String(task.answer).replace('.',',');
-  await recordLearningError(mathName,'math',DREISATZ_EXERCISE,flatIndex,'Proportional / Antiproportional · Dreisatz · Aufgabe '+(Math.floor(flatIndex/2)+1),{prompt,submittedAnswer:raw,answer,explanation:task.explanation},correct,at);
+  const prompt=task.prompt+' · '+prompts[part];
+  const expectedText=String(expected).replace('.',',');
+  await recordLearningError(mathName,'math',DREISATZ_EXERCISE,flatIndex,'Proportional / Antiproportional · Dreisatz · Aufgabe '+(taskIndex+1),{prompt,submittedAnswer:raw,answer:expectedText,explanation:task.explanation},correct,at);
  }catch(error){
-  const status=document.getElementById('dreisatz-result-'+flatIndex);
-  if(status)status.textContent='Eingabe konnte gerade nicht gespeichert werden. Bitte Verbindung prüfen und die Antwort erneut eingeben.';
+  const result=document.getElementById('dreisatz-result-'+flatIndex);
+  if(result)result.textContent='Eingabe konnte gerade nicht gespeichert werden. Bitte Verbindung prüfen und die Antwort erneut eingeben.';
   console.warn('Dreisatz-Antwort konnte nicht gespeichert werden:',error);
  }finally{field.dataset.dreisatzChecking='0';}
 }
@@ -1904,8 +1920,12 @@ async function mathDreisatzSaveLiveState(activeIndex,activeAt=Date.now()){
  if(Number.isInteger(activeIndex)){answers[activeIndex]=String(fields[activeIndex]?.value||'');updated[activeIndex]=String(fields[activeIndex]?.value||'').trim()?activeAt:0;}
  const entered=fields.filter(field=>String(field.value||'').trim()).length;
  const correctCount=fields.filter(field=>field.dataset.dreisatzCorrect==='true').length;
- const prompts=DREISATZ_TASKS.flatMap((task,index)=>[task.prompt+' · Aufgabe '+(index+1)+' · Schritt 1: teilen bis auf 1',task.prompt+' · Aufgabe '+(index+1)+' · Schritt 2: multiplizieren']);
- const liveState={taskTitle:'Dreisatz · Schritt '+(Number.isInteger(activeIndex)?(activeIndex+1):''),done:entered,total:DREISATZ_TASKS.length*2,draftAnswers:answers,draftUpdatedAt:updated,draftPrompts:prompts,status:entered+' von 16 Rechenschritten eingetragen · '+correctCount+' richtig'};
+ const prompts=DREISATZ_TASKS.flatMap((task,index)=>[
+  task.prompt+' · Aufgabe '+(index+1)+' · Divisor links',task.prompt+' · Aufgabe '+(index+1)+' · Divisor rechts',
+  task.prompt+' · Aufgabe '+(index+1)+' · Einheitswert',task.prompt+' · Aufgabe '+(index+1)+' · Multiplikator links',
+  task.prompt+' · Aufgabe '+(index+1)+' · Multiplikator rechts',task.prompt+' · Aufgabe '+(index+1)+' · Endergebnis'
+ ]);
+ const liveState={taskTitle:'Dreisatz · Schritt',done:entered,total:DREISATZ_TASKS.length*6,draftAnswers:answers,draftUpdatedAt:updated,draftPrompts:prompts,status:entered+' von 48 Eintragungen · '+correctCount+' richtig'};
  await recordLearningActivity(mathName,DREISATZ_EXERCISE,false,liveState);
 }
 
