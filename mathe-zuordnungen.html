@@ -102,7 +102,7 @@ if(!allowedNames.includes(childName)){
      value.answerChecks=checks;value.answerEvents=events;value.errorItems=errors;value.lastAt=at;return value;
     });
     if(duplicate)return true;
-    const rowPath='learningDailyLeaderboard/'+dayKey+'/math/'+childName+'/'+uid,itemKey=attemptId.replace(/[^A-Za-z0-9_-]/g,'_');
+    const rowPath='learningDailyLeaderboard/'+dayKey+'/math/'+childName+'/'+uid,itemKey=('task_'+dayKey+'_'+runId+'_'+key).replace(/[^A-Za-z0-9_-]/g,'_');
     await runTransaction(ref(db,rowPath),current=>{
      const value=current&&typeof current==='object'?{...current}:{name:childName,attempts:0,mistakes:0,checkedAttempts:0,submittedAttempts:0,answerCounterVersion:3,progressByExercise:{},submittedByExercise:{},legacySubmittedAttempts:0};
      const progress={...(value.progressByExercise||{})},exerciseValue={...(progress[exercise]||{})},items={...(exerciseValue.items||{})};
