@@ -773,7 +773,7 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
    if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}
    if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}
    value.lastAt=Math.max(Number(value.lastAt)||0,eventAt);
-   const checks={...(value.answerChecks||{})},previous=checks[key]||{},errors={...(value.errorItems||{})},old=errors[key],sessions=Array.isArray(value.sessions)?value.sessions:[],lastSession=sessions[sessions.length-1]||{},runId=activeLearningRunIds.get(path)||String(lastSession.runId||('run_'+(Number(lastSession.startedAt)||eventAt)+'_'+String(uid).replace(/[^A-Za-z0-9_-]/g,'_'))),sameRun=Boolean(previous.attempted&&(previous.runId===runId||(!previous.runId&&Number(lastSession.startedAt)>0&&Number(previous.checkedAt)>=Number(lastSession.startedAt)))),wrongAt=correct?0:eventAt;
+   const checks={...(value.answerChecks||{})},previous=checks[key]||{},errors={...(value.errorItems||{})},old=errors[key],sessions=Array.isArray(value.sessions)?value.sessions:[],lastSession=sessions[sessions.length-1]||{},runId=String(q?.runId||activeLearningRunIds.get(path)||String(lastSession.runId||('run_'+(Number(lastSession.startedAt)||eventAt)+'_'+String(uid).replace(/[^A-Za-z0-9_-]/g,'_')))),sameRun=Boolean(previous.attempted&&(previous.runId===runId||(!previous.runId&&Number(lastSession.startedAt)>0&&Number(previous.checkedAt)>=Number(lastSession.startedAt)))),wrongAt=correct?0:eventAt;
    const sameCheckedAnswer=sameRun&&previous.eventId&&normalizeLearningAnswerForCount(previous.submittedAnswer)===normalizeLearningAnswerForCount(q?.submittedAnswer)&&previous.correct===Boolean(correct);
     if(sameCheckedAnswer){attemptId=String(previous.eventId);duplicateInput=true;return current;}
 
@@ -974,7 +974,7 @@ async function errorPracticeAnswer(value){
  else if(practiceItem.type==='open'){const required=Array.isArray(practiceItem.required)&&practiceItem.required.length?practiceItem.required:accepted;correct=required.length>0&&required.every(term=>grammarNormalize(typed).includes(grammarNormalize(term)));}
  else correct=accepted.some(x=>grammarNormalize(x)===grammarNormalize(typed));
  const subject=errorEvalSubject==='math'||errorEvalSubject==='english'?errorEvalSubject:(item.subject||(entry.exercise.startsWith('math_')?'math':'english'));
- const saved=await recordLearningError(errorEvalName,subject,entry.exercise,entry.index,item.topic,{...item,submittedAnswer:Array.isArray(value)?value.join(', '):typed},correct);
+ const saved=await recordLearningError(errorEvalName,subject,entry.exercise,entry.index,item.topic,{...item,submittedAnswer:Array.isArray(value)?value.join(', '):typed,runId:'review_'+Date.now()},correct);
  if(!saved){const fb=document.querySelector('#error-feedback');if(fb)fb.innerHTML='<p class="error">Der Lernstand konnte nicht gespeichert werden. Bitte Verbindung prüfen und erneut versuchen.</p>';return;}
  if(correct){
   item.resolved=true;errorEvalQueue.shift();
