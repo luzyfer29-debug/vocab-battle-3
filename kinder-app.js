@@ -11,7 +11,7 @@ let getDatabase,ref,onValue,get,set,update,runTransaction,remove;
 const RATIONAL_MATH_TITLES=['Rationale Zahlen · Aufgabe 1','Rationale Zahlen · Aufgabe 2','Rationale Zahlen · Aufgabe 3','Rationale Zahlen · Aufgabe 4'];
 
 const app=document.querySelector('#app'),status=document.querySelector('#status');function disableChildTextAssist(){app.querySelectorAll('input,textarea').forEach(field=>{field.setAttribute('autocomplete','off');field.setAttribute('autocorrect','off');field.setAttribute('autocapitalize','off');field.setAttribute('spellcheck','false');});}new MutationObserver(disableChildTextAssist).observe(app,{childList:true,subtree:true});disableChildTextAssist();
-const names=['Luca','Semir','Talea','Nele'];
+const names=['Luca','Talea','Nele'];
 const VOCAB_QUESTION_MS=8000,OTHER_QUESTION_MS=15000,REVEAL_MS=3000;
 const ADMIN_UID='M41x9WNoHAfqpSmyrztAgf2IZYC3';
 let resetUnsubscribe=null,resetState={},resetReady=false;
@@ -158,8 +158,8 @@ function grammarReveal(){return;}
 function grammarClear(){if(grammarStation===null||grammarTask===null)return;grammarWrite(grammarStation,grammarTask,[]);grammarRender(grammarStation,grammarTask);}
 
 const key='vb2solo';
-const SOLO_NAMES=['Luca','Semir','Talea','Nele'];
-const RANKED_NAMES=['Luca','Semir','Talea','Nele'];
+const SOLO_NAMES=['Luca','Talea','Nele'];
+const RANKED_NAMES=['Luca','Talea','Nele'];
 const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:{count:50,baselineAnswers:36},Talea:{count:6,baselineAnswers:4}}},'2026-11-05':{english:{Luca:{count:111,baselineAnswers:66}}},'2026-11-06':{english:{Luca:{count:26,baselineAnswers:26}}},'2026-11-15':{english:{Nele:{count:145,baselineAnswers:145}}}};
 const DAILY_WIN_EXCLUDED_DAYS={'2026-11-02':'Lern- und Battle-Antworten sind an diesem Tag nicht verlässlich getrennt; der Tagessieg wurde manuell Luca gutgeschrieben.'};
 const DAILY_WINNER_OVERRIDES={'2026-11-02':{Luca:1},'2026-11-13':{Luca:1}}; const DAILY_WINNER_DAY_OVERRIDES={'2026-11-02':['Luca'],'2026-11-03':['Luca'],'2026-11-04':['Luca'],'2026-11-05':['Luca'],'2026-11-06':['Luca'],'2026-11-07':['Talea'],'2026-11-09':['Talea'],'2026-11-10':['Luca']};
