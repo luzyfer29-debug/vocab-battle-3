@@ -201,7 +201,7 @@ function uniqueLearningAnswerEvents(events){
  const unique=new Map();
  for(const [eventId,item] of Object.entries(events||{})){
   if(item?.attempted!==true||!normalizeLearningAnswerForCount(item?.submittedAnswer))continue;
-  const at=Math.max(Number(item.checkedAt)||0,Number(item.eventAt)||0,Number(item.resolvedAt)||0),dayKey=String(item.dayKey|| (at?activityPeriodKeys(at).dayKey:'')),index=String(item.index??''),signature=[dayKey,index].join('|'),old=unique.get(signature),hadWrong=Boolean(item.correct===false||Number(item.lastWrongAt)>0);
+  const at=Math.max(Number(item.checkedAt)||0,Number(item.eventAt)||0,Number(item.resolvedAt)||0),dayKey=String(item.dayKey|| (at?activityPeriodKeys(at).dayKey:'')),runId=String(item.runId||'legacy:'+eventId),index=String(item.index??''),signature=[dayKey,runId,index].join('|'),old=unique.get(signature),hadWrong=Boolean(item.correct===false||Number(item.lastWrongAt)>0);
   if(!old||at>=old.at)unique.set(signature,{eventId,item,at,hadWrong:Boolean(old?.hadWrong||hadWrong)});
   else if(hadWrong)old.hadWrong=true;
  }
@@ -763,8 +763,8 @@ async function cleanupFalsePositiveLearningErrors(name,subject){
 async function recordLearningError(name,subject,exercise,index,topic,q,correct,occurredAt=Date.now()){
  if(!learningTimeIsOpen()||!db||!uid||!SOLO_NAMES.includes(name)||!exercise||!String(q?.submittedAnswer??'').trim())return false;
  const eventAt=Number(occurredAt)||Date.now(),path=`learningActivity/${uid}/${name}/${exercise}`,acceptedAnswers=Array.isArray(q?.accepted)?q.accepted.map(String):(Array.isArray(q?.options)&&Number.isInteger(q?.correct)&&q.options[q.correct]!==undefined?[String(q.options[q.correct])]:(q?.answer!==undefined?[String(q.answer)]:null));
- let attemptId='';
- // Save every checked answer for counting; only actual wrong answers enter the error list.
+ let attemptId='',countRunKey='';
+ // Keep the answer history, but aggregate repeated checks for one question in the same learning run.
  let activitySaved=false,duplicateInput=false;
  try{
   let changedItem=null;
@@ -776,6 +776,7 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
    if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}
    value.lastAt=Math.max(Number(value.lastAt)||0,eventAt);
    const checks={...(value.answerChecks||{})},previous=checks[key]||{},errors={...(value.errorItems||{})},old=errors[key],sessions=Array.isArray(value.sessions)?value.sessions:[],lastSession=sessions[sessions.length-1]||{},runId=String(q?.runId||activeLearningRunIds.get(path)||String(lastSession.runId||('run_'+(Number(lastSession.startedAt)||eventAt)+'_'+String(uid).replace(/[^A-Za-z0-9_-]/g,'_')))),sameRun=Boolean(previous.attempted&&(previous.runId===runId||(!previous.runId&&Number(lastSession.startedAt)>0&&Number(previous.checkedAt)>=Number(lastSession.startedAt)))),wrongAt=correct?0:eventAt;
+   countRunKey=[dayKey,runId,key].join('_');
    const sameCheckedAnswer=sameRun&&previous.eventId&&normalizeLearningAnswerForCount(previous.submittedAnswer)===normalizeLearningAnswerForCount(q?.submittedAnswer)&&previous.correct===Boolean(correct);
     if(sameCheckedAnswer){attemptId=String(previous.eventId);duplicateInput=true;return current;}
 
@@ -795,7 +796,7 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
   activitySaved=true;
   activitySyncWarned=false;
  }catch(e){if(!activitySyncWarned){activitySyncWarned=true;msg(`Lernantwort konnte nicht gespeichert werden (${e.code||e.message||'Firebase-Zugriff verweigert'}).`,true);}}
- const dailySaved=duplicateInput?true:await updateDailyLeaderboard(name,subject,eventAt,!correct,exercise,index,q?.prompt||q?.q||q?.word||topic,attemptId);
+ const dailySaved=duplicateInput?true:await updateDailyLeaderboard(name,subject,eventAt,!correct,exercise,index,q?.prompt||q?.q||q?.word||topic,countRunKey||attemptId);
  return activitySaved;
 }
 function childLearningExercises(subject){if(subject==='math')return ['math_rational_battle1','math_rational_battle2','math_rational_battle3','math_rational_cards','math_exam','math_rational_exam','math_proportional_practice','math_proportional_exam1','math_proportional_exam2','math_proportional_exam3',...MATH_PROPORTIONAL_PRACTICE_BLOCKS.map(b=>`math_proportional_practice_${b.id}`),'math_proportional_worksheet','math_proportional_flashcards','math_proportional_diagrams','math_proportional_dreisatz',...FRACTION_MODULES.map(m=>`math_fraction_${m.id}`)];return ['english_vocab_work_page1','english_vocab_work_page2','english_vocab_work_station2_page1','english_vocab_work_station2_page2','english_listening','english_reading',...GRAMMAR.flatMap((station,s)=>station.tasks.map((_,i)=>`english_grammar_${s+1}_task${i+1}`)),...WRITING_TASKS.map((_,i)=>`english_writing_task${i+1}`)];}
