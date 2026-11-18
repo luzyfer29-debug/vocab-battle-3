@@ -977,7 +977,7 @@ async function errorPracticeAnswer(value){
  else if(practiceItem.type==='open'){const required=Array.isArray(practiceItem.required)&&practiceItem.required.length?practiceItem.required:accepted;correct=required.length>0&&required.every(term=>grammarNormalize(typed).includes(grammarNormalize(term)));}
  else correct=accepted.some(x=>grammarNormalize(x)===grammarNormalize(typed));
  const subject=errorEvalSubject==='math'||errorEvalSubject==='english'?errorEvalSubject:(item.subject||(entry.exercise.startsWith('math_')?'math':'english'));
- const saved=await recordLearningError(errorEvalName,subject,entry.exercise,entry.index,item.topic,{...item,submittedAnswer:Array.isArray(value)?value.join(', '):typed,runId:'review_'+Date.now()},correct);
+ const reviewRunId=entry.reviewRunId||(entry.reviewRunId='review_'+Date.now()+'_'+String(entry.index));const saved=await recordLearningError(errorEvalName,subject,entry.exercise,entry.index,item.topic,{...item,submittedAnswer:Array.isArray(value)?value.join(', '):typed,runId:reviewRunId},correct);
  if(!saved){const fb=document.querySelector('#error-feedback');if(fb)fb.innerHTML='<p class="error">Der Lernstand konnte nicht gespeichert werden. Bitte Verbindung prüfen und erneut versuchen.</p>';return;}
  if(correct){
   item.resolved=true;errorEvalQueue.shift();
