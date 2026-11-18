@@ -606,7 +606,8 @@ async function showChildDailyWeeklyOverview(){
   const childUsageName=SOLO_NAMES.includes(appUsageName)?appUsageName:(SOLO_NAMES.includes(soloName)?soloName:mathName);
   let appUsageHtml='';
   if(SOLO_NAMES.includes(childUsageName)){
-   const usageSnap=await get(ref(db,`learningActivity/${uid}/${childUsageName}/english_vocab_battle1/appUsageByDay`)),usageDays=usageSnap.val()||{};
+   const usageSnap=await get(ref(db,`learningActivity/${uid}/${childUsageName}`)),usageProfile=usageSnap.val()||{},usageDays={};
+   for(const exercise of Object.values(usageProfile))for(const [day,value] of Object.entries(exercise?.appUsageByDay||{}))usageDays[day]=(usageDays[day]||0)+(Number(value)||0);
    const todayKey=activityPeriodKeys().dayKey,dateParts=todayKey.split('-').map(Number),todayUtc=new Date(Date.UTC(dateParts[0],dateParts[1]-1,dateParts[2]));
    const usageDateKeys=Array.from({length:7},(_,index)=>{const day=new Date(todayUtc);day.setUTCDate(day.getUTCDate()-(6-index));return day.toISOString().slice(0,10);});
    const usageDuration=milliseconds=>{const seconds=Math.floor(Math.max(0,Number(milliseconds)||0)/1000),minutes=Math.floor(seconds/60),hours=Math.floor(minutes/60);return hours?hours+' Std. '+String(minutes%60).padStart(2,'0')+' Min.':minutes?minutes+' Min. '+(seconds%60)+' Sek.':seconds+' Sek.';};
