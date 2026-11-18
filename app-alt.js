@@ -6,7 +6,7 @@ import {BATTLES} from './questions.js';
 import {MATH_BATTLES} from './math-questions.js';
 import {GRAMMAR} from './grammar-data.js';
 const app=document.querySelector('#app'),status=document.querySelector('#status');
-const names=['Luca','Semir','Talea','Nele'];
+const names=['Luca','Talea','Nele'];
 const QUESTION_MS=8000,REVEAL_MS=3000;
 let db,uid='',code='',role='',slot='',room=null,unsubscribe=null,solo=null;
 let clock=null,busy=false,previousStageKey='',lastClockText='';
@@ -22,7 +22,7 @@ function loginForm(){app.innerHTML=card(`<h2>🔐 Schiedsrichter-Anmeldung</h2><
 async function adminLogin(){const email=document.querySelector('#admin-email')?.value.trim(),password=document.querySelector('#admin-password')?.value;if(!email||!password){msg('Bitte E-Mail und Passwort eingeben.',true);return;}try{await setPersistence(authClient,browserLocalPersistence);const cred=await signInWithEmailAndPassword(authClient,email,password);if(cred.user.uid!==ADMIN_UID){await signOut(authClient);adminLoggedIn=false;msg('Dieses Konto ist nicht als Schiedsrichter berechtigt.',true);return;}uid=cred.user.uid;adminLoggedIn=true;home();msg('Schiedsrichter erfolgreich angemeldet.');}catch(e){msg('Anmeldung fehlgeschlagen. Bitte E-Mail und Passwort prüfen. '+e.code,true);}}
 async function adminLogout(){try{await signOut(authClient);adminLoggedIn=false;uid='';home();}catch(e){msg('Abmeldung fehlgeschlagen: '+e.message,true);}}
 
-const SOLO_NAMES=['Luca','Semir','Talea','Nele'];
+const SOLO_NAMES=['Luca','Talea','Nele'];
 let soloName=localStorage.getItem('vb2solo_name')||'';
 let dashboardUnsubscribe=null,soloHeartbeat=null;
 let resetBusy=false;
@@ -30,7 +30,7 @@ function stopSoloHeartbeat(){if(soloHeartbeat!==null){clearInterval(soloHeartbea
 function startSoloHeartbeat(){stopSoloHeartbeat();soloHeartbeat=setInterval(()=>{if(solo&&soloName)void syncSolo();},30000);}
 function stopDashboard(){if(dashboardUnsubscribe){dashboardUnsubscribe();dashboardUnsubscribe=null;}}
 function stopClock(){if(clock!==null){clearInterval(clock);clock=null;}lastClockText='';}
-function home(){gbStop();stopDashboard();stopSoloHeartbeat();if(unsubscribe){unsubscribe();unsubscribe=null;}stopClock();code='';role='';slot='';room=null;solo=null;busy=false;previousStageKey='';status.textContent='';app.innerHTML=card(`<h2>Was möchtest du machen?</h2><div class="buttons">${adminLoggedIn?btn('🎮 Schiedsrichter','host'):btn('🔐 Schiedsrichter anmelden','adminForm')}${btn('🏆 Grammatik-Battle','gbChoose')}${btn('👥 Spiel beitreten','join')}${btn('🇬🇧 Englisch','solo')}${btn('🔢 Mathe Klasse 7 NRW','mathChoose')}${adminLoggedIn?btn('📊 Lernübersicht','dashboard'):''}${adminLoggedIn?btn('Abmelden','adminLogout','alt'):''}</div>`)+card('<p class="muted">Der Schiedsrichter startet die Battles. Alle vier Kinder können gleichzeitig auf eigenen Geräten lernen. Die Lernübersicht zeigt Punkte und Fehlerlisten.</p>');}
+function home(){gbStop();stopDashboard();stopSoloHeartbeat();if(unsubscribe){unsubscribe();unsubscribe=null;}stopClock();code='';role='';slot='';room=null;solo=null;busy=false;previousStageKey='';status.textContent='';app.innerHTML=card(`<h2>Was möchtest du machen?</h2><div class="buttons">${adminLoggedIn?btn('🎮 Schiedsrichter','host'):btn('🔐 Schiedsrichter anmelden','adminForm')}${btn('🏆 Grammatik-Battle','gbChoose')}${btn('👥 Spiel beitreten','join')}${btn('🇬🇧 Englisch','solo')}${btn('🔢 Mathe Klasse 7 NRW','mathChoose')}${adminLoggedIn?btn('📊 Lernübersicht','dashboard'):''}${adminLoggedIn?btn('Abmelden','adminLogout','alt'):''}</div>`)+card('<p class="muted">Der Schiedsrichter startet die Battles. Alle drei Kinder können gleichzeitig auf eigenen Geräten lernen. Die Lernübersicht zeigt Punkte und Fehlerlisten.</p>');}
 function listen(){if(unsubscribe)unsubscribe();stopClock();unsubscribe=onValue(ref(db,`rooms/${code}`),snap=>{room=snap.val();if(!room){msg('Raum nicht gefunden oder gelöscht.',true);return;}render();},e=>msg('Firebase-Zugriff verweigert: '+e.message,true));}
 function current(){const b=Number(room?.meta?.battle||1)-1;return (room?.meta?.subject==='math'?MATH_BATTLES:BATTLES)[b]?.[Number(room?.meta?.index||0)%30];}
 function players(){return Object.entries(room?.slots||{}).map(([id,p])=>({id,...p})).sort((a,b)=>(b.score||0)-(a.score||0));}
@@ -116,7 +116,7 @@ function renderDashboard(englishEntries,mathEntries){
   const details=SOLO_NAMES.map(name=>{const records=[1,2,3].map(b=>latest[name+':battle'+b]);const content=records.map((v,b)=>{const summary=`<p><strong>Battle ${b+1}:</strong> ${v?`${Math.min(30,Number(v.done)||0)}/30 · ${Number(v.score)||0} Punkte`:'Noch keine Online-Daten'}</p>`;let mistakes='';if(isMath){mistakes=Object.entries(v?.mistakes||{}).map(([i,count])=>{const q=MATH_BATTLES[b]?.[Number(i)];return q?`<div class="player">${esc(q.q)} → <strong>${esc(q.options[q.correct])}</strong> · ${Number(count)||0}× falsch</div>`:'';}).join('');}else{mistakes=mistakeRows(b,v?.mistakes).map(x=>`<div class="player">${esc(x.word)} – ${esc(x.translation)} · ${x.count}× falsch</div>`).join('');}return summary+(mistakes||'<p class="muted">Keine Fehler online erfasst.</p>');}).join('');return `<details class="player"><summary><strong>${esc(name)}</strong> · Ergebnisse und Fehlerliste</summary>${content}</details>`;}).join('');
   return card(`<h2>${heading}</h2><p class="muted">Erledigte Aufgaben / 30 · Punkte</p>${table}<h3>Fehlerlisten und Einzelheiten</h3>${details}`);
  }).join('');
- app.innerHTML=card('<h2>📊 Live-Lernübersicht</h2><p>Englisch und Mathe getrennt. 🟢 = Aktivität in den letzten 90 Sekunden.</p>')+sections+card('<h2>🗑️ Lernstände zurücksetzen</h2><p>Nur für den Schiedsrichter.</p><label>Fach<select id="reset-subject"><option value="english">🇬🇧 Englisch</option><option value="math">🔢 Mathe</option></select></label><label>Kind<select id="reset-target"><option value="Luca">Luca</option><option value="Semir">Semir</option><option value="Talea">Talea</option><option value="Nele">Nele</option><option value="all">Alle vier Kinder</option></select></label>'+btn('🗑️ Lernstände zurücksetzen','resetLearning'))+card(btn('Zurück','home','alt'));
+ app.innerHTML=card('<h2>📊 Live-Lernübersicht</h2><p>Englisch und Mathe getrennt. 🟢 = Aktivität in den letzten 90 Sekunden.</p>')+sections+card('<h2>🗑️ Lernstände zurücksetzen</h2><p>Nur für den Schiedsrichter.</p><label>Fach<select id="reset-subject"><option value="english">🇬🇧 Englisch</option><option value="math">🔢 Mathe</option></select></label><label>Kind<select id="reset-target"><option value="Luca">Luca</option><option value="Talea">Talea</option><option value="Nele">Nele</option><option value="all">Alle vier Kinder</option></select></label>'+btn('🗑️ Lernstände zurücksetzen','resetLearning'))+card(btn('Zurück','home','alt'));
 }
 async function resetLearning(){
  if(resetBusy||!adminLoggedIn||uid!==ADMIN_UID){msg('Nur der Schiedsrichter darf Lernstände löschen.',true);return;}
