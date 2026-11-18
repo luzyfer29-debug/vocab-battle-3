@@ -86,14 +86,14 @@ if(!allowedNames.includes(childName)){
   window.recordMathDiagramCheck=async(index,submittedAnswer,correct,prompt,expected)=>{
    const answer=String(submittedAnswer||'').trim();if(!answer||!allowedNames.includes(childName)||!openAt(Date.now()))return false;
    try{
-    await ensureFirebaseAuth();
+    if(!uid)throw new Error('Firebase-Anmeldung noch nicht bereit');
     const at=Date.now(),{dayKey,weekKey}=periodKeys(at),path=activityPath(),key=String(index),runId=activeRunId||('run_'+at+'_'+uid.replace(/[^A-Za-z0-9_-]/g,'_')),attemptId='attempt_'+uid.replace(/[^A-Za-z0-9_-]/g,'_')+'_'+runId.replace(/[^A-Za-z0-9_-]/g,'_')+'_'+dayKey+'_'+key+'_'+at+'_'+Math.random().toString(36).slice(2,8),accepted=[String(expected||'')];
     let duplicate=false;
     await runTransaction(ref(db,path),current=>{
      const value=current&&typeof current==='object'?{...current}:{dayKey,dayCount:0,weekKey,weekCount:0};
      if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}
      if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}
-     const checks={...(value.answerChecks||{})},previous=checks[key],sameAnswer=String(previous?.submittedAnswer||'').trim().toLowerCase().replace(/\s+/g,' ')===answer.toLowerCase().replace(/\\s+/g,' ');
+     const checks={...(value.answerChecks||{})},previous=checks[key],sameAnswer=String(previous?.submittedAnswer||'').trim().toLowerCase().replace(/\s+/g,' ')===answer.toLowerCase().replace(/\s+/g,' ');
      if(previous?.attempted&&previous.runId===runId&&sameAnswer&&previous.correct===Boolean(correct)){duplicate=true;return current;}
      const errors={...(value.errorItems||{})},old=errors[key],events={...(value.answerEvents||{})};
      checks[key]={attempted:true,source:'answer_check',subject:'math',topic:'Zuordnungen und Diagramme',prompt:String(prompt||('Aufgabe '+(Number(index)+1))),submittedAnswer:answer,accepted,dayKey,weekKey,checkedAt:at,lastWrongAt:correct?0:at,correct:Boolean(correct),eventId:attemptId,runId};
