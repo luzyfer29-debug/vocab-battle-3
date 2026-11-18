@@ -74,18 +74,18 @@ function grammarMenu(){grammarCollect();if(!soloName){soloChooseName();return;}g
 function grammarStationMenu(st){grammarCollect();grammarStation=st;grammarTask=null;const s=GRAMMAR[st],progress=grammarStationProgress(st);app.innerHTML=card(`<h2>📘 ${esc(s.title)}</h2><p>Tippe die englischen Antworten selbst ein. Deine Eingaben erscheinen sofort live. Freie Sätze werden anhand von Beispielen selbst kontrolliert.</p><p class="muted">Di
 e Live-Ansicht zeigt auch ungeprüfte Zwischenstände. „Prüfen“ ist nur für die Rückmeldung und Punkteauswertung nötig. Freie Schreibaufgaben zählen als bearbeitet; gewertet werden die automatisch prüfbaren Antworten.</p>${s.tasks.map((t,i)=>{const done=!!grammarReadResult(st,i)?.finished;return `<div class="player"><strong>${esc(t.title)}</strong><div class="buttons">${btn(done?'✅ Aufgabe geprüft · erneut öffnen':'Aufgabe öffnen',`grammarTask${i}`)}</div></div>`;}).join('')}`)+card(btn('Zur Grammatik-Auswahl','grammarMenu','alt'));}
 function grammarDraftTimesKey(st,task){return 'vb2grammar_times_'+soloName+'_station'+(st+1)+'_task'+(task+1);}
-function grammarDraftTimesRead(st,task){try{const values=JSON.parse(localStorage.getItem(grammarDraftTimesKey(st,task))||'[]');return Array.isArray(values)?values:[];}catch{return [];}}
+function grammarDraftTimesRead(st,task){try{const values=JSON.parse(localStorage.getItem(grammarDraftTimesKey(st,task))||'[]');return Array.isArray(values)?Array.from({length:values.length},(_,index)=>Number(values[index])||0):[];}catch{return [];}}
 function grammarCollect(){
  if(grammarStation===null||grammarTask===null)return;
  const fields=Array.from(document.querySelectorAll('[data-grammar]'));if(!fields.length)return;
- const previous=grammarRead(grammarStation,grammarTask),answers=fields.map(el=>el.value),times=grammarDraftTimesRead(grammarStation,grammarTask),now=Date.now();
+ const previous=grammarRead(grammarStation,grammarTask),answers=fields.map(el=>el.value),storedTimes=grammarDraftTimesRead(grammarStation,grammarTask),times=Array.from({length:answers.length},(_,index)=>Number(storedTimes[index])||0),now=Date.now();
  answers.forEach((answer,index)=>{if(String(answer||'')!==String(previous[index]||'')||(String(answer||'').trim()&&!Number(times[index])))times[index]=now;});
  grammarWrite(grammarStation,grammarTask,answers);try{localStorage.setItem(grammarDraftTimesKey(grammarStation,grammarTask),JSON.stringify(times));}catch{}
  void syncGrammarDraft(grammarStation,grammarTask,answers,times);
 }
 const grammarDraftQueues=[Promise.resolve(),Promise.resolve()];
 function syncGrammarDraft(st,task,answers=grammarRead(st,task),draftUpdatedAt=grammarDraftTimesRead(st,task)){
- const snapshot=answers.map(value=>String(value||'')),times=[...draftUpdatedAt],previous=grammarDraftQueues[st]||Promise.resolve();
+ const snapshot=answers.map(value=>String(value||'')),times=Array.from({length:answers.length},(_,index)=>Number(draftUpdatedAt?.[index])||0),previous=grammarDraftQueues[st]||Promise.resolve();
  const next=previous.catch(()=>{}).then(()=>saveGrammarDraft(st,task,snapshot,times));grammarDraftQueues[st]=next.catch(()=>{});return next;
 }
 async function saveGrammarDraft(st,task,answers,draftUpdatedAt){
