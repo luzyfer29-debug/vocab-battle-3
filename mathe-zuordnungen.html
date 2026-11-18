@@ -51,7 +51,7 @@ function setMode(m){current=m;Object.keys(drawState).forEach(k=>delete drawState
 <script type="module">
 import {firebaseConfig} from './firebase-config.js?v=20261117-diagram-activity-time';
 const childName=new URLSearchParams(location.search).get('name')||'';
-const allowedNames=['Luca','Semir','Talea','Nele'];
+const allowedNames=['Luca','Talea','Nele'];
 const status=document.getElementById('status');
 const openAt=timestamp=>{
  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Berlin',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date(timestamp)).map(x=>[x.type,x.value]));
