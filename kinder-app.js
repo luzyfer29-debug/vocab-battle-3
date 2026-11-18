@@ -191,7 +191,7 @@ function isWithinDailyCountWindow(timestamp,dayKey){
  return seconds>=23400&&seconds<=75600;
 }
 function learningTimeIsOpen(timestamp=Date.now()){
- if(new URLSearchParams(location.search).get('test')==='1'&&(soloName==='Frauke'||mathName==='Frauke'))return true;
+ if(new URLSearchParams(location.search).get('test')==='1'&&(soloName==='Frauke'||mathName==='Frauke'||(!localStorage.getItem('vb2solo_name')&&!localStorage.getItem('vb2math_name'))))return true;
  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Berlin',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date(Number(timestamp))).map(x=>[x.type,x.value]));
  const seconds=(Number(parts.hour)||0)*3600+(Number(parts.minute)||0)*60+(Number(parts.second)||0);
  return seconds>=23400&&seconds<=75600;
