@@ -157,8 +157,8 @@ function grammarReveal(){return;}
 function grammarClear(){if(grammarStation===null||grammarTask===null)return;grammarWrite(grammarStation,grammarTask,[]);grammarRender(grammarStation,grammarTask);}
 
 const key='vb2solo';
-const SOLO_NAMES=['Luca','Talea','Nele'];
-const RANKED_NAMES=['Luca','Talea','Nele'];
+const SOLO_NAMES=['Luca','Talea','Nele','Frauke'];
+const RANKED_NAMES=['Luca','Talea','Nele','Frauke'];
 const DAILY_COUNTER_OVERRIDES={'2026-11-03':{english:{Luca:{count:50,baselineAnswers:36},Talea:{count:6,baselineAnswers:4}}},'2026-11-05':{english:{Luca:{count:111,baselineAnswers:66}}},'2026-11-06':{english:{Luca:{count:26,baselineAnswers:26}}},'2026-11-15':{english:{Nele:{count:145,baselineAnswers:145}}}};
 const DAILY_WIN_EXCLUDED_DAYS={'2026-11-02':'Lern- und Battle-Antworten sind an diesem Tag nicht verlässlich getrennt; der Tagessieg wurde manuell Luca gutgeschrieben.'};
 const DAILY_WINNER_OVERRIDES={'2026-11-02':{Luca:1},'2026-11-13':{Luca:1}}; const DAILY_WINNER_DAY_OVERRIDES={'2026-11-02':['Luca'],'2026-11-03':['Luca'],'2026-11-04':['Luca'],'2026-11-05':['Luca'],'2026-11-06':['Luca'],'2026-11-07':['Talea'],'2026-11-09':['Talea'],'2026-11-10':['Luca']};
@@ -191,6 +191,7 @@ function isWithinDailyCountWindow(timestamp,dayKey){
  return seconds>=23400&&seconds<=75600;
 }
 function learningTimeIsOpen(timestamp=Date.now()){
+ if(new URLSearchParams(location.search).get('test')==='1'&&(soloName==='Frauke'||mathName==='Frauke'))return true;
  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Berlin',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date(Number(timestamp))).map(x=>[x.type,x.value]));
  const seconds=(Number(parts.hour)||0)*3600+(Number(parts.minute)||0)*60+(Number(parts.second)||0);
  return seconds>=23400&&seconds<=75600;
@@ -1753,7 +1754,7 @@ async function mathSync(){
  }catch(e){msg('Mathe online noch nicht verfügbar – der Fortschritt bleibt auf diesem Gerät gespeichert.',true);}
 }
 function mathChoose(){mathRun=null;mathView='';if(!mathName){mathNeedName('mathChoose');return;}app.innerHTML=card('<h2>🔢 Mathe · Klasse 7 NRW · '+esc(mathName)+'</h2><p>'+btn('👤 Kind wechseln','mathChangeName','alt')+'</p><p>Wähle ein Kapitel zum Lernen oder eine Klassenarbeit.</p>'+`<section class="solo-section math-review-panel"><div class="math-review-copy"><span class="math-review-kicker">🔁 Wiederholen</span><h3>Das muss ich noch lernen</h3><p>Offene Mathefehler üben, bis sie richtig beantwortet sind.</p></div><div class="solo-actions">${btn('Mathe-Fehler wiederholen','reviewMathChild','math-review-button')}</div></section>`+'<div class="name-actions">'+btn('➗ Bruchrechnung','mathViewFractions','math-choice-fractions')+btn('📈 Proportional / Antiproportional','mathViewProportional','math-choice-proportional')+btn('🧮 Dreisatz üben · 8 Aufgaben','mathDreisatzStart','math-choice-dreisatz')+btn('📊 Zuordnungen und Diagramme','mathDiagramsStart','math-choice-diagrams')+btn('📝 Klassenarbeit Proportional / Antiproportional','mathViewProportionalExam','math-choice-proportional-exam')+ '</div>')+card(btn('Zur Fächerauswahl','home','alt'));}
-function mathDiagramsStart(){if(mathNeedName('mathDiagramsStart'))return;window.location.href='./mathe-zuordnungen.html?name='+encodeURIComponent(mathName)+'&v=20261118-answer-count-v1#worksheet-tasks';}
+function mathDiagramsStart(){if(mathNeedName('mathDiagramsStart'))return;window.location.href='./mathe-zuordnungen.html?name='+encodeURIComponent(mathName)+'&v=20261118-answer-count-v1'+(mathName==='Frauke'?'&test=1':'')+'#worksheet-tasks';}
 function mathSelectView(view){mathView=view;mathHome();if(view==='proportional')window.scrollTo(0,0);}
 function mathChangeName(){mathName='';mathRun=null;fractionRun=null;localStorage.removeItem('vb2math_name');mathNeedName('mathChoose');}
 function mathNeedName(action){if(mathName)return false;mathPendingAction=action;app.innerHTML=card('<h2>📚 Wer lernt gerade?</h2><p>Wähle deinen Namen, damit dein Lernstand gespeichert wird.</p><div class="name-actions">'+SOLO_NAMES.map((n,i)=>btn(esc(n),`mathName${i}`)).join('')+'</div>')+card(btn('Zur Aufgabenübersicht','mathHome','alt'));return true;}
