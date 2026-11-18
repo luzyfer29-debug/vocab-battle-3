@@ -108,7 +108,7 @@ if(!allowedNames.includes(childName)){
    const delta=Math.floor(pendingMs),now=Date.now(),{dayKey,weekKey}=periodKeys(now);
    pendingMs=Math.max(0,pendingMs-delta);writing=true;
    try{
-    await runTransaction(ref(db,'learningActivity/'+uid+'/'+childName+'/english_vocab_battle1'),current=>{
+    await runTransaction(ref(db,activityPath()),current=>{
      const value=current&&typeof current==='object'?{...current}:{dayKey,dayCount:0,weekKey,weekCount:0,lastAt:now};
      if(value.dayKey!==dayKey){value.dayKey=dayKey;value.dayCount=0;}
      if(value.weekKey!==weekKey){value.weekKey=weekKey;value.weekCount=0;}
