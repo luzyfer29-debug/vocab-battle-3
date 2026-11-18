@@ -40,8 +40,7 @@ const status=document.getElementById('status');
 status.textContent='Kinderbereich wird gestartet …';
 window.addEventListener('error',event=>{if(event.target&&event.target.tagName==='SCRIPT'){status.className='error';status.style.whiteSpace='pre-wrap';status.textContent='Ladefehler im Kinderbereich: '+(event.message||event.target.src||'Unbekannt');}});
 window.addEventListener('unhandledrejection',event=>{status.className='error';status.style.whiteSpace='pre-wrap';status.textContent='Startfehler im Kinderbereich: '+String(event.reason?.stack||event.reason||'Unbekannt');});
-if(new URLSearchParams(location.search).get('test')==='1'){localStorage.setItem('vb2solo_name','Frauke');localStorage.setItem('vb2math_name','Frauke');}
-import('./kinder-app.js?v=20261118-temp-frauke-test-v4').then(()=>{if(status.textContent==='Kinderbereich wird gestartet …')status.textContent='';}).catch(error=>{status.className='error';status.style.whiteSpace='pre-wrap';status.textContent='Kinderbereich konnte nicht starten: '+String(error?.stack||error?.message||error);});
+import('./kinder-app.js?v=20261118-counting-fix-v5').then(()=>{if(status.textContent==='Kinderbereich wird gestartet …')status.textContent='';}).catch(error=>{status.className='error';status.style.whiteSpace='pre-wrap';status.textContent='Kinderbereich konnte nicht starten: '+String(error?.stack||error?.message||error);});
 </script><script type="module" src="./french-module.js?v=20261112-karte-klar"></script></body></html>
 
 
