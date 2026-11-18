@@ -1226,9 +1226,12 @@ ffd166;font-weight:750}.activity-state.is-done{color:#8cebd8;font-weight:750}.ac
  function appUsageOverview(activityData,name){
  const totals={};
  for(const device of Object.values(activityData||{})){
-  const days=device?.[name]?.english_vocab_battle1?.appUsageByDay;
-  if(!days||typeof days!=='object')continue;
-  for(const [day,value] of Object.entries(days))totals[day]=(totals[day]||0)+(Number(value)||0);
+  const exercises=device?.[name]||{};
+  for(const exercise of Object.values(exercises)){
+   const days=exercise?.appUsageByDay;
+   if(!days||typeof days!=='object')continue;
+   for(const [day,value] of Object.entries(days))totals[day]=(totals[day]||0)+(Number(value)||0);
+  }
  }
  const currentParts=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
  const dateParts=Object.fromEntries(currentParts.map(part=>[part.type,part.value]));
