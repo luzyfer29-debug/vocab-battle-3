@@ -13,7 +13,6 @@ import {GRAMMAR_ST2_PAGES} from './grammar-station2-images.js?v=20261124-grammar
 import {LISTENING_ST1_PAGES} from './listening-station1-images.js?v=20261124-listening-danny1';
 import {BLACK_DINNER_PAGES} from './black-dinner-images.js?v=20261124-reading-black-dinner2';
 import {WRITING_ST1_IMAGES} from './writing-st1-images.js?v=20261124-writing-st1-1';
-import {WRITING_ST1_IMAGES} from './writing-st1-images.js?v=20261124-writing-st1-1';
 let initializeApp,getAuth,signInAnonymously,onAuthStateChanged;
 let getDatabase,ref,onValue,get,set,update,runTransaction,remove;
 const RATIONAL_MATH_TITLES=['Rationale Zahlen · Aufgabe 1','Rationale Zahlen · Aufgabe 2','Rationale Zahlen · Aufgabe 3','Rationale Zahlen · Aufgabe 4'];
