@@ -1438,9 +1438,9 @@ function grammarSt1Menu(){
 }
 const ENGLISH_WORKSHEET_CROPS={
  grammar1:{1:{w:709,h:1012,top:125,height:390},2:{w:709,h:1012,top:525,height:385},3:{w:709,h:940,top:65,height:590}},
- grammar2:{1:{w:667,h:1004,top:110,height:365},2:{w:667,h:1004,top:500,height:425},3:{w:667,h:968,top:55,height:375},4:{w:667,h:968,top:430,height:480},5:{w:667,h:1022,top:50,height:500},6:{w:667,h:1022,top:530,height:320}},
- vocab1:{1:{w:709,h:1008,top:110,height:680},2:{w:709,h:1022,top:0,height:420},3:{w:709,h:1022,top:410,height:520},4:{w:709,h:890,top:50,height:540}},
- listeningDanny:{1:{w:645,h:922,top:320,height:270},2:{w:645,h:922,top:590,height:270},3:{w:645,h:1010,top:45,height:810},4:{w:645,h:1000,top:60,height:230},5:{w:645,h:1000,top:300,height:480}}
+ grammar2:{1:{w:667,h:1004,top:110,height:365},2:{w:667,h:1004,top:500,height:425},3:{w:667,h:968,top:55,height:375},4:{w:667,h:968,top:430,height:480},5:{w:667,h:1022,top:70,height:480},6:{w:667,h:1022,top:530,height:320}},
+ vocab1:{1:{w:709,h:1008,top:110,height:680},2:{w:709,h:1022,top:45,height:375},3:{w:709,h:1022,top:410,height:520},4:{w:709,h:890,top:55,height:505}},
+ listeningDanny:{1:{w:645,h:922,top:320,height:270},2:{w:645,h:922,top:590,height:270},3:{w:645,h:1010,top:65,height:790},4:{w:645,h:1000,top:90,height:200},5:{w:645,h:1000,top:300,height:480}}
 };
 function cropEnglishWorksheet(sheetHtml,sheetClass,crop){
  const shift=(crop.top/crop.height*100).toFixed(3),opening='class="'+sheetClass+'"';
