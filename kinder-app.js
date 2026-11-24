@@ -11,7 +11,7 @@ import {VOCAB_STATION1_PAGES} from './vocab-station1-images.js?v=20261124-st1-vo
 import {GRAMMAR_ST1_PAGES} from './grammar-station1-images.js?v=20261124-grammar-st1-clean';
 import {GRAMMAR_ST2_PAGES} from './grammar-station2-images.js?v=20261124-grammar-st2-clean2';
 import {LISTENING_ST1_PAGES} from './listening-station1-images.js?v=20261124-listening-danny1';
-import {BLACK_DINNER_PAGES} from './black-dinner-images.js?v=20261124-reading-black-dinner1';
+import {BLACK_DINNER_PAGES} from './black-dinner-images.js?v=20261124-reading-black-dinner2';
 let initializeApp,getAuth,signInAnonymously,onAuthStateChanged;
 let getDatabase,ref,onValue,get,set,update,runTransaction,remove;
 const RATIONAL_MATH_TITLES=['Rationale Zahlen · Aufgabe 1','Rationale Zahlen · Aufgabe 2','Rationale Zahlen · Aufgabe 3','Rationale Zahlen · Aufgabe 4'];
