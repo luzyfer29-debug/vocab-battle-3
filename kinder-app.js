@@ -1357,6 +1357,14 @@ function soloHome(){
  app.innerHTML=card('<h2>🇬🇧 Englisch · '+esc(soloName)+'</h2><p>Wähle eine Übung. Deine Eingaben werden im Lernbereich erfasst.</p><div class="name-actions">'+
   btn('📗 Vokabeln 2 · Station 2','englishVocabMenu','english-vocab-action')+
   btn('📗 Vokabeln 1 · Station 1','englishVocab1Menu','english-vocab-action')+
+  btn('📝 Vokabelarbeit · Station 1 · Seite 1','vocabWorkPage1','english-vocab-action')+
+  btn('📝 Vokabelarbeit · Station 1 · Seite 2','vocabWorkPage2','english-vocab-action')+
+  btn('📝 Vokabelarbeit · Station 2 · Seite 1','vocabWorkStation2Page1','english-vocab-action')+
+  btn('📝 Vokabelarbeit · Station 2 · Seite 2','vocabWorkStation2Page2','english-vocab-action')+
+  btn('📘 Grammatik · Station 1 und 2','grammarMenu','english-grammar-action')+
+  btn('📖 Reading · Cardiff Castle','readingLearn','english-reading-action')+
+  btn('🎧 Listening · Unit 2','englishListeningMenu','english-listening-action')+
+  btn('✍️ Writing · Unit 2','writingMenu','english-writing-action')+
   btn('🔁 Das muss ich noch lernen','reviewEnglishChild','alt')+
  '</div>')+card('<div class="solo-actions">'+btn('Anderen Namen wählen','soloChangeName','alt')+btn('Zurück','home','alt')+'</div>');
 }
