@@ -10,6 +10,7 @@ import {VOCAB_STATION2_IMAGES} from './vocab-station2-data.js?v=20261124-st2-voc
 import {VOCAB_STATION1_PAGES} from './vocab-station1-images.js?v=20261124-st1-vocab-pages';
 import {GRAMMAR_ST1_PAGES} from './grammar-station1-images.js?v=20261124-grammar-st1-clean';
 import {GRAMMAR_ST2_PAGES} from './grammar-station2-images.js?v=20261124-grammar-st2-clean2';
+import {LISTENING_ST1_PAGES} from './listening-station1-images.js?v=20261124-listening-danny1';
 let initializeApp,getAuth,signInAnonymously,onAuthStateChanged;
 let getDatabase,ref,onValue,get,set,update,runTransaction,remove;
 const RATIONAL_MATH_TITLES=['Rationale Zahlen · Aufgabe 1','Rationale Zahlen · Aufgabe 2','Rationale Zahlen · Aufgabe 3','Rationale Zahlen · Aufgabe 4'];
@@ -479,7 +480,7 @@ function learningActivityIds(subject){
   ...GRAMMAR.flatMap((station,index)=>station.tasks.map((_,task)=>`english_grammar_${index+1}_task${task+1}`)),
   ...[1,2,3].map(n=>`english_grammar_station1_task${n}`),
   ...[1,2,3,4,5,6].map(n=>`english_grammar_station2_task${n}`),...[1,2,3,4,5,6].map(n=>`english_grammar_station2_task${n}`),
-  'english_listening','english_reading',...WRITING_TASKS.map((_,index)=>`english_writing_task${index+1}`)
+  'english_listening',...[1,2,3,4,5].map(n=>'english_listening_danny_task'+n),'english_reading',...WRITING_TASKS.map((_,index)=>`english_writing_task${index+1}`)
  ];
  return [
   ...[1,2,3,4].map(n=>`math_rational_battle${n}`),'math_rational_cards','math_exam','math_rational_exam',
@@ -806,7 +807,7 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
  const dailySaved=duplicateInput?true:await updateDailyLeaderboard(name,subject,eventAt,!correct,exercise,index,q?.prompt||q?.q||q?.word||topic,countRunKey||attemptId);
  return activitySaved;
 }
-function childLearningExercises(subject){if(subject==='math')return ['math_rational_battle1','math_rational_battle2','math_rational_battle3','math_rational_cards','math_exam','math_rational_exam','math_proportional_practice','math_proportional_exam1','math_proportional_exam2','math_proportional_exam3',...MATH_PROPORTIONAL_PRACTICE_BLOCKS.map(b=>`math_proportional_practice_${b.id}`),'math_proportional_worksheet','math_proportional_flashcards','math_proportional_diagrams','math_proportional_dreisatz',...FRACTION_MODULES.map(m=>`math_fraction_${m.id}`)];return ['english_vocab_station2_task1','english_vocab_station2_task2',...[1,2,3,4].map(n=>`english_vocab_station1_task${n}`),...[1,2,3].map(n=>`english_grammar_station1_task${n}`)];}
+function childLearningExercises(subject){if(subject==='math')return ['math_rational_battle1','math_rational_battle2','math_rational_battle3','math_rational_cards','math_exam','math_rational_exam','math_proportional_practice','math_proportional_exam1','math_proportional_exam2','math_proportional_exam3',...MATH_PROPORTIONAL_PRACTICE_BLOCKS.map(b=>`math_proportional_practice_${b.id}`),'math_proportional_worksheet','math_proportional_flashcards','math_proportional_diagrams','math_proportional_dreisatz',...FRACTION_MODULES.map(m=>`math_fraction_${m.id}`)];return ['english_vocab_station2_task1','english_vocab_station2_task2',...[1,2,3,4].map(n=>`english_vocab_station1_task${n}`),...[1,2,3].map(n=>`english_grammar_station1_task${n}`),...[1,2,3,4,5].map(n=>`english_listening_danny_task${n}`)];}
 async function mergeSharedLearningReview(name,subject,exercise,index,item){
  if(!item||(item.subject&&item.subject!==subject)||item.source==='live_battle'||item.source==='battle')return;
  const at=Number(item.lastWrongAt)||Date.now(),period=activityPeriodKeys(at),resolved=item.resolved===true;
@@ -1640,6 +1641,8 @@ function soloHome(){
   btn('📗 Vokabeln 2 · Station 2','englishVocabMenu','english-vocab-action')+
   btn('📘 Grammatik · Station 1','englishGrammar1Menu','english-grammar-action')+
   btn('📘 Grammatik · Station 2','englishGrammar2Menu','english-grammar-action')+
+  btn('🎧 Listening · Danny MacAskill','listeningDannyMenu','english-vocab-action')+
+  btn('🎧 Listening · Activity weekend','englishListeningMenu','english-vocab-action')+
   btn('🔁 Das muss ich noch lernen','reviewEnglishChild','alt')+
  '</div>')+card('<div class="solo-actions">'+btn('Anderen Namen wählen','soloChangeName','alt')+btn('Zurück','home','alt')+'</div>');
 }
@@ -1787,6 +1790,136 @@ function englishListeningMenu(){
  const saved=listenLoad(),action=saved&&!saved.finished?'listenResume':'listenStart',label=saved&&!saved.finished?'▶️ Listening fortsetzen':'🎧 Listening starten';
  app.innerHTML=card('<h2>🎧 Listening · Unit 2</h2><p>Activity weekend in Cardiff · '+LISTENING_QUESTIONS.length+' Fragen</p>'+btn(label,action))+card(btn('Zurück zu Englisch','soloHome','alt'));
 }
+const LISTENING_DANNY_COUNTS={1:7,2:6,3:6,4:4,5:5};
+const LISTENING_DANNY_PROGRESS={1:7,2:6,3:4,4:4,5:5};
+const LISTENING_DANNY_POINTS={1:7,2:5,3:4,4:4,5:5};
+const LISTENING_DANNY_ACCEPTED={
+ 1:[['wrong'],['right'],['right'],['wrong'],['right'],['wrong'],['right']],
+ 2:[['second'],['largest'],['beautiful'],['beaches'],['mountains'],['countryside']],
+ 3:[['3'],[''],['4'],[''],['2'],['1']],
+ 4:[['countryside'],['helmet'],['carefully'],['inventor']],
+ 5:[['see'],['trip'],['down'],['coast'],['town']]
+};
+const LISTENING_DANNY_PROMPTS={
+ 1:['Emma has just seen the coolest poster in the world.','Danny MacAskill does cool tricks with his bike.','Millions of people have watched his videos.','Danny worked at a bike shop in Dunvegan.','He comes from the Isle of Skye.','He was born there in 1958.','John hasn’t watched the video yet.'],
+ 2:['The Isle of Skye is the _____ largest Scottish island.','It’s a really _____ place.','There are nice _____ and _____ and you can enjoy the _____ there.'],
+ 3:['Picture 1 · enter the order number or leave blank if not used.','Picture 2 · enter the order number or leave blank if not used.','Picture 3 · enter the order number or leave blank if not used.','Picture 4 · enter the order number or leave blank if not used.','Picture 5 · enter the order number or leave blank if not used.','Picture 6 · enter the order number or leave blank if not used.'],
+ 4:['Danny rides his bike not only in the _____ but also in cities and villages.','When he is riding his bike, he always wears a _____.','He plans his tricks _____.','He is also an _____ of new tricks.'],
+ 5:['Correct the wrong word in the first line.','Correct the word in the holiday sentence.','Correct the direction word before Edinburgh Castle.','Correct the word after countryside.','Correct the word describing his home place.']
+};
+const LISTENING_DANNY_TITLES={1:'Right or wrong?',2:'The Isle of Skye',3:'Pictures in the right order',4:'Complete the sentences',5:'Correct the text'};
+const LISTENING_DANNY_POSITIONS={
+ 1:[[64.2,42.6],[72.0,42.6],[64.2,45.4],[72.0,45.4],[64.2,48.2],[72.0,48.2],[64.2,51.0],[72.0,51.0],[64.2,53.8],[72.0,53.8],[64.2,56.6],[72.0,56.6],[64.2,59.4],[72.0,59.4]],
+ 2:[[28.2,73.1,23.0],[5.0,77.0,23.3],[5.0,80.6,23.3],[5.0,84.1,23.3],[34.9,84.1,24.8],[22.0,87.7,29.5]],
+ 3:[[28.3,34.0,6.8],[70.0,34.0,6.8],[28.3,55.3,6.8],[70.0,55.3,6.8],[28.3,76.9,6.8],[70.0,76.9,6.8]],
+ 4:[[42.0,14.0,24.0],[50.0,17.4,25.0],[31.0,20.7,24.0],[34.0,24.0,25.0]],
+ 5:[[67.0,35.0,29.0],[67.0,42.5,29.0],[67.0,49.9,29.0],[67.0,57.3,29.0],[67.0,64.7,29.0]]
+};
+let listeningDannySyncTimer=null;
+function listeningDannyNormalize(value){return String(value||'').normalize('NFKC').trim().toLowerCase().replace(/[’‘]/g,"'").replace(/[,.!?;:]/g,'').replace(/\s+/g,' ');}
+function listeningDannyKey(task){return 'vb2_listening_danny_'+soloName+'_task'+task;}
+function listeningDannyState(task){
+ const total=LISTENING_DANNY_COUNTS[task]||0;
+ try{const saved=JSON.parse(localStorage.getItem(listeningDannyKey(task))||'null');if(saved&&Array.isArray(saved.answers))return {answers:Array.from({length:total},(_,i)=>String(saved.answers[i]||'')),times:Array.from({length:total},(_,i)=>Number(saved.times?.[i])||0),results:Array.from({length:total},(_,i)=>typeof saved.results?.[i]==='boolean'?saved.results[i]:null),runId:String(saved.runId||'')};}catch{}
+ return {answers:Array(total).fill(''),times:Array(total).fill(0),results:Array(total).fill(null),runId:''};
+}
+function listeningDannySave(task,state){try{localStorage.setItem(listeningDannyKey(task),JSON.stringify(state));}catch{}}
+function listeningDannyPrompts(task){return LISTENING_DANNY_PROMPTS[task]||[];}
+function listeningDannyTouch(task,state){
+ const exercise='english_listening_danny_task'+task,done=state.answers.filter(value=>String(value||'').trim()).length,now=Date.now();
+ state.times=state.answers.map((value,index)=>String(value||'').trim()?(Number(state.times[index])||now):0);
+ touchLearningActivity(soloName,exercise,{taskTitle:'Listening · Danny MacAskill · Aufgabe '+task,done,total:LISTENING_DANNY_PROGRESS[task],status:'Eingaben live gespeichert',draftAnswers:state.answers,draftUpdatedAt:state.times,draftPrompts:listeningDannyPrompts(task)});
+}
+function listeningDannySchedule(task){
+ clearTimeout(listeningDannySyncTimer);
+ listeningDannySyncTimer=setTimeout(()=>{const latest=listeningDannyState(task);if(latest.answers.some(value=>String(value||'').trim()))listeningDannyTouch(task,latest);},500);
+}
+function listeningDannyCollect(task){
+ if(!soloName)return;
+ const state=listeningDannyState(task);
+ app.querySelectorAll('[data-listening-danny-input="'+task+'"]').forEach(field=>{
+  const index=Number(field.dataset.listeningIndex),next=String(field.value||'');
+  if(!Number.isInteger(index)||index<0||index>=state.answers.length)return;
+  if(next!==state.answers[index])state.results[index]=null;
+  state.answers[index]=next;
+  if(!next.trim())state.times[index]=0;else if(!state.times[index])state.times[index]=Date.now();
+ });
+ listeningDannySave(task,state);
+ return state;
+}
+document.addEventListener('input',e=>{const field=e.target.closest?.('[data-listening-danny-input]');if(!field||!soloName||!learningTimeIsOpen())return;listeningDannyCollect(Number(field.dataset.listeningDannyInput));listeningDannySchedule(Number(field.dataset.listeningDannyInput));});
+document.addEventListener('click',e=>{
+ const choice=e.target.closest?.('[data-listening-danny-choice]');
+ if(choice){
+  const task=Number(choice.dataset.listeningTask),index=Number(choice.dataset.listeningIndex),value=String(choice.dataset.listeningValue||''),state=listeningDannyState(task);
+  if(Number.isInteger(index)&&index>=0&&index<state.answers.length){
+   if(state.answers[index]!==value)state.results[index]=null;
+   state.answers[index]=value;state.times[index]=Date.now();listeningDannySave(task,state);listeningDannySchedule(task);
+   app.querySelectorAll('[data-listening-danny-row="'+index+'"]').forEach(button=>{const selected=button.dataset.listeningValue===value;button.setAttribute('aria-pressed',selected?'true':'false');button.textContent=selected?'✓':'';});
+  }
+  return;
+ }
+ if(e.target.closest?.('[data-listening-danny-control]'))return;
+ const sheet=e.target.closest?.('.listening-danny-sheet');if(!sheet)return;
+ let nearest=null,best=Infinity;
+ for(const field of sheet.querySelectorAll('[data-listening-danny-input],[data-listening-danny-choice]')){
+  const r=field.getBoundingClientRect(),dx=e.clientX<r.left?r.left-e.clientX:e.clientX>r.right?e.clientX-r.right:0,dy=e.clientY<r.top?r.top-e.clientY:e.clientY>r.bottom?e.clientY-r.bottom:0,distance=Math.hypot(dx,dy);
+  if(dx<=14&&dy<=10&&distance<best){nearest=field;best=distance;}
+ }
+ if(nearest?.matches('[data-listening-danny-choice]'))nearest.click();else nearest?.focus({preventScroll:true});
+});
+function listeningDannyOverlay(task,state){
+ if(task===1)return LISTENING_DANNY_POSITIONS[1].map((pos,index)=>{
+  const row=Math.floor(index/2),value=index%2?'wrong':'right',selected=state.answers[row]===value,result=state.results[row],border=result===true?'#15804b':result===false?'#c33232':'#151515';
+  return '<button type="button" class="listening-danny-choice" data-listening-danny-choice="1" data-listening-task="1" data-listening-index="'+row+'" data-listening-row="'+row+'" data-listening-value="'+value+'" aria-label="Satz '+(row+1)+', '+(value==='right'?'richtig':'falsch')+'" aria-pressed="'+(selected?'true':'false')+'" style="left:'+pos[0]+'%;top:'+pos[1]+'%;border-color:'+border+'">'+(selected?'✓':'')+'</button>';
+ }).join('');
+ return (LISTENING_DANNY_POSITIONS[task]||[]).map(([left,top,width],index)=>{
+  const result=state.results[index],color=result===true?'#15804b':result===false?'#c33232':'#31536c';
+  return '<input class="listening-danny-answer" data-listening-danny-input="'+task+'" data-listening-index="'+index+'" aria-label="'+esc(listeningDannyPrompts(task)[index]||('Antwort '+(index+1)))+'" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+esc(state.answers[index]||'')+'" style="left:'+left+'%;top:'+top+'%;width:'+width+'%;border-bottom-color:'+color+'">';
+ }).join('');
+}
+function listeningDannyFeedback(task,state){
+ const checked=state.results.filter(value=>typeof value==='boolean').length;if(!checked)return '';
+ let points=state.results.filter(value=>value===true).length;
+ if(task===2)points=(state.results[0]===true&&state.results[1]===true?1:0)+state.results.slice(2).filter(value=>value===true).length;
+ if(task===3)points=[0,2,4,5].filter(index=>state.results[index]===true).length;
+ const max=LISTENING_DANNY_POINTS[task],wrong=state.results.filter(value=>value===false).length;
+ return '<p><strong>'+points+' von '+max+' Punkten.</strong></p>'+(wrong?'<p class="error">'+wrong+' Antwort'+(wrong===1?' ist':'en sind')+' falsch. Du findest sie unter „Das muss ich noch lernen“.</p>':'<p class="good">✅ Alle bisher geprüften Antworten sind richtig.</p>');
+}
+function listeningDannyMenu(){
+ if(!soloName){soloChooseName();return;}
+ app.innerHTML=card('<h2>🎧 Listening · Danny MacAskill</h2><p>Arbeite die fünf Aufgaben direkt auf den Originalseiten aus. Die blauen Lösungseinträge sind ausgeblendet. Für die Hörteile brauchst du die Hördatei aus dem Unterricht.</p>'+[1,2,3,4,5].map(task=>{const state=listeningDannyState(task),filled=state.answers.filter(value=>String(value||'').trim()).length;return '<div class="player"><strong>Aufgabe '+task+' · '+esc(LISTENING_DANNY_TITLES[task])+'</strong><p class="muted">'+filled+' Antworten eingetragen</p>'+btn('Aufgabe '+task,'listeningDannyTask'+task)+'</div>';}).join(''))+card(btn('Zurück zu Englisch','soloHome','alt'));
+}
+function listeningDannyOpenTask(task){
+ if(!soloName){soloChooseName();return;}
+ const pageNo=task<=2?1:task===3?2:3,page=LISTENING_ST1_PAGES['page'+pageNo],state=listeningDannyState(task);
+ const css='<style>.listening-danny-sheet{position:relative;width:100%;max-width:645px;margin:12px auto 18px;line-height:0}.listening-danny-sheet>img{display:block;width:100%;height:auto}.listening-danny-answer{position:absolute;box-sizing:border-box;margin:0;padding:0 3px;height:max(2.6%,22px);min-height:22px;z-index:5;border:0;border-bottom:2px solid #31536c;border-radius:0;background:#fff;color:#172337;text-align:center;font:600 clamp(11px,2vw,16px)/1.15 system-ui,sans-serif;outline-offset:1px}.listening-danny-answer:focus{outline:2px solid #4b83bb;background:#fff}.listening-danny-choice{position:absolute;box-sizing:border-box;margin:0;padding:0;height:max(2.2%,18px);min-height:18px;width:max(3.1%,18px);min-width:18px;z-index:6;border:1.5px solid #151515;border-radius:2px;background:#fff;color:#1486a2;text-align:center;font:800 14px/1 system-ui,sans-serif;outline-offset:1px}.listening-danny-choice:focus{outline:2px solid #4b83bb}.listening-danny-instruction{line-height:1.45}</style>';
+ app.innerHTML=card(css+'<h2>🎧 Listening · Danny MacAskill · Aufgabe '+task+'</h2><p class="muted listening-danny-instruction">Tippe die Kästchen an oder schreibe die Antworten direkt auf die Linien. Prüfe deine Lösungen am Ende der Aufgabe. Falsche Antworten findest du unter „Das muss ich noch lernen“.</p><div class="listening-danny-sheet"><img src="'+page+'" alt="Originalarbeitsblatt Listening Danny MacAskill, Seite '+pageNo+'">'+listeningDannyOverlay(task,state)+'</div>')+card('<div class="solo-actions">'+btn('Antworten prüfen','listeningDannyCheck'+task)+btn('Zurück zu Listening · Danny MacAskill','listeningDannyMenu','alt')+'</div>')+card(listeningDannyFeedback(task,state));
+}
+async function listeningDannyCheck(task){
+ if(!soloName||!LISTENING_DANNY_COUNTS[task])return;
+ const state=listeningDannyCollect(task)||listeningDannyState(task),filled=state.answers.filter(value=>String(value||'').trim()).length;
+ if(!filled){msg('Schreibe oder wähle zuerst deine Antworten.',true);return;}
+ if(task===1&&filled<7){msg('Wähle für alle sieben Sätze richtig oder falsch.',true);return;}
+ if(task===2&&filled<6){msg('Fülle alle sechs Lücken aus.',true);return;}
+ if(task===3&&filled<4){msg('Trage die vier Reihenfolgen ein. Für zwei Bilder bleibt das Feld leer.',true);return;}
+ if(task===4&&filled<4){msg('Fülle alle vier Lücken aus.',true);return;}
+ if(task===5&&filled<5){msg('Schreibe alle fünf Korrekturen auf die Linien.',true);return;}
+ try{await ensureFirebaseAuth();}catch(error){msg('Die Antwortkontrolle ist noch nicht bereit. Bitte Verbindung prüfen und erneut versuchen.',true);return;}
+ if(!state.runId)state.runId='listeningdanny_'+soloName+'_'+task+'_'+activityPeriodKeys().dayKey;
+ const exercise='english_listening_danny_task'+task,topic='Listening · Danny MacAskill · Aufgabe '+task;let saveFailed=false;
+ for(let index=0;index<state.answers.length;index++){
+  const submitted=String(state.answers[index]||'').trim(),accepted=LISTENING_DANNY_ACCEPTED[task][index];
+  if(!submitted&&task===3&&accepted.includes('')){state.results[index]=true;continue;}
+  if(!submitted)continue;
+  const correct=accepted.some(answer=>listeningDannyNormalize(answer)===listeningDannyNormalize(submitted));
+  const saved=await recordLearningError(soloName,'english',exercise,index,topic,{prompt:listeningDannyPrompts(task)[index],accepted,submittedAnswer:submitted,runId:state.runId},correct,state.times[index]||Date.now());
+  if(!saved)saveFailed=true;state.results[index]=correct;
+ }
+ listeningDannySave(task,state);listeningDannyTouch(task,state);listeningDannyOpenTask(task);
+ if(saveFailed)msg('Die Antworten wurden angezeigt, aber nicht alle Ergebnisse konnten online gespeichert werden. Bitte Verbindung prüfen.',true);
+}
+
 function vocabSt2Field(task,index,state,prefix=''){
  const locked=!!state.checked[index],value=String(state.answers[index]||''),correct=locked&&vocabSt2Accept(task,index).some(answer=>vocabSt2Normalize(answer)===vocabSt2Normalize(task===1&&prefix?((value.toLowerCase().startsWith(prefix)?value:prefix+value)):value));
  const border=locked?(correct?'#3bc48d':'#f07878'):'#8aa0bd';
@@ -2547,7 +2680,7 @@ function studentHelpText(){
 function attachStudentHelp(){return;}
 function showContentRebuildNotice(subject='Englisch'){app.innerHTML=card('<h2>🧩 '+esc(subject)+' wird neu befüllt</h2><p>Die bisherigen Inhalte sind entfernt. Hier kommen neue Aufgaben und Battles hinein. Der Button bleibt bestehen.</p>')+card(btn('Zur Startseite','home','alt'));}
 document.addEventListener('click',e=>{if(e.eventPhase!==1)return;const action=e.target.closest('[data-action]')?.dataset.action||'';const englishActions=['join','joinGrammar','joinVocabWork','joinVocabWorkStation2'];const mathBattleActions=['joinMathFractions','joinMathRational','joinMathExam'];if(englishActions.includes(action)||mathBattleActions.includes(action)){e.preventDefault();e.stopImmediatePropagation();showContentRebuildNotice(mathBattleActions.includes(action)?'Mathe-Battles':'Englisch');}},true);
-document.addEventListener('click',e=>{const action=e.target.closest('[data-action]')?.dataset.action||'';let match=action.match(/^soloName(\d)$/)||action.match(/^mathName(\d)$/);if(match)appUsageSetName(SOLO_NAMES[Number(match[1])]);else if((match=action.match(/^errorName(?:math|english)_(\d)$/)))appUsageSetName(SOLO_NAMES[Number(match[1])]);const frenchName=e.target.closest('[data-french-action=name][data-name]')?.dataset.name;if(frenchName)appUsageSetName(frenchName);if(!learningTimeIsOpen()){e.preventDefault();e.stopImmediatePropagation();return;}const similar=e.target.closest('[data-error-similar]');if(similar){errorPracticeSimilar();return;}const ea=e.target.closest('[data-error-answer]');if(ea){void errorPracticeAnswer(ea.dataset.errorAnswer);return;}const errorListenSubmit=e.target.closest('[data-error-listening-submit]');if(errorListenSubmit){const item=errorEvalQueue[0]?.item;if(item)void errorPracticeAnswer(listeningAnswerValue({...item,q:item.prompt},'error'));return;}const ma=e.target.closest('[data-mathanswer]');if(ma){mathAnswer(Number(ma.dataset.mathanswer));return;}const mathButton=e.target.closest('[data-action]');if(mathButton&&(errorEvaluationAction(mathButton.dataset.action)||mathAction(mathButton.dataset.action)))return;const fa=e.target.closest('[data-fractionanswer]');if(fa){fractionAnswer(Number(fa.dataset.fractionanswer));return;}const a=e.target.closest('[data-action]'),ans=e.target.closest('[data-answer]'),sa=e.target.closest('[data-soloanswer]'),la=e.target.closest('[data-listenanswer]');if(ans){answer(Number(ans.dataset.answer));return;}if(sa){soloAnswer(Number(sa.dataset.soloanswer));return;}if(la){listenAnswer(Number(la.dataset.listenanswer));return;}const listenSubmit=e.target.closest('[data-listening-submit]');if(listenSubmit){const q=room?.meta?.mode==='listening'?current():LISTENING_QUESTIONS[listeningRun?.index];const prefix=listenSubmit.dataset.listeningSubmit==='battle'?'battle':'solo';const value=listeningAnswerValue(q,prefix);if(prefix==='battle')void answer(value);else listenAnswer(value);return;}if(!a)return;const v=a.dataset.action;if(v==='kidGbSubmit'){void kidGbSubmit();return;}if(v==='kidWbSubmit'){void kidWbSubmit();return;}if(v==='home')home();else if(v==='host'||v==='createRoom'||v==='dashboard'||v==='start'||v==='reset')return;else if(v==='join')joinForm();else if(v==='joinGrammar')joinForm('Grammatik-Battle beitreten','grammar');else if(v==='joinVocabWork')joinForm('Vokabelarbeit-Battle · Station 1, Seiten 1 + 2 beitreten','vocab-work-1');else if(v==='joinVocabWorkStation2')joinForm('Vokabelarbeit-Battle · Station 2, Seiten 1 + 2 beitreten','vocab-work-2');else if(v==='joinMathFractions')joinForm('1 · Bruchrechnung-Battle beitreten','fractions');else if(v==='joinMathRational')joinForm('2 · Rationale-Zahlen-Battle beitreten','rational');else if(v==='joinMathExam')joinForm('3 · Proportional-/Antiproportional-Klassenarbeit beitreten','math-exam');else if(v==='enter')enter();else if(['start','reset'].includes(v))hostAction(v);else if(v==='solo')soloChooseName();else if(v==='readingLearn')readingLearn();else if(v==='readingLearnHome')readingLearnHome();else if(v==='readingCheck')readingCheck();else if(v==='readingSamples')readingSamples();else if(v==='readingRoomEn'){readingBattleLanguage='en';render();}else if(v==='readingRoomDe'){readingBattleLanguage='de';render();}else if(v==='battleResultsMenu')battleResultsMenu();else if(v==='englishSeries'||v==='grammarSeries'||v==='battleSeriesEnglish')void showBattleSeries('english');else if(v==='battleSeriesMath')void showBattleSeries('math');else if(v==='dashboard')void showDashboard();else if(v==='soloChangeName')soloChooseName();else if(v==='soloHome')soloHome();else if(v==='englishVocabMenu')vocabSt2Menu();else if(v==='englishVocab1Menu')vocabSt1Menu();else if(v==='englishGrammar1Menu')grammarSt1Menu();else if(v==='englishGrammar2Menu')grammarSt2Menu();else if(/^grammarSt2Task[1-6]$/.test(v))grammarSt2OpenTask(Number(v.slice(-1)));else if(/^grammarSt2Check[1-6]$/.test(v))void grammarSt2Check(Number(v.slice(-1)));else if(/^grammarSt1Task[1-3]$/.test(v))grammarSt1OpenTask(Number(v.slice(-1)));else if(/^grammarSt1Check[1-3]$/.test(v))void grammarSt1Check(Number(v.slice(-1)));else if(/^vocabSt1Task[1-4]$/.test(v))vocabSt1OpenTask(Number(v.slice(-1)));else if(/^vocabSt1Check[1-4]$/.test(v))void vocabSt1Check(Number(v.slice(-1)));else if(v==='englishListeningMenu')englishListeningMenu();else if(v==='vocabSt2Task1')vocabSt2Task1();else if(v==='vocabSt2Task2')vocabSt2Task2();else if(v==='vocabSt2Check1')void vocabSt2Check(1);else if(v==='vocabSt2Check2')void vocabSt2Check(2);else if(v==='vocabWorkPage1')vocabWorkPage(1);else if(v==='vocabWorkPage2')vocabWorkPage(2);else if(v==='vocabWorkStation2Page1')vocabWorkStation2Page(1);else if(v==='vocabWorkStation2Page2')vocabWorkStation2Page(2);else if(v==='vocabWorkCheck')vocabWorkCheck();else if(v==='vocabWorkRetry')vocabWorkRetry();else if(v==='vocabWorkStation2Check')vocabWorkStation2Check();else if(v==='vocabWorkStation2Retry')vocabWorkStation2Retry();else if(v==='vocabWorkBack'){vocabWorkCollect();soloHome();}else if(v==='grammarMenu')grammarMenu();else if(v==='grammarStation0')grammarStationMenu(0);else if(v==='grammarStation1')grammarStationMenu(1);else if(/^grammarTask\d+$/.test(v)){const n=Number(v.slice(11));if(grammarStation!==null&&n<GRAMMAR[grammarStation].tasks.length){void recordLearningActivity(soloName,`english_grammar_${grammarStation+1}_task${n+1}`);grammarWrite(grammarStation,n,[]);grammarRender(grammarStation,n);}}else if(v==='grammarCheck')grammarCheck();else if(v==='grammarReveal')grammarReveal();else if(v==='grammarClear')grammarClear();else if(v==='grammarBack')grammarStationMenu(grammarStation);else if(v==='writingMenu')writingMenu();else if(v==='writingModel'){writingModelVisible=!writingModelVisible;writingRender();}else if(v==='writingComplete')writingToggleComplete();else if(/^writingOpen[0-2]$/.test(v))writingOpen(Number(v.slice(-1)));else if(v==='listenStart')listenStart();else if(v==='listenResume')listenResume();else if(v==='listenNext')listenNext();else if(/^soloName[0-4]$/.test(v))soloSetName(Number(v.slice(-1)));else if(/^soloStart[012]$/.test(v))soloStart(Number(v.slice(-1)));else if(/^soloResume[012]$/.test(v))soloResume(Number(v.slice(-1)));else if(v==='soloNext')soloNext();});
+document.addEventListener('click',e=>{const action=e.target.closest('[data-action]')?.dataset.action||'';let match=action.match(/^soloName(\d)$/)||action.match(/^mathName(\d)$/);if(match)appUsageSetName(SOLO_NAMES[Number(match[1])]);else if((match=action.match(/^errorName(?:math|english)_(\d)$/)))appUsageSetName(SOLO_NAMES[Number(match[1])]);const frenchName=e.target.closest('[data-french-action=name][data-name]')?.dataset.name;if(frenchName)appUsageSetName(frenchName);if(!learningTimeIsOpen()){e.preventDefault();e.stopImmediatePropagation();return;}const similar=e.target.closest('[data-error-similar]');if(similar){errorPracticeSimilar();return;}const ea=e.target.closest('[data-error-answer]');if(ea){void errorPracticeAnswer(ea.dataset.errorAnswer);return;}const errorListenSubmit=e.target.closest('[data-error-listening-submit]');if(errorListenSubmit){const item=errorEvalQueue[0]?.item;if(item)void errorPracticeAnswer(listeningAnswerValue({...item,q:item.prompt},'error'));return;}const ma=e.target.closest('[data-mathanswer]');if(ma){mathAnswer(Number(ma.dataset.mathanswer));return;}const mathButton=e.target.closest('[data-action]');if(mathButton&&(errorEvaluationAction(mathButton.dataset.action)||mathAction(mathButton.dataset.action)))return;const fa=e.target.closest('[data-fractionanswer]');if(fa){fractionAnswer(Number(fa.dataset.fractionanswer));return;}const a=e.target.closest('[data-action]'),ans=e.target.closest('[data-answer]'),sa=e.target.closest('[data-soloanswer]'),la=e.target.closest('[data-listenanswer]');if(ans){answer(Number(ans.dataset.answer));return;}if(sa){soloAnswer(Number(sa.dataset.soloanswer));return;}if(la){listenAnswer(Number(la.dataset.listenanswer));return;}const listenSubmit=e.target.closest('[data-listening-submit]');if(listenSubmit){const q=room?.meta?.mode==='listening'?current():LISTENING_QUESTIONS[listeningRun?.index];const prefix=listenSubmit.dataset.listeningSubmit==='battle'?'battle':'solo';const value=listeningAnswerValue(q,prefix);if(prefix==='battle')void answer(value);else listenAnswer(value);return;}if(!a)return;const v=a.dataset.action;if(v==='kidGbSubmit'){void kidGbSubmit();return;}if(v==='kidWbSubmit'){void kidWbSubmit();return;}if(v==='home')home();else if(v==='host'||v==='createRoom'||v==='dashboard'||v==='start'||v==='reset')return;else if(v==='join')joinForm();else if(v==='joinGrammar')joinForm('Grammatik-Battle beitreten','grammar');else if(v==='joinVocabWork')joinForm('Vokabelarbeit-Battle · Station 1, Seiten 1 + 2 beitreten','vocab-work-1');else if(v==='joinVocabWorkStation2')joinForm('Vokabelarbeit-Battle · Station 2, Seiten 1 + 2 beitreten','vocab-work-2');else if(v==='joinMathFractions')joinForm('1 · Bruchrechnung-Battle beitreten','fractions');else if(v==='joinMathRational')joinForm('2 · Rationale-Zahlen-Battle beitreten','rational');else if(v==='joinMathExam')joinForm('3 · Proportional-/Antiproportional-Klassenarbeit beitreten','math-exam');else if(v==='enter')enter();else if(['start','reset'].includes(v))hostAction(v);else if(v==='solo')soloChooseName();else if(v==='readingLearn')readingLearn();else if(v==='readingLearnHome')readingLearnHome();else if(v==='readingCheck')readingCheck();else if(v==='readingSamples')readingSamples();else if(v==='readingRoomEn'){readingBattleLanguage='en';render();}else if(v==='readingRoomDe'){readingBattleLanguage='de';render();}else if(v==='battleResultsMenu')battleResultsMenu();else if(v==='englishSeries'||v==='grammarSeries'||v==='battleSeriesEnglish')void showBattleSeries('english');else if(v==='battleSeriesMath')void showBattleSeries('math');else if(v==='dashboard')void showDashboard();else if(v==='soloChangeName')soloChooseName();else if(v==='soloHome')soloHome();else if(v==='englishVocabMenu')vocabSt2Menu();else if(v==='englishVocab1Menu')vocabSt1Menu();else if(v==='englishGrammar1Menu')grammarSt1Menu();else if(v==='englishGrammar2Menu')grammarSt2Menu();else if(v==='listeningDannyMenu')listeningDannyMenu();else if(/^listeningDannyTask[1-5]$/.test(v))listeningDannyOpenTask(Number(v.slice(-1)));else if(/^listeningDannyCheck[1-5]$/.test(v))void listeningDannyCheck(Number(v.slice(-1)));else if(/^grammarSt2Task[1-6]$/.test(v))grammarSt2OpenTask(Number(v.slice(-1)));else if(/^grammarSt2Check[1-6]$/.test(v))void grammarSt2Check(Number(v.slice(-1)));else if(/^grammarSt1Task[1-3]$/.test(v))grammarSt1OpenTask(Number(v.slice(-1)));else if(/^grammarSt1Check[1-3]$/.test(v))void grammarSt1Check(Number(v.slice(-1)));else if(/^vocabSt1Task[1-4]$/.test(v))vocabSt1OpenTask(Number(v.slice(-1)));else if(/^vocabSt1Check[1-4]$/.test(v))void vocabSt1Check(Number(v.slice(-1)));else if(v==='englishListeningMenu')englishListeningMenu();else if(v==='vocabSt2Task1')vocabSt2Task1();else if(v==='vocabSt2Task2')vocabSt2Task2();else if(v==='vocabSt2Check1')void vocabSt2Check(1);else if(v==='vocabSt2Check2')void vocabSt2Check(2);else if(v==='vocabWorkPage1')vocabWorkPage(1);else if(v==='vocabWorkPage2')vocabWorkPage(2);else if(v==='vocabWorkStation2Page1')vocabWorkStation2Page(1);else if(v==='vocabWorkStation2Page2')vocabWorkStation2Page(2);else if(v==='vocabWorkCheck')vocabWorkCheck();else if(v==='vocabWorkRetry')vocabWorkRetry();else if(v==='vocabWorkStation2Check')vocabWorkStation2Check();else if(v==='vocabWorkStation2Retry')vocabWorkStation2Retry();else if(v==='vocabWorkBack'){vocabWorkCollect();soloHome();}else if(v==='grammarMenu')grammarMenu();else if(v==='grammarStation0')grammarStationMenu(0);else if(v==='grammarStation1')grammarStationMenu(1);else if(/^grammarTask\d+$/.test(v)){const n=Number(v.slice(11));if(grammarStation!==null&&n<GRAMMAR[grammarStation].tasks.length){void recordLearningActivity(soloName,`english_grammar_${grammarStation+1}_task${n+1}`);grammarWrite(grammarStation,n,[]);grammarRender(grammarStation,n);}}else if(v==='grammarCheck')grammarCheck();else if(v==='grammarReveal')grammarReveal();else if(v==='grammarClear')grammarClear();else if(v==='grammarBack')grammarStationMenu(grammarStation);else if(v==='writingMenu')writingMenu();else if(v==='writingModel'){writingModelVisible=!writingModelVisible;writingRender();}else if(v==='writingComplete')writingToggleComplete();else if(/^writingOpen[0-2]$/.test(v))writingOpen(Number(v.slice(-1)));else if(v==='listenStart')listenStart();else if(v==='listenResume')listenResume();else if(v==='listenNext')listenNext();else if(/^soloName[0-4]$/.test(v))soloSetName(Number(v.slice(-1)));else if(/^soloStart[012]$/.test(v))soloStart(Number(v.slice(-1)));else if(/^soloResume[012]$/.test(v))soloResume(Number(v.slice(-1)));else if(v==='soloNext')soloNext();});
 document.addEventListener('input',e=>{const field=e.target.closest?.('[data-vocab-st1]');if(!field||!soloName||!learningTimeIsOpen())return;vocabSt1Collect(Number(field.dataset.vocabSt1));},true);
 document.addEventListener('input',e=>{const field=e.target.closest?.('[data-vocab-st2]');if(!field||!soloName||!learningTimeIsOpen())return;const task=Number(field.dataset.vocabSt2),index=Number(field.dataset.vocabIndex),state=vocabSt2State(task);if(!Number.isInteger(index)||state.checked[index])return;state.answers[index]=field.value;vocabSt2Save(task,state);vocabSt2ScheduleLive(task);},true);
 document.addEventListener('input',e=>{if(!learningTimeIsOpen())return;if(e.target.matches('[data-kid-gbtext]'))gbDraft=e.target.value;if(e.target.matches('[data-kid-wbtext]'))wbDraft=e.target.value;if(e.target.matches('[data-reading-match],[data-reading-truth],[data-reading-answer],[data-reading-guestbook],[data-reading-own4]')){readingInputSave();const label=document.querySelector('[data-reading-own4-label]');if(label&&e.target.matches('[data-reading-own4]'))label.textContent=`${e.target.value} / 4`;}if(e.target.matches('[data-vocabwork]'))vocabWorkCollect();if(e.target.matches('[data-vocabwork-s2]'))vocabWorkStation2Collect();if(e.target.matches('[data-grammar]'))grammarCollect();if(e.target.matches('[data-writingtext]'))writingSaveField('texts',e.target.value);if(e.target.matches('[data-writingplan]'))writingSaveField('plans',e.target.value);});
