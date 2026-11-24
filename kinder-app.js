@@ -805,7 +805,7 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
  return activitySaved;
 }
 function childLearningExercises(subject){if(subject==='math')return ['math_rational_battle1','math_rational_battle2','math_rational_battle3','math_rational_cards','math_exam','math_rational_exam','math_proportional_practice','math_proportional_exam1','math_proportional_exam2','math_proportional_exam3',...MATH_PROPORTIONAL_PRACTICE_BLOCKS.map(b=>`math_proportional_practice_${b.id}`),'math_proportional_worksheet','math_proportional_flashcards','math_proportional_diagrams','math_proportional_dreisatz',...FRACTION_MODULES.map(m=>`math_fraction_${m.id}`)];return ['english_vocab_station2_task1','english_vocab_station2_task2',...[1,2,3,4].map(n=>`english_vocab_station1_task${n}`),...[1,2,3].map(n=>`english_grammar_station1_task${n}`)];}
-function mergeSharedLearningReview(name,subject,exercise,index,item){
+async function mergeSharedLearningReview(name,subject,exercise,index,item){
  if(!item||(item.subject&&item.subject!==subject)||item.source==='live_battle'||item.source==='battle')return;
  const at=Number(item.lastWrongAt)||Date.now(),period=activityPeriodKeys(at),resolved=item.resolved===true;
  const normalized={...item,attempted:true,source:'answer_check',subject,topic:String(item.topic||exercise),prompt:String(item.prompt||item.q||item.word||exercise),count:Math.max(1,Number(item.count)||1),lastWrongAt:at,dayKey:String(item.dayKey||period.dayKey),weekKey:String(item.weekKey||period.weekKey),resolved};
