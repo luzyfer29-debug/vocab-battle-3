@@ -1422,7 +1422,7 @@ app.addEventListener('input',e=>{const field=e.target.closest?.('[data-grammar-s
 function grammarSt1Overlay(task,state){
  const imageField=(index,layout)=>{
   const [left,top,width]=layout,result=state.results[index],color=result===true?'#15804b':result===false?'#c33232':'#31536c';
-  return '<input class="grammar-st1-answer" data-grammar-st1="'+task+'" data-grammar-index="'+index+'" aria-label="'+esc(GRAMMAR_ST1_PROMPTS[task][index])+'" autocomplete="off" autocapitalize="none" spellcheck="false" '+(result===true?'disabled ':'')+'value="'+esc(state.answers[index]||'')+'" style="left:'+left+'%;top:'+top+'%;width:'+width+'%;border-color:'+color+">';
+  return '<input class="grammar-st1-answer" data-grammar-st1="'+task+'" data-grammar-index="'+index+'" aria-label="'+esc(GRAMMAR_ST1_PROMPTS[task][index])+'" autocomplete="off" autocapitalize="none" spellcheck="false" '+(result===true?'disabled ':'')+'value="'+esc(state.answers[index]||'')+'" style="left:'+left+'%;top:'+top+'%;width:'+width+'%;border-color:'+color+'">';
  };
  return (GRAMMAR_ST1_POSITIONS[task]||[]).map((layout,index)=>imageField(index,layout)).join('');
 }
@@ -1584,7 +1584,7 @@ function grammarSt2Overlay(task,state){
  const pages={1:1,2:1,3:2,4:2,5:3,6:3};
  return GRAMMAR_ST2_POSITIONS[task].map(([left,top,width],index)=>{
   const result=state.results[index],color=result===true?'#15804b':result===false?'#c33232':'#31536c';
-  return '<input class="grammar-st2-answer" data-grammar-st2="'+task+'" data-grammar-index="'+index+'" aria-label="'+esc(GRAMMAR_ST2_PROMPTS[task][index])+'" autocomplete="off" autocapitalize="none" spellcheck="false" '+(result===true?'disabled ':'')+'value="'+esc(state.answers[index]||'')+'" style="left:'+left+'%;top:'+top+'%;width:'+width+'%;border-color:'+color+">';
+  return '<input class="grammar-st2-answer" data-grammar-st2="'+task+'" data-grammar-index="'+index+'" aria-label="'+esc(GRAMMAR_ST2_PROMPTS[task][index])+'" autocomplete="off" autocapitalize="none" spellcheck="false" '+(result===true?'disabled ':'')+'value="'+esc(state.answers[index]||'')+'" style="left:'+left+'%;top:'+top+'%;width:'+width+'%;border-color:'+color+'">';
  }).join('');
 }
 function grammarSt2Feedback(task,state){
@@ -1735,7 +1735,7 @@ function vocabSt1Collect(task){
 function vocabSt1Overlay(task,state){
  return (VOCAB_ST1_INPUT_POSITIONS[task]||[]).map(([left,top,width],index)=>{
   const result=state.results[index],color=result===true?'#15804b':result===false?'#c33232':'#31536c';
-  return '<input class="vocab-st1-answer" data-vocab-st1="'+task+'" data-vocab-index="'+index+'" aria-label="'+esc(VOCAB_ST1_PROMPTS[task][index])+'" autocomplete="off" autocapitalize="none" spellcheck="false" '+(result===true?'disabled ':'')+'value="'+esc(state.answers[index]||'')+'" style="left:'+left+'%;top:'+top+'%;width:'+width+'%;border-color:'+color+">';
+  return '<input class="vocab-st1-answer" data-vocab-st1="'+task+'" data-vocab-index="'+index+'" aria-label="'+esc(VOCAB_ST1_PROMPTS[task][index])+'" autocomplete="off" autocapitalize="none" spellcheck="false" '+(result===true?'disabled ':'')+'value="'+esc(state.answers[index]||'')+'" style="left:'+left+'%;top:'+top+'%;width:'+width+'%;border-color:'+color+'">';
  }).join('');
 }
 function vocabSt1OpenTask(task){
@@ -1875,7 +1875,7 @@ function listeningDannyOverlay(task,state){
  }).join('');
  return (LISTENING_DANNY_POSITIONS[task]||[]).map(([left,top,width],index)=>{
   const result=state.results[index],color=result===true?'#15804b':result===false?'#c33232':'#31536c';
-  return '<input class="listening-danny-answer" data-listening-danny-input="'+task+'" data-listening-index="'+index+'" aria-label="'+esc(listeningDannyPrompts(task)[index]||('Antwort '+(index+1)))+'" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+esc(state.answers[index]||'')+'" style="left:'+left+'%;top:'+top+'%;width:'+width+'%;border-color:'+color+">';
+  return '<input class="listening-danny-answer" data-listening-danny-input="'+task+'" data-listening-index="'+index+'" aria-label="'+esc(listeningDannyPrompts(task)[index]||('Antwort '+(index+1)))+'" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+esc(state.answers[index]||'')+'" style="left:'+left+'%;top:'+top+'%;width:'+width+'%;border-color:'+color+'">';
  }).join('');
 }
 function listeningDannyFeedback(task,state){
