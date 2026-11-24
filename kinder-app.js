@@ -1828,7 +1828,7 @@ const LISTENING_DANNY_POSITIONS={
 };
 let listeningDannySyncTimer=null;
 function listeningDannyNormalize(value){return String(value||'').normalize('NFKC').trim().toLowerCase().replace(/[’‘]/g,"'").replace(/[,.!?;:]/g,'').replace(/\s+/g,' ');}
-function listeningDannyKey(task){return 'vb2_listening_danny_'+soloName+'_task'+task;}
+function listeningDannyKey(task){return 'vb2_listening_danny_v2_'+soloName+'_task'+task;}
 function listeningDannyState(task){
  const total=LISTENING_DANNY_COUNTS[task]||0;
  try{const saved=JSON.parse(localStorage.getItem(listeningDannyKey(task))||'null');if(saved&&Array.isArray(saved.answers))return {answers:Array.from({length:total},(_,i)=>String(saved.answers[i]||'')),times:Array.from({length:total},(_,i)=>Number(saved.times?.[i])||0),results:Array.from({length:total},(_,i)=>typeof saved.results?.[i]==='boolean'?saved.results[i]:null),runId:String(saved.runId||'')};}catch{}
