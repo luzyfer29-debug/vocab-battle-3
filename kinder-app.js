@@ -1802,7 +1802,7 @@ const LISTENING_DANNY_ACCEPTED={
 };
 const LISTENING_DANNY_PROMPTS={
  1:['Emma has just seen the coolest poster in the world.','Danny MacAskill does cool tricks with his bike.','Millions of people have watched his videos.','Danny worked at a bike shop in Dunvegan.','He comes from the Isle of Skye.','He was born there in 1958.','John hasn’t watched the video yet.'],
- 2:['The Isle of Skye is the _____ largest Scottish island.','It’s a really _____ place.','There are nice _____ and _____ and you can enjoy the _____ there.'],
+ 2:['The Isle of Skye is the _____ largest Scottish island.','The Isle of Skye is the second _____ Scottish island.','It’s a really _____ place.','There are nice _____ on the island.','There are nice beaches and _____ there.','You can enjoy the _____ there.'],
  3:['Picture 1 · enter the order number or leave blank if not used.','Picture 2 · enter the order number or leave blank if not used.','Picture 3 · enter the order number or leave blank if not used.','Picture 4 · enter the order number or leave blank if not used.','Picture 5 · enter the order number or leave blank if not used.','Picture 6 · enter the order number or leave blank if not used.'],
  4:['Danny rides his bike not only in the _____ but also in cities and villages.','When he is riding his bike, he always wears a _____.','He plans his tricks _____.','He is also an _____ of new tricks.'],
  5:['Correct the wrong word in the first line.','Correct the word in the holiday sentence.','Correct the direction word before Edinburgh Castle.','Correct the word after countryside.','Correct the word describing his home place.']
