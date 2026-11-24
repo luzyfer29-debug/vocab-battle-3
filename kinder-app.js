@@ -476,6 +476,7 @@ function learningActivityIds(subject){
   ...[1,2,3,4].map(n=>`english_vocab_station1_task${n}`),
   ...[1,2].map(n=>`english_vocab_work_page${n}`),...[1,2].map(n=>`english_vocab_work_station2_page${n}`),
   ...GRAMMAR.flatMap((station,index)=>station.tasks.map((_,task)=>`english_grammar_${index+1}_task${task+1}`)),
+  ...[1,2,3].map(n=>`english_grammar_station1_task${n}`),
   'english_listening','english_reading',...WRITING_TASKS.map((_,index)=>`english_writing_task${index+1}`)
  ];
  return [
