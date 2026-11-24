@@ -1476,7 +1476,7 @@ const GRAMMAR_ST2_ACCEPTED={
   ["sienna's brothers will go swimming in the river if the water isn't too cold"],
   ['if the town museum is open the family will visit it'],
   ['if there is porridge for breakfast they will try it'],
-  ['sienna's parents will wear warm clothes if they get cold']
+  ["sienna's parents will wear warm clothes if they get cold"]
  ],
  5:[
   ["if sienna is angry we'll give her sweets","if sienna is angry we will give her sweets"],
