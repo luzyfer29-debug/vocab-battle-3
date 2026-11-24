@@ -1552,7 +1552,7 @@ const GRAMMAR_ST2_POSITIONS={
 };
 let grammarSt2SyncTimer=null;
 function grammarSt2Key(task){return 'vb2_grammar_station2_'+soloName+'_task'+task;}
-function grammarSt2Normalize(value){return String(value||'').normalize('NFKC').trim().toLowerCase().replace(/[’‘]/g,"'").replace(/[.!?,;:]+$/g,'').replace(/\s+/g,' ');}
+function grammarSt2Normalize(value){return String(value||'').normalize('NFKC').trim().toLowerCase().replace(/[’‘]/g,"'").replace(/[,.!?;:]/g,'').replace(/\s+/g,' ');}
 function grammarSt2State(task){
  const total=GRAMMAR_ST2_TOTALS[task]||0;
  try{const saved=JSON.parse(localStorage.getItem(grammarSt2Key(task))||'null');if(saved&&Array.isArray(saved.answers))return {answers:Array.from({length:total},(_,i)=>String(saved.answers[i]||'')),times:Array.from({length:total},(_,i)=>Number(saved.times?.[i])||0),results:Array.from({length:total},(_,i)=>typeof saved.results?.[i]==='boolean'?saved.results[i]:null),runId:String(saved.runId||'')};}catch{}
