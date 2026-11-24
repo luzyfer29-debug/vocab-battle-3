@@ -1545,7 +1545,7 @@ const GRAMMAR_ST2_PROMPTS={
 const GRAMMAR_ST2_POSITIONS={
  1:[[18,20.6,23],[31,27.3,24],[34,33.5,22],[34,38.4,23],[29,43.7,26]],
  2:[[26,60.2,29],[38,65.6,27],[21,70.3,25],[47,74.8,24],[17,79.2,27],[27,83.9,28],[16,88.6,27]],
- 3:[[22,9.8,19],[69,9.8,28],[48,13.6,21],[23,16.8,20],[70,16.8,19],[35,20.0,24],[20,24.1,22],[73,24.1,20],[20,28.8,22],[10,32.4,20],[50,32.4,20],[10,35.9,22],[60,35.9,22],[27,39.0,20]],
+ 3:[[18,9.8,24],[61,9.8,35],[48,13.6,21],[23,16.8,20],[70,16.8,19],[35,20.0,24],[20,24.1,22],[73,24.1,20],[20,28.8,22],[10,32.4,20],[50,32.4,20],[10,35.9,22],[60,35.9,22],[27,39.0,20]],
  4:[[14,58.0,83],[14,65.3,83],[14,73.4,83],[14,80.7,83],[14,88.4,83]],
  5:[[14,23.0,83],[14,31.4,83],[14,40.0,83],[14,48.7,83]],
  6:[[10,59.2,87],[10,62.8,87],[10,66.8,87]]
@@ -1597,7 +1597,7 @@ function grammarSt2Menu(){
 function grammarSt2OpenTask(task){
  if(!soloName){soloChooseName();return;}
  const pageNo=task<=2?1:task<=4?2:3,page=GRAMMAR_ST2_PAGES['page'+pageNo],state=grammarSt2State(task);
- const css='<style>.grammar-st2-sheet{position:relative;width:100%;max-width:667px;margin:12px auto 18px;line-height:0}.grammar-st2-sheet>img{display:block;width:100%;height:auto}.grammar-st2-answer{position:absolute;box-sizing:border-box;margin:0;padding:0 2px;height:2.65%;border:0;border-bottom:2px solid #31536c;border-radius:0;background:rgba(255,255,255,.98);color:#172337;text-align:left;font:600 clamp(8px,1.35vw,12px)/1.15 system-ui,sans-serif;outline-offset:1px}.grammar-st2-answer:focus{outline:2px solid #4b83bb;background:#fff}.grammar-st2-answer:disabled{background:rgba(231,247,236,.98)}.grammar-st2-instruction{line-height:1.45}</style>';
+ const css='<style>.grammar-st2-sheet{position:relative;width:100%;max-width:667px;margin:12px auto 18px;line-height:0}.grammar-st2-sheet>img{display:block;width:100%;height:auto}.grammar-st2-answer{position:absolute;box-sizing:border-box;margin:0;padding:0 2px;height:2.65%;border:0;border-bottom:2px solid #31536c;border-radius:0;background:#fff;color:#172337;text-align:left;font:600 clamp(8px,1.35vw,12px)/1.15 system-ui,sans-serif;outline-offset:1px}.grammar-st2-answer:focus{outline:2px solid #4b83bb;background:#fff}.grammar-st2-answer:disabled{background:rgba(231,247,236,.98)}.grammar-st2-instruction{line-height:1.45}</style>';
  app.innerHTML=card(css+'<h2>📘 Grammatik · Station 2 · Aufgabe '+task+'</h2><p class="muted grammar-st2-instruction">Tippe deine Antworten direkt auf die Linien. Danach kannst du sie prüfen. Falsche Antworten findest du unter „Das muss ich noch lernen“.</p><div class="grammar-st2-sheet"><img src="'+page+'" alt="Arbeitsblatt Grammatik Station 2, Seite '+pageNo+'">'+grammarSt2Overlay(task,state)+'</div>')+card('<div class="solo-actions">'+btn('Antworten prüfen','grammarSt2Check'+task)+btn('Zurück zu Grammatik · Station 2','englishGrammar2Menu','alt')+'</div>')+card(grammarSt2Feedback(task,state));
 }
 function grammarSt2FreeOk(value){
