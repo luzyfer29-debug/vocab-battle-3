@@ -1437,10 +1437,10 @@ function grammarSt1Menu(){
  app.innerHTML=card('<h2>📘 Grammatik · Station 1</h2><p>Die Originalseiten sind abgebildet. Fülle die Antworten direkt auf den Arbeitsblattlinien aus.</p>'+[1,2,3].map(task=>{const state=grammarSt1State(task),filled=state.answers.filter(value=>String(value||'').trim()).length;return '<div class="player"><strong>Aufgabe '+task+' · '+esc(titles[task])+'</strong><p class="muted">'+filled+' von '+GRAMMAR_ST1_TOTALS[task]+' Antworten eingetragen</p>'+btn('Aufgabe '+task,'grammarSt1Task'+task)+'</div>';}).join(''))+card(btn('Zurück zu Englisch','soloHome','alt'));
 }
 const ENGLISH_WORKSHEET_CROPS={
- grammar1:{1:{w:709,h:1012,top:125,height:390},2:{w:709,h:1012,top:525,height:385},3:{w:709,h:940,top:25,height:650}},
- grammar2:{1:{w:667,h:1004,top:110,height:380},2:{w:667,h:1004,top:500,height:425},3:{w:667,h:968,top:15,height:410},4:{w:667,h:968,top:430,height:480},5:{w:667,h:1022,top:100,height:450},6:{w:667,h:1022,top:515,height:330}},
- vocab1:{1:{w:709,h:1008,top:110,height:680},2:{w:709,h:1022,top:0,height:420},3:{w:709,h:1022,top:410,height:520},4:{w:709,h:890,top:20,height:520}},
- listeningDanny:{1:{w:645,h:922,top:320,height:270},2:{w:645,h:922,top:590,height:270},3:{w:645,h:1010,top:0,height:850},4:{w:645,h:1000,top:20,height:270},5:{w:645,h:1000,top:300,height:480}}
+ grammar1:{1:{w:709,h:1012,top:125,height:390},2:{w:709,h:1012,top:525,height:385},3:{w:709,h:940,top:65,height:590}},
+ grammar2:{1:{w:667,h:1004,top:110,height:365},2:{w:667,h:1004,top:500,height:425},3:{w:667,h:968,top:55,height:375},4:{w:667,h:968,top:430,height:480},5:{w:667,h:1022,top:50,height:500},6:{w:667,h:1022,top:530,height:320}},
+ vocab1:{1:{w:709,h:1008,top:110,height:680},2:{w:709,h:1022,top:0,height:420},3:{w:709,h:1022,top:410,height:520},4:{w:709,h:890,top:50,height:540}},
+ listeningDanny:{1:{w:645,h:922,top:320,height:270},2:{w:645,h:922,top:590,height:270},3:{w:645,h:1010,top:45,height:810},4:{w:645,h:1000,top:60,height:230},5:{w:645,h:1000,top:300,height:480}}
 };
 function cropEnglishWorksheet(sheetHtml,sheetClass,crop){
  const shift=(crop.top/crop.height*100).toFixed(3),opening='class="'+sheetClass+'"';
