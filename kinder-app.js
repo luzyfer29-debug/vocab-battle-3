@@ -802,7 +802,7 @@ async function recordLearningError(name,subject,exercise,index,topic,q,correct,o
  const dailySaved=duplicateInput?true:await updateDailyLeaderboard(name,subject,eventAt,!correct,exercise,index,q?.prompt||q?.q||q?.word||topic,countRunKey||attemptId);
  return activitySaved;
 }
-function childLearningExercises(subject){if(subject==='math')return ['math_rational_battle1','math_rational_battle2','math_rational_battle3','math_rational_cards','math_exam','math_rational_exam','math_proportional_practice','math_proportional_exam1','math_proportional_exam2','math_proportional_exam3',...MATH_PROPORTIONAL_PRACTICE_BLOCKS.map(b=>`math_proportional_practice_${b.id}`),'math_proportional_worksheet','math_proportional_flashcards','math_proportional_diagrams','math_proportional_dreisatz',...FRACTION_MODULES.map(m=>`math_fraction_${m.id}`)];return [1,2,3,4].map(n=>`english_vocab_station1_task${n}`);}
+function childLearningExercises(subject){if(subject==='math')return ['math_rational_battle1','math_rational_battle2','math_rational_battle3','math_rational_cards','math_exam','math_rational_exam','math_proportional_practice','math_proportional_exam1','math_proportional_exam2','math_proportional_exam3',...MATH_PROPORTIONAL_PRACTICE_BLOCKS.map(b=>`math_proportional_practice_${b.id}`),'math_proportional_worksheet','math_proportional_flashcards','math_proportional_diagrams','math_proportional_dreisatz',...FRACTION_MODULES.map(m=>`math_fraction_${m.id}`)];return ['english_vocab_station2_task1','english_vocab_station2_task2',...[1,2,3,4].map(n=>`english_vocab_station1_task${n}`)];}
 function mergeSharedLearningReview(name,subject,exercise,index,item){
  if(!item||(item.subject&&item.subject!==subject)||item.source==='live_battle'||item.source==='battle')return;
  const at=Number(item.lastWrongAt)||Date.now(),period=activityPeriodKeys(at),resolved=item.resolved===true;
@@ -1356,6 +1356,7 @@ function soloHome(){
  grammarCollect();stopSoloHeartbeat();if(!soloName){soloChooseName();return;}solo=null;
  app.innerHTML=card('<h2>🇬🇧 Englisch · '+esc(soloName)+'</h2><p>Wähle eine Übung. Deine Eingaben werden im Lernbereich erfasst.</p><div class="name-actions">'+
   btn('📗 Vokabeln 1 · Station 1','englishVocab1Menu','english-vocab-action')+
+  btn('📗 Vokabeln 2 · Station 2','englishVocabMenu','english-vocab-action')+
   btn('🔁 Das muss ich noch lernen','reviewEnglishChild','alt')+
  '</div>')+card('<div class="solo-actions">'+btn('Anderen Namen wählen','soloChangeName','alt')+btn('Zurück','home','alt')+'</div>');
 }
