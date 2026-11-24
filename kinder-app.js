@@ -1578,6 +1578,7 @@ function grammarSt2Collect(task){
 }
 app.addEventListener('input',e=>{const field=e.target.closest?.('[data-grammar-st2]');if(field)grammarSt2Collect(Number(field.dataset.grammarSt2));});
 app.addEventListener('pointerdown',e=>{if(e.target.closest?.('[data-grammar-st2]'))return;const sheet=e.target.closest?.('.grammar-st2-sheet');if(!sheet)return;let nearest=null,best=Infinity;for(const field of sheet.querySelectorAll('[data-grammar-st2]')){const r=field.getBoundingClientRect(),dx=e.clientX<r.left?r.left-e.clientX:e.clientX>r.right?e.clientX-r.right:0,dy=e.clientY<r.top?r.top-e.clientY:e.clientY>r.bottom?e.clientY-r.bottom:0,distance=Math.hypot(dx,dy);if(dx<=18&&dy<=10&&distance<best){nearest=field;best=distance;}}nearest?.focus({preventScroll:true});});
+app.addEventListener('click',e=>{if(e.target.closest?.('[data-grammar-st2]'))return;const sheet=e.target.closest?.('.grammar-st2-sheet');if(!sheet)return;let nearest=null,best=Infinity;for(const field of sheet.querySelectorAll('[data-grammar-st2]')){const r=field.getBoundingClientRect(),dx=e.clientX<r.left?r.left-e.clientX:e.clientX>r.right?e.clientX-r.right:0,dy=e.clientY<r.top?r.top-e.clientY:e.clientY>r.bottom?e.clientY-r.bottom:0,distance=Math.hypot(dx,dy);if(dx<=18&&dy<=10&&distance<best){nearest=field;best=distance;}}nearest?.focus({preventScroll:true});});
 function grammarSt2Overlay(task,state){
  const pages={1:1,2:1,3:2,4:2,5:3,6:3};
  return GRAMMAR_ST2_POSITIONS[task].map(([left,top,width],index)=>{
