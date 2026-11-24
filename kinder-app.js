@@ -9,7 +9,7 @@ import {LISTENING_QUESTIONS,LISTENING_TOTAL_POINTS,listeningIsCorrect,listeningC
 import {VOCAB_STATION2_IMAGES} from './vocab-station2-data.js?v=20261124-st2-vocab-images';
 import {VOCAB_STATION1_PAGES} from './vocab-station1-images.js?v=20261124-st1-vocab-pages';
 import {GRAMMAR_ST1_PAGES} from './grammar-station1-images.js?v=20261124-grammar-st1-clean';
-import {GRAMMAR_ST2_PAGES} from './grammar-station2-images.js?v=20261124-grammar-st2-clean';
+import {GRAMMAR_ST2_PAGES} from './grammar-station2-images.js?v=20261124-grammar-st2-clean2';
 let initializeApp,getAuth,signInAnonymously,onAuthStateChanged;
 let getDatabase,ref,onValue,get,set,update,runTransaction,remove;
 const RATIONAL_MATH_TITLES=['Rationale Zahlen · Aufgabe 1','Rationale Zahlen · Aufgabe 2','Rationale Zahlen · Aufgabe 3','Rationale Zahlen · Aufgabe 4'];
