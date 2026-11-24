@@ -1826,7 +1826,7 @@ function listeningDannyState(task){
 function listeningDannySave(task,state){try{localStorage.setItem(listeningDannyKey(task),JSON.stringify(state));}catch{}}
 function listeningDannyPrompts(task){return LISTENING_DANNY_PROMPTS[task]||[];}
 function listeningDannyTouch(task,state){
- const exercise='english_listening_danny_task'+task,done=state.answers.filter(value=>String(value||'').trim()).length,now=Date.now();
+ const exercise='english_listening_danny_task'+task,done=Math.min(LISTENING_DANNY_PROGRESS[task],state.answers.filter(value=>String(value||'').trim()).length),now=Date.now();
  state.times=state.answers.map((value,index)=>String(value||'').trim()?(Number(state.times[index])||now):0);
  touchLearningActivity(soloName,exercise,{taskTitle:'Listening · Danny MacAskill · Aufgabe '+task,done,total:LISTENING_DANNY_PROGRESS[task],status:'Eingaben live gespeichert',draftAnswers:state.answers,draftUpdatedAt:state.times,draftPrompts:listeningDannyPrompts(task)});
 }
