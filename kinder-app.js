@@ -1461,7 +1461,7 @@ function vocabSt1Feedback(task,state){
  const checked=state.results.filter(value=>typeof value==='boolean').length;
  if(!checked)return '';
  const correct=state.results.filter(value=>value===true).length,wrong=state.results.filter(value=>value===false).length;
- return card('<p><strong>'+correct+' von '+checked+' geprüften Antworten richtig.</strong></p>'+(wrong?'<p class="error">'+wrong+' Antwort'+(wrong===1?' ist':'en sind')+' falsch. Du findest sie unter „Das muss ich noch lernen“.</p>':'<p class="good">✅ Alle bisher geprüften Antworten sind richtig.</p>'));
+ return '<p><strong>'+correct+' von '+checked+' geprüften Antworten richtig.</strong></p>'+(wrong?'<p class="error">'+wrong+' Antwort'+(wrong===1?' ist':'en sind')+' falsch. Du findest sie unter „Das muss ich noch lernen“.</p>':'<p class="good">✅ Alle bisher geprüften Antworten sind richtig.</p>');
 }
 async function vocabSt1Check(task){
  if(!soloName||!VOCAB_ST1_TOTALS[task])return;
